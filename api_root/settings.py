@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 import os
 from pathlib import Path
+
+import dj_database_url
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -91,22 +93,20 @@ WSGI_APPLICATION = 'api_root.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 #
-# Este banco SQLite é usado só para as tabelas internas do Django
-# (autenticação e sessões do admin). Os dados de leituras meteorológicas
-# ficam no MongoDB, configurado logo abaixo em MONGO_URI / MONGO_DB_NAME.
+# Um único banco PostgreSQL para tudo: tabelas internas do Django
+# (autenticação, sessões) e as leituras meteorológicas (app api_rest).
+# Em produção, DATABASE_URL aponta para o projeto no Supabase; localmente
+# tem como padrão o Postgres de desenvolvimento (veja o README).
+
+# dj_database_url.config() faz o próprio lookup de DATABASE_URL no ambiente,
+# e ignora o "default" se a variável existir só que vazia (caso do .env
+# antes de ser preenchida) — por isso resolvemos a string nós mesmos e
+# usamos parse() em vez de config().
+_database_url = os.environ.get('DATABASE_URL') or 'postgresql://teste:teste@localhost:5433/monitoramento_meteorologico'
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.parse(_database_url, conn_max_age=600)
 }
-
-
-# Configuração do MongoDB (usado em api_rest/mongo.py)
-
-MONGO_URI = os.environ.get('MONGO_URI', 'mongodb://localhost:27017')
-MONGO_DB_NAME = os.environ.get('MONGO_DB_NAME', 'monitoramento_meteorologico')
 
 
 # Password validation

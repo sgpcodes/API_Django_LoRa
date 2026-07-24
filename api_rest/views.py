@@ -1,19 +1,24 @@
-from bson import ObjectId
-from bson.errors import InvalidId
-from pymongo.errors import PyMongoError
+from django.db import DatabaseError
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .mongo import get_collection
+from .models import Leitura
 from .serializers import LeituraSerializer
 
 
-def _documento_para_dict(documento):
-    """Converte um documento do MongoDB para um dict serializável em JSON."""
-    documento['id'] = str(documento['_id'])
-    del documento['_id']
-    return documento
+def _leitura_para_dict(leitura):
+    """Converte uma Leitura (model) num dict serializável em JSON, com o
+    mesmo formato de campos usado desde a época do MongoDB."""
+    return {
+        'id': leitura.id,
+        'sensor_id': leitura.sensor_id,
+        'temperatura': leitura.temperatura,
+        'umidade': leitura.umidade,
+        'pressao': leitura.pressao,
+        'dados_adicionais': leitura.dados_adicionais,
+        'data_hora': leitura.data_hora,
+    }
 
 
 class LeituraListCreateView(APIView):
@@ -27,10 +32,9 @@ class LeituraListCreateView(APIView):
         # personalizado), que também vão compor esse mesmo `filtro`.
         filtro = {'sensor_id': sensor_id} if sensor_id else {}
 
-        collection = get_collection()
-        leituras = collection.find(filtro).sort('data_hora', -1)
+        leituras = Leitura.objects.filter(**filtro).order_by('-data_hora')
 
-        dados = [_documento_para_dict(leitura) for leitura in leituras]
+        dados = [_leitura_para_dict(leitura) for leitura in leituras]
         return Response(dados)
 
     def post(self, request):
@@ -38,9 +42,8 @@ class LeituraListCreateView(APIView):
         serializer.is_valid(raise_exception=True)
 
         try:
-            collection = get_collection()
-            collection.insert_one(dict(serializer.validated_data))
-        except PyMongoError:
+            Leitura.objects.create(**serializer.validated_data)
+        except DatabaseError:
             return Response(
                 {'status': 'error', 'message': 'Não foi possível salvar a leitura.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -57,20 +60,11 @@ class LeituraDetailView(APIView):
 
     def get(self, request, leitura_id):
         try:
-            object_id = ObjectId(leitura_id)
-        except InvalidId:
-            return Response(
-                {'erro': 'ID inválido.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        collection = get_collection()
-        leitura = collection.find_one({'_id': object_id})
-
-        if leitura is None:
+            leitura = Leitura.objects.get(pk=leitura_id)
+        except (Leitura.DoesNotExist, ValueError):
             return Response(
                 {'erro': 'Leitura não encontrada.'},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        return Response(_documento_para_dict(leitura))
+        return Response(_leitura_para_dict(leitura))

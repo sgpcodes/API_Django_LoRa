@@ -1,13 +1,13 @@
 # API de Monitoramento Meteorológico
 
-API backend em Python/Django para receber leituras de sensores e salvar em MongoDB.
+API backend em Python/Django para receber leituras de sensores (ESP32 + LoRa) e salvar em PostgreSQL, com um dashboard React para visualização.
 
 ## Tecnologias usadas
 
 - Python
-- Django
-- Django REST Framework
-- MongoDB
+- Django + Django REST Framework
+- PostgreSQL (Supabase)
+- React (frontend, pasta `frontend/`)
 - Render (deploy)
 
 ## Estrutura do projeto
@@ -18,7 +18,6 @@ api_django_lora/
 ├── .gitignore
 ├── Procfile
 ├── README.md
-├── README.md
 ├── render.yaml
 ├── requirements.txt
 ├── manage.py
@@ -28,28 +27,28 @@ api_django_lora/
 │   ├── settings.py
 │   ├── urls.py
 │   └── wsgi.py
-└── api_rest/
-    ├── __init__.py
-    ├── mongo.py
-    ├── serializers.py
-    ├── urls.py
-    ├── views.py
-    ├── models.py
-    ├── admin.py
-    ├── apps.py
-    └── tests.py
+├── api_rest/
+│   ├── __init__.py
+│   ├── models.py
+│   ├── serializers.py
+│   ├── urls.py
+│   ├── views.py
+│   ├── migrations/
+│   ├── admin.py
+│   ├── apps.py
+│   └── tests.py
+└── frontend/        (dashboard React, ver frontend/README.md)
 ```
 
 ## O que cada arquivo faz
 
 - `manage.py`: utilitário do Django para rodar servidor, migrar banco e testes.
-- `api_root/settings.py`: configurações principais do Django, incluindo MongoDB, CORS e variáveis de ambiente.
+- `api_root/settings.py`: configurações principais do Django, incluindo banco de dados, CORS e variáveis de ambiente.
 - `api_root/urls.py`: define o ponto de entrada `/api/` para o app de leituras.
 - `api_rest/urls.py`: define as rotas REST para listar, criar e consultar leituras.
 - `api_rest/views.py`: contém a lógica de API para receber e retornar leituras.
 - `api_rest/serializers.py`: valida os dados enviados pelo sensor antes de salvar.
-- `api_rest/mongo.py`: gerencia a conexão com o MongoDB.
-- `api_rest/models.py`: arquivo explicativo do app; não usamos modelos Django para leituras.
+- `api_rest/models.py`: model `Leitura` (Django ORM/PostgreSQL).
 - `.env.example`: exemplo de variáveis de ambiente necessárias.
 - `requirements.txt`: dependências do projeto.
 - `Procfile` / `render.yaml`: configuração para deploy no Render.
@@ -57,7 +56,7 @@ api_django_lora/
 ## Endpoints disponíveis
 
 - POST `/api/leituras/`
-  - Recebe uma leitura enviada pela ESP32 receptora (via LoRa) e salva no MongoDB.
+  - Recebe uma leitura enviada pela ESP32 receptora (via LoRa) e salva no PostgreSQL.
   - A chave do payload é `sensor` (é o que a ESP32 envia), guardada internamente como `sensor_id` — o mesmo nome que o frontend já espera.
   - `data_hora` é gerada automaticamente pela API caso não venha no payload.
   - Exemplo de payload:
@@ -94,8 +93,7 @@ Use `.env.example` como base e crie um arquivo `.env` na raiz do projeto.
 - `SECRET_KEY`: chave secreta do Django.
 - `DEBUG`: `True` em desenvolvimento, `False` em produção.
 - `ALLOWED_HOSTS`: domínios permitidos, separados por vírgula.
-- `MONGO_URI`: URI de conexão com MongoDB.
-- `MONGO_DB_NAME`: nome do banco de dados MongoDB.
+- `DATABASE_URL`: string de conexão do PostgreSQL (local ou Supabase).
 
 ## Executando localmente
 
@@ -112,7 +110,7 @@ Use `.env.example` como base e crie um arquivo `.env` na raiz do projeto.
    ```bash
    cp .env.example .env
    ```
-4. Ajuste `MONGO_URI` se necessário e verifique se o MongoDB está rodando.
+4. Ajuste `DATABASE_URL` (Postgres local ou Supabase).
 5. Execute migrações do Django:
    ```bash
    python manage.py migrate
@@ -126,24 +124,17 @@ Use `.env.example` como base e crie um arquivo `.env` na raiz do projeto.
 
 ## Deploy no Render
 
-1. Crie um novo serviço web no Render.
-2. Aponte para este repositório.
-3. Use `python` como ambiente.
-4. Defina o comando de start:
-   ```bash
-   gunicorn api_root.wsgi --bind 0.0.0.0:$PORT
-   ```
-5. Defina as variáveis de ambiente no Render:
+1. Crie um banco PostgreSQL gratuito no [Supabase](https://supabase.com) e copie a connection string (Project Settings → Database → Connection string → URI).
+2. No Render, crie um novo Blueprint apontando para este repositório (usa o `render.yaml` já configurado com plano free).
+3. Defina as variáveis de ambiente no Render:
    - `SECRET_KEY`
    - `DEBUG=False`
    - `ALLOWED_HOSTS=<seu-dominio>.onrender.com`
-   - `MONGO_URI`
-   - `MONGO_DB_NAME`
-
-> Dica: no Render, `MONGO_URI` pode apontar para MongoDB Atlas ou para um MongoDB hospedado fora do Render.
+   - `DATABASE_URL` (a connection string do Supabase)
+4. O build já roda `collectstatic` e `migrate` automaticamente (ver `render.yaml`).
 
 ## Observações
 
-- O backend salva as leituras no MongoDB.
-- A API foi criada apenas para o backend, sem frontend.
+- O backend salva as leituras no PostgreSQL (Supabase em produção).
+- O frontend React (pasta `frontend/`) consome esta API e mostra o dashboard.
 - O projeto foi mantido simples, com arquivos separados por responsabilidade.

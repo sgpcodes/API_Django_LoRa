@@ -3,11 +3,10 @@ services:
     name: api-monitoramento-meteorologico
     env: python
     plan: free
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate
     startCommand: gunicorn api_root.wsgi --bind 0.0.0.0:$PORT
     envVars:
       - key: SECRET_KEY
       - key: DEBUG
       - key: ALLOWED_HOSTS
-      - key: MONGO_URI
-      - key: MONGO_DB_NAME
+      - key: DATABASE_URL
