@@ -7,6 +7,10 @@ services:
     startCommand: gunicorn api_root.wsgi --bind 0.0.0.0:$PORT
     envVars:
       - key: SECRET_KEY
+        sync: false
       - key: DEBUG
+        value: "False"
       - key: ALLOWED_HOSTS
+        sync: false
       - key: DATABASE_URL
+        sync: false
