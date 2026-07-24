@@ -27,8 +27,9 @@ import { obterTemaPorHorario, obterCondicaoClima } from '../services/climaServic
 import styles from './Dashboard.module.css'
 
 // Busca novas leituras periodicamente para o dashboard se manter atualizado
-// sozinho, já que o ESP32 envia uma leitura por minuto.
-const INTERVALO_ATUALIZACAO_MS = 60_000
+// sozinho. A ESP32 envia uma leitura a cada ~10-15s, então buscamos nesse
+// ritmo para a temperatura/umidade em destaque acompanhar quase em tempo real.
+const INTERVALO_ATUALIZACAO_MS = 10_000
 
 // O tema (dia/noite) segue o relógio do computador por padrão, então
 // checamos o horário de tempos em tempos para trocar sozinho caso o
