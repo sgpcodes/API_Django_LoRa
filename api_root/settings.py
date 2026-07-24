@@ -104,8 +104,12 @@ WSGI_APPLICATION = 'api_root.wsgi.application'
 # usamos parse() em vez de config().
 _database_url = os.environ.get('DATABASE_URL') or 'postgresql://teste:teste@localhost:5433/monitoramento_meteorologico'
 
+# conn_max_age=0: fecha a conexão a cada request em vez de mantê-la aberta.
+# O Supabase free tier limita o Session pooler a 15 conexões simultâneas no
+# total — com conexões persistentes, cada processo (servidor local, Render,
+# testes) prende uma vaga por minutos e esgota esse limite rapidinho.
 DATABASES = {
-    'default': dj_database_url.parse(_database_url, conn_max_age=600)
+    'default': dj_database_url.parse(_database_url, conn_max_age=0)
 }
 
 
