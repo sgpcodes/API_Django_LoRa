@@ -1,0 +1,111 @@
+.container {
+  width: 100%;
+  padding: 1.5rem;
+  border-radius: 20px;
+  background-color: var(--color-card-bg);
+  border: 1px solid var(--color-card-border);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(12px);
+  transition: var(--transition-theme);
+}
+
+.titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 1.1rem;
+  transition: var(--transition-theme);
+}
+
+.linha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  background-color: var(--color-pill-bg);
+  padding: 0.3rem;
+  border-radius: 12px;
+}
+
+.pill {
+  border: none;
+  background: none;
+  padding: 0.45rem 0.9rem;
+  border-radius: 9px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: var(--transition-theme);
+}
+
+.pillAtivo {
+  background-color: var(--color-pill-ativo-bg);
+  color: var(--color-pill-ativo-texto);
+}
+
+.personalizado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.75rem;
+}
+
+.campoData {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  transition: var(--transition-theme);
+}
+
+.campoData input {
+  border: 1px solid var(--color-card-border);
+  background-color: var(--color-input-bg);
+  color: var(--color-text);
+  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.85rem;
+  transition: var(--transition-theme);
+}
+
+.botaoAplicar {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: none;
+  background-color: var(--color-accent);
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.55rem 1rem;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: var(--transition-theme);
+}
+
+@media (max-width: 640px) {
+  .linha {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pills {
+    justify-content: center;
+  }
+
+  .personalizado {
+    justify-content: center;
+  }
+}

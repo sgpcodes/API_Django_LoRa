@@ -1,0 +1,65 @@
+/*
+  Paleta de cores do dashboard. O atributo "data-theme" é definido em
+  tempo real pelo Dashboard.jsx: por padrão segue o horário do
+  computador (dia das 7h às 18h59, noite das 19h às 6h59), mas o botão
+  no cabeçalho permite alternar manualmente. A temperatura não
+  influencia mais essas cores, só a mensagem de condição do clima
+  (veja services/climaService.js).
+*/
+
+:root {
+  --transition-theme: background-color 0.8s ease, color 0.8s ease,
+    border-color 0.8s ease, box-shadow 0.8s ease;
+}
+
+[data-theme='dia'] {
+  --color-text: #142850;
+  --color-text-secondary: #5779a6;
+  --color-accent: #2f6fed;
+  --color-card-bg: rgba(255, 255, 255, 0.72);
+  --color-card-border: rgba(47, 111, 237, 0.1);
+  --color-grid: #dce7f7;
+  --shadow-card: 0 8px 30px rgba(30, 64, 130, 0.1);
+  --chart-line: #2f6fed;
+  --chart-area-inicio: rgba(47, 111, 237, 0.35);
+  --chart-area-fim: rgba(47, 111, 237, 0);
+
+  --color-pill-bg: rgba(47, 111, 237, 0.06);
+  --color-pill-ativo-bg: #2f6fed;
+  --color-pill-ativo-texto: #ffffff;
+  --color-input-bg: #ffffff;
+  --color-table-header: #8593ad;
+  --color-table-linha-hover: rgba(47, 111, 237, 0.05);
+}
+
+[data-theme='noite'] {
+  --color-text: #eef2ff;
+  --color-text-secondary: #93a5c9;
+  --color-accent: #7dabfa;
+  --color-card-bg: rgba(24, 26, 46, 0.6);
+  --color-card-border: rgba(122, 42, 110, 0.4);
+  --color-grid: rgba(255, 255, 255, 0.08);
+  --shadow-card: 0 8px 30px rgba(0, 0, 0, 0.45);
+  --chart-line: #7dabfa;
+  --chart-area-inicio: rgba(125, 171, 250, 0.4);
+  --chart-area-fim: rgba(125, 171, 250, 0);
+
+  --color-pill-bg: rgba(255, 255, 255, 0.06);
+  --color-pill-ativo-bg: #7dabfa;
+  --color-pill-ativo-texto: #10142b;
+  --color-input-bg: rgba(255, 255, 255, 0.06);
+  --color-table-header: #6c7ba3;
+  --color-table-linha-hover: rgba(255, 255, 255, 0.04);
+}
+
+/*
+  Cores fixas de status/semântica, que não mudam entre dia e noite
+  (ex.: verde de "online", vermelho de temperatura máxima).
+*/
+:root {
+  --color-status-online: #22c55e;
+  --color-maxima: #ef4444;
+  --color-minima: #3b82f6;
+  --color-media: #10b981;
+  --color-umidade: #0ea5e9;
+}

@@ -1,0 +1,94 @@
+.container {
+  width: 100%;
+  height: 100%;
+  padding: 1.5rem;
+  border-radius: 20px;
+  background-color: var(--color-card-bg);
+  border: 1px solid var(--color-card-border);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(12px);
+  transition: var(--transition-theme);
+  box-sizing: border-box;
+}
+
+.titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 1.1rem;
+  transition: var(--transition-theme);
+}
+
+.vazio {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.tabelaWrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.tabela th {
+  text-align: left;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-table-header);
+  padding: 0 0.6rem 0.6rem 0;
+  transition: var(--transition-theme);
+}
+
+.tabela td {
+  padding: 0.65rem 0.6rem 0.65rem 0;
+  color: var(--color-text);
+  border-top: 1px solid var(--color-card-border);
+  transition: var(--transition-theme);
+}
+
+.tabela tbody tr:hover {
+  background-color: var(--color-table-linha-hover);
+}
+
+.max {
+  color: var(--color-maxima);
+  font-weight: 600;
+}
+
+.min {
+  color: var(--color-minima);
+  font-weight: 600;
+}
+
+.seta {
+  color: var(--color-text-secondary);
+  text-align: right;
+}
+
+.verMais {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  width: 100%;
+  margin-top: 0.75rem;
+  padding: 0.6rem;
+  border: none;
+  background: none;
+  color: var(--color-accent);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition-theme);
+}

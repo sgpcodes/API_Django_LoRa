@@ -1,0 +1,233 @@
+.dashboard {
+  position: relative;
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+/*
+  As duas camadas de fundo (dia e noite) ficam sempre no DOM, uma sobre
+  a outra, e a troca de tema apenas cruza a opacidade entre elas — é
+  isso que garante a transição suave entre os visuais.
+*/
+.fundoDia,
+.fundoNoite {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  transition: opacity 0.8s ease;
+  pointer-events: none;
+}
+
+.fundoDia {
+  opacity: 1;
+  background:
+    radial-gradient(ellipse 420px 220px at 12% 18%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0) 70%),
+    radial-gradient(ellipse 500px 260px at 90% 25%, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0) 70%),
+    radial-gradient(ellipse 460px 240px at 25% 90%, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0) 70%),
+    linear-gradient(180deg, #dbeeff 0%, #f2f8ff 55%, #ffffff 100%);
+}
+
+.fundoNoite {
+  opacity: 0;
+  background:
+    radial-gradient(260px 260px at 10% 12%, rgba(147, 197, 253, 0.35), rgba(147, 197, 253, 0) 70%),
+    radial-gradient(1.5px 1.5px at 15% 20%, #ffffff 50%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 30% 12%, #ffffff 50%, transparent 100%),
+    radial-gradient(1px 1px at 45% 28%, #ffffff 50%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 60% 8%, #ffffff 50%, transparent 100%),
+    radial-gradient(1px 1px at 75% 22%, #ffffff 50%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 88% 15%, #ffffff 50%, transparent 100%),
+    radial-gradient(1px 1px at 20% 45%, #ffffff 50%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 50% 55%, #ffffff 50%, transparent 100%),
+    radial-gradient(1px 1px at 80% 60%, #ffffff 50%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 10% 70%, #ffffff 50%, transparent 100%),
+    radial-gradient(1px 1px at 35% 80%, #ffffff 50%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 65% 85%, #ffffff 50%, transparent 100%),
+    radial-gradient(1px 1px at 92% 78%, #ffffff 50%, transparent 100%),
+    linear-gradient(180deg, #0c1330 0%, #070b1e 100%);
+}
+
+[data-theme='noite'] .fundoDia {
+  opacity: 0;
+}
+
+[data-theme='noite'] .fundoNoite {
+  opacity: 1;
+}
+
+.pagina {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 2rem clamp(1rem, 4vw, 3rem) 3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.marca {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.iconeClima {
+  color: var(--color-accent);
+  transition: var(--transition-theme);
+}
+
+.tituloMarca {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  transition: var(--transition-theme);
+}
+
+.acoesCabecalho {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.painelPrincipal {
+  display: grid;
+  grid-template-columns: minmax(260px, 400px) 1fr;
+  gap: 2rem;
+  width: 100%;
+  padding: 2rem;
+  border-radius: 24px;
+  background-color: var(--color-card-bg);
+  border: 1px solid var(--color-card-border);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(12px);
+  transition: var(--transition-theme);
+  box-sizing: border-box;
+}
+
+.colunaTemperatura {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.75rem;
+}
+
+.infoGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.colunaGrafico {
+  min-width: 0;
+  display: flex;
+}
+
+.colunaGrafico > * {
+  width: 100%;
+}
+
+.blocoResumo {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.tituloSecao {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0;
+  transition: var(--transition-theme);
+}
+
+.resumoGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+.semDados {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+}
+
+.grid2Colunas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+.grid2Colunas > *,
+.resumoGrid > *,
+.infoGrid > * {
+  min-width: 0;
+}
+
+.rodape {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  transition: var(--transition-theme);
+  margin-top: 0.5rem;
+}
+
+.pontoRodape {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--color-accent);
+  transition: var(--transition-theme);
+}
+
+@media (max-width: 1023px) {
+  .painelPrincipal {
+    grid-template-columns: 1fr;
+  }
+
+  .resumoGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .grid2Colunas {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .infoGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .resumoGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .cabecalho {
+    justify-content: center;
+    text-align: center;
+  }
+
+  .acoesCabecalho {
+    justify-content: center;
+    width: 100%;
+  }
+}
