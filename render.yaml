@@ -2,6 +2,7 @@ services:
   - type: web
     name: api-monitoramento-meteorologico
     env: python
+    plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn api_root.wsgi --bind 0.0.0.0:$PORT
     envVars:
