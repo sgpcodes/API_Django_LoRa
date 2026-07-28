@@ -16,10 +16,11 @@
   --color-text: #142850;
   --color-text-secondary: #5779a6;
   --color-accent: #2f6fed;
-  --color-card-bg: rgba(255, 255, 255, 0.72);
-  --color-card-border: rgba(47, 111, 237, 0.1);
+  --color-bg: #f4f7fc;
+  --color-card-bg: #ffffff;
+  --color-card-border: #e6ebf5;
   --color-grid: #dce7f7;
-  --shadow-card: 0 8px 30px rgba(30, 64, 130, 0.1);
+  --shadow-card: 0 4px 18px rgba(30, 64, 130, 0.06);
   --chart-line: #2f6fed;
   --chart-area-inicio: rgba(47, 111, 237, 0.35);
   --chart-area-fim: rgba(47, 111, 237, 0);
@@ -30,16 +31,25 @@
   --color-input-bg: #ffffff;
   --color-table-header: #8593ad;
   --color-table-linha-hover: rgba(47, 111, 237, 0.05);
+
+  --color-sidebar-bg: #ffffff;
+  --color-sidebar-border: #e6ebf5;
+  --color-sidebar-text: #5779a6;
+  --color-sidebar-text-ativo: #2f6fed;
+  --color-sidebar-bg-ativo: rgba(47, 111, 237, 0.1);
+  --color-badge-off-bg: #eef1f6;
+  --color-badge-off-texto: #8593ad;
 }
 
 [data-theme='noite'] {
   --color-text: #eef2ff;
   --color-text-secondary: #93a5c9;
   --color-accent: #7dabfa;
-  --color-card-bg: rgba(24, 26, 46, 0.6);
-  --color-card-border: rgba(122, 42, 110, 0.4);
+  --color-bg: #0b0f22;
+  --color-card-bg: #161b33;
+  --color-card-border: #262c4a;
   --color-grid: rgba(255, 255, 255, 0.08);
-  --shadow-card: 0 8px 30px rgba(0, 0, 0, 0.45);
+  --shadow-card: 0 4px 18px rgba(0, 0, 0, 0.35);
   --chart-line: #7dabfa;
   --chart-area-inicio: rgba(125, 171, 250, 0.4);
   --chart-area-fim: rgba(125, 171, 250, 0);
@@ -50,6 +60,14 @@
   --color-input-bg: rgba(255, 255, 255, 0.06);
   --color-table-header: #6c7ba3;
   --color-table-linha-hover: rgba(255, 255, 255, 0.04);
+
+  --color-sidebar-bg: #10142b;
+  --color-sidebar-border: #262c4a;
+  --color-sidebar-text: #93a5c9;
+  --color-sidebar-text-ativo: #7dabfa;
+  --color-sidebar-bg-ativo: rgba(125, 171, 250, 0.12);
+  --color-badge-off-bg: rgba(255, 255, 255, 0.06);
+  --color-badge-off-texto: #93a5c9;
 }
 
 /*

@@ -1,0 +1,140 @@
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  width: 240px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-sidebar-bg);
+  border-right: 1px solid var(--color-sidebar-border);
+  padding: 1.5rem 1rem;
+  box-sizing: border-box;
+  transition: var(--transition-theme);
+}
+
+.marca {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0.75rem 2rem;
+}
+
+.nomeMarca {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--color-text);
+  transition: var(--transition-theme);
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 0.75rem;
+  border-radius: 10px;
+  color: var(--color-sidebar-text);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border: none;
+  background: none;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: var(--transition-theme), background-color 0.15s ease;
+}
+
+.link:hover {
+  background-color: var(--color-sidebar-bg-ativo);
+}
+
+.linkAtivo {
+  background-color: var(--color-sidebar-bg-ativo);
+  color: var(--color-sidebar-text-ativo);
+  font-weight: 600;
+}
+
+.rotuloLink {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badgeOff {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 0.15rem 0.4rem;
+  border-radius: 6px;
+  background-color: var(--color-badge-off-bg);
+  color: var(--color-badge-off-texto);
+  flex-shrink: 0;
+}
+
+.rodape {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-sidebar-border);
+  transition: var(--transition-theme);
+}
+
+.temaBloco {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding-top: 1rem;
+}
+
+.temaBotoes {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.3rem;
+  border-radius: 12px;
+  background-color: var(--color-pill-bg);
+}
+
+.temaBotao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  border: none;
+  background: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: var(--transition-theme), background-color 0.15s ease, color 0.15s ease;
+}
+
+.temaBotaoAtivo {
+  background-color: var(--color-accent);
+  color: white;
+}
+
+.temaRotulo {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  transition: var(--transition-theme);
+}
+
+@media (max-width: 900px) {
+  .sidebar {
+    position: fixed;
+    z-index: 20;
+    transform: translateX(-100%);
+  }
+}

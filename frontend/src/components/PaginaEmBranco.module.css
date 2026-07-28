@@ -1,0 +1,36 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.75rem;
+  min-height: 70vh;
+}
+
+.iconeFundo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background-color: var(--color-pill-bg);
+  color: var(--color-accent);
+  margin-bottom: 0.5rem;
+}
+
+.titulo {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--color-text);
+  transition: var(--transition-theme);
+}
+
+.texto {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  transition: var(--transition-theme);
+}

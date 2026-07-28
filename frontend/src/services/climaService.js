@@ -4,11 +4,3 @@ export function obterTemaPorHorario() {
   const hora = new Date().getHours()
   return hora >= 7 && hora < 19 ? 'dia' : 'noite'
 }
-
-// Já a mensagem de condição do clima depende só da temperatura, e não
-// tem mais relação nenhuma com o tema de cores.
-export function obterCondicaoClima(temperatura) {
-  if (temperatura < 25) return 'Frio'
-  if (temperatura <= 30) return 'Temperatura agradável'
-  return 'Dia quente'
-}

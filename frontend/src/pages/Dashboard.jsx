@@ -1,12 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { CloudSun, CloudMoon, Sun, Moon, Droplet, Wifi, Clock, Thermometer, ThermometerSun, ThermometerSnowflake, Droplets } from 'lucide-react'
-import TemperatureDisplay from '../components/TemperatureDisplay'
-import InfoCard from '../components/InfoCard'
+import { useEffect, useMemo, useState } from 'react'
+import { useOutletContext } from 'react-router-dom'
+import { Cpu, Clock, Thermometer, ThermometerSun, ThermometerSnowflake, Droplets } from 'lucide-react'
+import Header from '../components/Header'
 import WeatherChart from '../components/WeatherChart'
 import StatusMessage from '../components/StatusMessage'
-import StatusBadge from '../components/StatusBadge'
-import ThemeToggle from '../components/ThemeToggle'
-import PeriodFilter from '../components/PeriodFilter'
 import SummaryStatCard from '../components/SummaryStatCard'
 import HistoryTable from '../components/HistoryTable'
 import TemperatureBarChart from '../components/TemperatureBarChart'
@@ -23,26 +20,23 @@ import {
   agruparPorDia,
   calcularResumo,
 } from '../services/leiturasService'
-import { obterTemaPorHorario, obterCondicaoClima } from '../services/climaService'
 import styles from './Dashboard.module.css'
 
 // Busca novas leituras periodicamente para o dashboard se manter atualizado
-// sozinho. A ESP32 agora envia uma leitura a cada 1 minuto, então buscamos
-// nesse ritmo para a temperatura/umidade em destaque e os gráficos
-// acompanharem cada leitura nova assim que ela chegar.
+// sozinho. A ESP32 envia uma leitura a cada 1 minuto, então buscamos nesse
+// ritmo para os cards e os gráficos acompanharem cada leitura nova assim
+// que ela chegar.
 const INTERVALO_ATUALIZACAO_MS = 60_000
-
-// O tema (dia/noite) segue o relógio do computador por padrão, então
-// checamos o horário de tempos em tempos para trocar sozinho caso o
-// dashboard fique aberto passando das 7h ou das 19h. Isso só vale
-// enquanto o usuário não usar o botão de alternar tema manualmente.
-const INTERVALO_VERIFICACAO_TEMA_MS = 60_000
 
 function formatarHorario(dataHoraISO) {
   return new Date(dataHoraISO).toLocaleTimeString('pt-BR', {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+function formatarDataCurta(dataHoraISO) {
+  return new Date(dataHoraISO).toLocaleDateString('pt-BR')
 }
 
 function formatarDataHoraCurta(dataHoraISO) {
@@ -74,14 +68,13 @@ function datasPersonalizadasIniciais() {
 }
 
 function Dashboard() {
+  const { tema, onAlternarTema } = useOutletContext()
+
   const [leituras, setLeituras] = useState([])
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState(null)
-  const [tema, setTema] = useState(obterTemaPorHorario)
   const [periodo, setPeriodo] = useState('hoje')
   const [datasPersonalizadas, setDatasPersonalizadas] = useState(datasPersonalizadasIniciais)
-
-  const temaEscolhidoManualmente = useRef(false)
 
   useEffect(() => {
     async function carregarLeituras() {
@@ -100,20 +93,6 @@ function Dashboard() {
     const intervalo = setInterval(carregarLeituras, INTERVALO_ATUALIZACAO_MS)
     return () => clearInterval(intervalo)
   }, [])
-
-  useEffect(() => {
-    const intervalo = setInterval(() => {
-      if (!temaEscolhidoManualmente.current) {
-        setTema(obterTemaPorHorario())
-      }
-    }, INTERVALO_VERIFICACAO_TEMA_MS)
-    return () => clearInterval(intervalo)
-  }, [])
-
-  function alternarTema() {
-    temaEscolhidoManualmente.current = true
-    setTema((atual) => (atual === 'dia' ? 'noite' : 'dia'))
-  }
 
   const leituraAtual = useMemo(() => obterLeituraMaisRecente(leituras), [leituras])
 
@@ -144,140 +123,159 @@ function Dashboard() {
     }))
   }, [leituras, intervaloSelecionado])
 
+  const cabecalho = (
+    <Header
+      periodo={periodo}
+      onEscolherPeriodo={setPeriodo}
+      dataInicio={datasPersonalizadas.inicio}
+      dataFim={datasPersonalizadas.fim}
+      onAplicarPersonalizado={(inicio, fim) => {
+        setDatasPersonalizadas({ inicio, fim })
+        setPeriodo('personalizado')
+      }}
+      tema={tema}
+      onAlternarTema={onAlternarTema}
+    />
+  )
+
   if (carregando) {
-    return <StatusMessage texto="Carregando dados do clima..." />
+    return (
+      <div className={styles.pagina}>
+        {cabecalho}
+        <StatusMessage texto="Carregando dados do clima..." />
+      </div>
+    )
   }
 
   if (erro) {
-    return <StatusMessage texto={erro} />
+    return (
+      <div className={styles.pagina}>
+        {cabecalho}
+        <StatusMessage texto={erro} />
+      </div>
+    )
   }
 
   if (!leituraAtual) {
-    return <StatusMessage texto="Nenhuma leitura cadastrada ainda." />
+    return (
+      <div className={styles.pagina}>
+        {cabecalho}
+        <StatusMessage texto="Nenhuma leitura cadastrada ainda." />
+      </div>
+    )
   }
 
-  const IconeClima = tema === 'dia' ? CloudSun : CloudMoon
-  const IconeCondicao = tema === 'dia' ? Sun : Moon
-
   return (
-    <div className={styles.dashboard} data-theme={tema}>
-      <div className={styles.fundoDia} aria-hidden="true" />
-      <div className={styles.fundoNoite} aria-hidden="true" />
+    <div className={styles.pagina}>
+      {cabecalho}
 
-      <div className={styles.pagina}>
-        <header className={styles.cabecalho}>
-          <div className={styles.marca}>
-            <IconeClima size={28} className={styles.iconeClima} />
-            <span className={styles.tituloMarca}>Monitoramento Meteorológico</span>
-          </div>
-          <div className={styles.acoesCabecalho}>
-            <StatusBadge sensorId={leituraAtual.sensor_id} />
-            <ThemeToggle tema={tema} onAlternar={alternarTema} />
-          </div>
-        </header>
-
-        <section className={styles.painelPrincipal}>
-          <div className={styles.colunaTemperatura}>
-            <TemperatureDisplay
-              temperatura={leituraAtual.temperatura}
-              condicao={obterCondicaoClima(leituraAtual.temperatura)}
-              icone={IconeCondicao}
-            />
-            <div className={styles.infoGrid}>
-              <InfoCard icone={Droplet} rotulo="Umidade" valor={`${leituraAtual.umidade}%`} />
-              <InfoCard icone={Wifi} rotulo="Sensor" valor={leituraAtual.sensor_id} />
-              <InfoCard
-                icone={Clock}
-                rotulo="Última atualização"
-                valor={formatarHorario(leituraAtual.data_hora)}
-              />
-            </div>
-          </div>
-
-          <div className={styles.colunaGrafico}>
-            <WeatherChart dados={dadosGraficoHoje} />
-          </div>
-        </section>
-
-        <PeriodFilter
-          periodo={periodo}
-          onEscolherPeriodo={setPeriodo}
-          dataInicio={datasPersonalizadas.inicio}
-          dataFim={datasPersonalizadas.fim}
-          onAplicarPersonalizado={(inicio, fim) => {
-            setDatasPersonalizadas({ inicio, fim })
-            setPeriodo('personalizado')
-          }}
+      <div className={styles.cardsPrincipais}>
+        <SummaryStatCard
+          icone={Thermometer}
+          cor="var(--color-accent)"
+          rotulo="Temperatura média"
+          valor={`${resumo.temperaturaMedia}°C`}
+          legenda={formatarLegendaComparativa(resumo.deltaTemperaturaMedia, '°C')}
+          tendencia={
+            resumo.deltaTemperaturaMedia == null
+              ? undefined
+              : resumo.deltaTemperaturaMedia >= 0
+                ? 'alta'
+                : 'baixa'
+          }
         />
-
-        <section className={styles.blocoResumo}>
-          <h2 className={styles.tituloSecao}>Resumo do período selecionado</h2>
-
-          {resumo ? (
-            <div className={styles.resumoGrid}>
-              <SummaryStatCard
-                icone={Thermometer}
-                cor="var(--color-media)"
-                rotulo="Temperatura média"
-                valor={`${resumo.temperaturaMedia}°C`}
-                legenda={formatarLegendaComparativa(resumo.deltaTemperaturaMedia, '°C')}
-                tendencia={
-                  resumo.deltaTemperaturaMedia == null
-                    ? undefined
-                    : resumo.deltaTemperaturaMedia >= 0
-                      ? 'alta'
-                      : 'baixa'
-                }
-              />
-              <SummaryStatCard
-                icone={ThermometerSun}
-                cor="var(--color-maxima)"
-                rotulo="Temperatura máxima"
-                valor={`${resumo.temperaturaMaxima}°C`}
-                legenda={formatarDataHoraCurta(resumo.temperaturaMaximaHorario)}
-              />
-              <SummaryStatCard
-                icone={ThermometerSnowflake}
-                cor="var(--color-minima)"
-                rotulo="Temperatura mínima"
-                valor={`${resumo.temperaturaMinima}°C`}
-                legenda={formatarDataHoraCurta(resumo.temperaturaMinimaHorario)}
-              />
-              <SummaryStatCard
-                icone={Droplets}
-                cor="var(--color-umidade)"
-                rotulo="Umidade média"
-                valor={`${resumo.umidadeMedia}%`}
-                legenda={formatarLegendaComparativa(resumo.deltaUmidadeMedia, '%')}
-                tendencia={
-                  resumo.deltaUmidadeMedia == null
-                    ? undefined
-                    : resumo.deltaUmidadeMedia >= 0
-                      ? 'alta'
-                      : 'baixa'
-                }
-              />
-            </div>
-          ) : (
-            <p className={styles.semDados}>Nenhuma leitura encontrada no período selecionado.</p>
-          )}
-        </section>
-
-        <section className={styles.grid2Colunas}>
-          <HistoryTable dias={diasComRotulo} />
-          <TemperatureBarChart dados={diasComRotulo} />
-        </section>
-
-        <section className={styles.grid2Colunas}>
-          <HumidityLineChart dados={diasComRotulo} />
-          <MinMaxLineChart dados={diasComRotulo} />
-        </section>
-
-        <footer className={styles.rodape}>
-          Dados em tempo real coletados pelo seu dispositivo
-          <span className={styles.pontoRodape} />
-        </footer>
+        <SummaryStatCard
+          icone={Droplets}
+          cor="var(--color-accent)"
+          rotulo="Umidade média"
+          valor={`${resumo.umidadeMedia}%`}
+          legenda={formatarLegendaComparativa(resumo.deltaUmidadeMedia, '%')}
+          tendencia={
+            resumo.deltaUmidadeMedia == null
+              ? undefined
+              : resumo.deltaUmidadeMedia >= 0
+                ? 'alta'
+                : 'baixa'
+          }
+        />
+        <SummaryStatCard
+          icone={Cpu}
+          cor="var(--color-accent)"
+          rotulo="Sensor"
+          valor={leituraAtual.sensor_id}
+          legenda={`Última atualização: ${formatarHorario(leituraAtual.data_hora)}`}
+        />
+        <SummaryStatCard
+          icone={Clock}
+          cor="var(--color-accent)"
+          rotulo="Última atualização"
+          valor={formatarHorario(leituraAtual.data_hora)}
+          legenda={formatarDataCurta(leituraAtual.data_hora)}
+        />
       </div>
+
+      <section className={styles.grid2Colunas}>
+        <WeatherChart dados={dadosGraficoHoje} />
+        <TemperatureBarChart dados={diasComRotulo} />
+      </section>
+
+      {resumo ? (
+        <section className={styles.resumoGrid}>
+          <SummaryStatCard
+            icone={Thermometer}
+            cor="var(--color-media)"
+            rotulo="Temperatura média"
+            valor={`${resumo.temperaturaMedia}°C`}
+            legenda={formatarLegendaComparativa(resumo.deltaTemperaturaMedia, '°C')}
+            tendencia={
+              resumo.deltaTemperaturaMedia == null
+                ? undefined
+                : resumo.deltaTemperaturaMedia >= 0
+                  ? 'alta'
+                  : 'baixa'
+            }
+          />
+          <SummaryStatCard
+            icone={ThermometerSun}
+            cor="var(--color-maxima)"
+            rotulo="Temperatura máxima"
+            valor={`${resumo.temperaturaMaxima}°C`}
+            legenda={formatarDataHoraCurta(resumo.temperaturaMaximaHorario)}
+          />
+          <SummaryStatCard
+            icone={ThermometerSnowflake}
+            cor="var(--color-minima)"
+            rotulo="Temperatura mínima"
+            valor={`${resumo.temperaturaMinima}°C`}
+            legenda={formatarDataHoraCurta(resumo.temperaturaMinimaHorario)}
+          />
+          <SummaryStatCard
+            icone={Droplets}
+            cor="var(--color-umidade)"
+            rotulo="Umidade média"
+            valor={`${resumo.umidadeMedia}%`}
+            legenda={formatarLegendaComparativa(resumo.deltaUmidadeMedia, '%')}
+            tendencia={
+              resumo.deltaUmidadeMedia == null
+                ? undefined
+                : resumo.deltaUmidadeMedia >= 0
+                  ? 'alta'
+                  : 'baixa'
+            }
+          />
+        </section>
+      ) : (
+        <p className={styles.semDados}>Nenhuma leitura encontrada no período selecionado.</p>
+      )}
+
+      <section className={styles.grid2Colunas}>
+        <HistoryTable dias={diasComRotulo} />
+        <MinMaxLineChart dados={diasComRotulo} />
+      </section>
+
+      <section className={styles.grid1Coluna}>
+        <HumidityLineChart dados={diasComRotulo} />
+      </section>
     </div>
   )
 }
