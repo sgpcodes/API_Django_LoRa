@@ -1,16 +1,19 @@
 .sidebar {
   position: sticky;
-  top: 0;
-  height: 100vh;
+  top: 1rem;
+  height: calc(100vh - 2rem);
   width: 240px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   background-color: var(--color-sidebar-bg);
-  border-right: 1px solid var(--color-sidebar-border);
+  border: 1px solid var(--color-sidebar-border);
+  border-radius: 20px;
+  box-shadow: var(--shadow-card);
+  margin: 1rem 0 1rem 1rem;
   padding: 1.5rem 1rem;
   box-sizing: border-box;
-  overflow: hidden;
+  overflow: visible;
   transition: width 0.25s ease, var(--transition-theme);
 }
 
@@ -18,36 +21,35 @@
   width: 84px;
 }
 
+.botaoRecolher {
+  position: absolute;
+  top: 1.75rem;
+  right: -13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--color-sidebar-border);
+  background-color: var(--color-card-bg);
+  color: var(--color-text-secondary);
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+  z-index: 1;
+  transition: var(--transition-theme), background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.botaoRecolher:hover {
+  color: var(--color-accent);
+  transform: scale(1.08);
+}
+
 .marca {
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0.5rem 0.75rem 2rem;
-}
-
-.botaoRecolher {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  align-self: flex-end;
-  width: 32px;
-  height: 32px;
-  margin: -0.5rem 0.25rem 1rem auto;
-  border-radius: 8px;
-  border: none;
-  background: none;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: var(--transition-theme), background-color 0.15s ease, color 0.15s ease;
-}
-
-.botaoRecolher:hover {
-  background-color: var(--color-sidebar-bg-ativo);
-}
-
-.sidebarRecolhida .botaoRecolher {
-  align-self: center;
-  margin: -0.5rem 0 1rem;
 }
 
 .logoMarca {
@@ -91,10 +93,26 @@
   padding-right: 0;
 }
 
+.iconeLink {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
 .linkAtivo {
-  background-color: var(--color-sidebar-bg-ativo);
-  color: var(--color-sidebar-text-ativo);
+  background-color: var(--color-pill-ativo-bg);
+  color: var(--color-pill-ativo-texto);
   font-weight: 600;
+}
+
+.linkAtivo:hover {
+  background-color: var(--color-pill-ativo-bg);
+}
+
+.linkAtivo .badgeOff {
+  background-color: rgba(255, 255, 255, 0.25);
+  color: inherit;
 }
 
 .rotuloLink {
