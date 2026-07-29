@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { LayoutGrid, Wifi, Settings, HelpCircle, LogOut, Sun, Moon } from 'lucide-react'
+import logoLacop from '../assets/lacop.png'
 import styles from './Sidebar.module.css'
 
 const ITENS_NAV = [
@@ -14,6 +15,7 @@ function Sidebar({ tema, onAlternarTema }) {
   return (
     <aside className={styles.sidebar}>
       <div className={styles.marca}>
+        <img src={logoLacop} alt="LACOP UFF" className={styles.logoMarca} />
         <span className={styles.nomeMarca}>LACOP UFF</span>
       </div>
 

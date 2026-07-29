@@ -49,9 +49,9 @@ function Header({
             className={styles.botaoPeriodo}
             onClick={() => setMenuAberto((aberto) => !aberto)}
           >
-            <Calendar size={16} />
+            <Calendar size={18} />
             {rotuloAtual}
-            <ChevronDown size={14} />
+            <ChevronDown size={16} />
           </button>
 
           {menuAberto && (

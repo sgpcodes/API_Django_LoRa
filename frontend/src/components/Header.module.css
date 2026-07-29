@@ -39,13 +39,13 @@
 .botaoPeriodo {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.55rem 0.9rem;
+  gap: 0.55rem;
+  padding: 0.7rem 1.1rem;
   border-radius: 12px;
   border: 1px solid var(--color-card-border);
   background-color: var(--color-card-bg);
   color: var(--color-text);
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   font-weight: 500;
   cursor: pointer;
   transition: var(--transition-theme);
@@ -59,7 +59,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
-  min-width: 180px;
+  min-width: 200px;
   padding: 0.5rem;
   border-radius: 12px;
   border: 1px solid var(--color-card-border);
@@ -69,12 +69,12 @@
 }
 
 .itemMenu {
-  padding: 0.5rem 0.6rem;
+  padding: 0.6rem 0.7rem;
   border-radius: 8px;
   border: none;
   background: none;
   text-align: left;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   color: var(--color-text);
   cursor: pointer;
   transition: var(--transition-theme), background-color 0.15s ease;

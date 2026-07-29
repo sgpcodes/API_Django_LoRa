@@ -16,7 +16,15 @@
 .marca {
   display: flex;
   align-items: center;
+  gap: 0.6rem;
   padding: 0.5rem 0.75rem 2rem;
+}
+
+.logoMarca {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .nomeMarca {
