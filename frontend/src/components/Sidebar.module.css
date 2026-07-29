@@ -149,8 +149,8 @@
   letter-spacing: 0.03em;
   padding: 0.15rem 0.4rem;
   border-radius: 6px;
-  background-color: rgba(20, 40, 80, 0.14);
-  color: rgba(20, 40, 80, 0.8);
+  background-color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.9);
   flex-shrink: 0;
   transition: var(--transition-theme);
 }
@@ -178,7 +178,7 @@
   gap: 0.5rem;
   padding: 0.3rem;
   border-radius: 12px;
-  background-color: rgba(20, 40, 80, 0.1);
+  background-color: rgba(255, 255, 255, 0.14);
   transition: var(--transition-theme);
 }
 
@@ -191,7 +191,7 @@
   border-radius: 9px;
   border: none;
   background: none;
-  color: rgba(20, 40, 80, 0.65);
+  color: rgba(255, 255, 255, 0.75);
   cursor: pointer;
   transition: var(--transition-theme), background-color 0.15s ease, color 0.15s ease;
 }
@@ -203,7 +203,7 @@
 
 .temaRotulo {
   font-size: 0.75rem;
-  color: rgba(20, 40, 80, 0.65);
+  color: rgba(255, 255, 255, 0.75);
   transition: var(--transition-theme);
 }
 
