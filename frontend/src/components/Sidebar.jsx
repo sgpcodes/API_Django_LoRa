@@ -16,7 +16,6 @@ function Sidebar({ tema, onAlternarTema }) {
     <aside className={styles.sidebar}>
       <div className={styles.marca}>
         <img src={logoLacop} alt="LACOP UFF" className={styles.logoMarca} />
-        <span className={styles.nomeMarca}>LACOP UFF</span>
       </div>
 
       <nav className={styles.nav}>
