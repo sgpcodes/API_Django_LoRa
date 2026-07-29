@@ -20,8 +20,9 @@
 
 .botaoRecolher {
   position: absolute;
-  top: 1.5rem;
+  top: 50%;
   right: -13px;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -39,7 +40,7 @@
 
 .botaoRecolher:hover {
   color: var(--color-accent);
-  transform: scale(1.08);
+  transform: translateY(-50%) scale(1.08);
 }
 
 .marca {
@@ -53,20 +54,29 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  padding: 0.85rem;
-  border-radius: 16px;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
   background-color: var(--color-card-bg);
   box-shadow: var(--shadow-card);
   box-sizing: border-box;
-  transition: var(--transition-theme);
+  transition: var(--transition-theme), width 0.25s ease, height 0.25s ease;
 }
 
 .logoMarca {
   width: 100%;
-  max-width: 130px;
+  max-width: 66px;
   height: auto;
   object-fit: contain;
+}
+
+.sidebarRecolhida .logoFundo {
+  width: 52px;
+  height: 52px;
+}
+
+.sidebarRecolhida .logoMarca {
+  max-width: 34px;
 }
 
 .nav {
@@ -139,8 +149,8 @@
   letter-spacing: 0.03em;
   padding: 0.15rem 0.4rem;
   border-radius: 6px;
-  background-color: rgba(255, 255, 255, 0.18);
-  color: rgba(255, 255, 255, 0.85);
+  background-color: rgba(20, 40, 80, 0.14);
+  color: rgba(20, 40, 80, 0.8);
   flex-shrink: 0;
   transition: var(--transition-theme);
 }
@@ -168,7 +178,7 @@
   gap: 0.5rem;
   padding: 0.3rem;
   border-radius: 12px;
-  background-color: rgba(255, 255, 255, 0.12);
+  background-color: rgba(20, 40, 80, 0.1);
   transition: var(--transition-theme);
 }
 
@@ -181,7 +191,7 @@
   border-radius: 9px;
   border: none;
   background: none;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(20, 40, 80, 0.65);
   cursor: pointer;
   transition: var(--transition-theme), background-color 0.15s ease, color 0.15s ease;
 }
@@ -193,7 +203,7 @@
 
 .temaRotulo {
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(20, 40, 80, 0.65);
   transition: var(--transition-theme);
 }
 
