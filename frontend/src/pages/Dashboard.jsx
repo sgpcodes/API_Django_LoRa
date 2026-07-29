@@ -174,10 +174,14 @@ function Dashboard() {
           icone={Thermometer}
           cor="var(--color-accent)"
           rotulo="Temperatura média"
-          valor={`${resumo.temperaturaMedia}°C`}
-          legenda={formatarLegendaComparativa(resumo.deltaTemperaturaMedia, '°C')}
+          valor={resumo ? `${resumo.temperaturaMedia}°C` : '—'}
+          legenda={
+            resumo
+              ? formatarLegendaComparativa(resumo.deltaTemperaturaMedia, '°C')
+              : 'Sem leituras no período selecionado'
+          }
           tendencia={
-            resumo.deltaTemperaturaMedia == null
+            resumo?.deltaTemperaturaMedia == null
               ? undefined
               : resumo.deltaTemperaturaMedia >= 0
                 ? 'alta'
@@ -188,10 +192,14 @@ function Dashboard() {
           icone={Droplets}
           cor="var(--color-accent)"
           rotulo="Umidade média"
-          valor={`${resumo.umidadeMedia}%`}
-          legenda={formatarLegendaComparativa(resumo.deltaUmidadeMedia, '%')}
+          valor={resumo ? `${resumo.umidadeMedia}%` : '—'}
+          legenda={
+            resumo
+              ? formatarLegendaComparativa(resumo.deltaUmidadeMedia, '%')
+              : 'Sem leituras no período selecionado'
+          }
           tendencia={
-            resumo.deltaUmidadeMedia == null
+            resumo?.deltaUmidadeMedia == null
               ? undefined
               : resumo.deltaUmidadeMedia >= 0
                 ? 'alta'
