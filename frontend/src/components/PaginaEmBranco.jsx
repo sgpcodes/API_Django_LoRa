@@ -1,7 +1,7 @@
 import styles from './PaginaEmBranco.module.css'
 
 // Placeholder para páginas que já têm um lugar no menu, mas cujo conteúdo
-// ainda vai ser definido (Dados do LoRa, Configurações).
+// ainda vai ser definido (Dados do LoRa, Perfil).
 function PaginaEmBranco({ icone: Icone, titulo }) {
   return (
     <div className={styles.container}>

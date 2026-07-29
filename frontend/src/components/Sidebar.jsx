@@ -1,22 +1,35 @@
+import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { LayoutGrid, Wifi, Settings, HelpCircle, LogOut, Sun, Moon } from 'lucide-react'
+import { LayoutGrid, Wifi, User, HelpCircle, LogOut, Sun, Moon, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import logoLacop from '../assets/lacop.png'
 import styles from './Sidebar.module.css'
 
 const ITENS_NAV = [
   { to: '/', rotulo: 'Dashboard', icone: LayoutGrid, fim: true },
   { to: '/dados-lora', rotulo: 'Dados do LoRa', icone: Wifi, badge: 'OFF' },
-  { to: '/configuracoes', rotulo: 'Configurações', icone: Settings },
+  { to: '/perfil', rotulo: 'Perfil', icone: User },
 ]
 
 // Menu lateral fixo: navegação entre as páginas, e atalho de tema no rodapé.
-// "Dados do LoRa" e "Configurações" ainda não têm conteúdo (páginas em branco).
+// Pode ser recolhida (fica só com os ícones, que continuam clicáveis).
+// "Dados do LoRa" e "Perfil" ainda não têm conteúdo (páginas em branco).
 function Sidebar({ tema, onAlternarTema }) {
+  const [recolhida, setRecolhida] = useState(false)
+
   return (
-    <aside className={styles.sidebar}>
+    <aside className={`${styles.sidebar} ${recolhida ? styles.sidebarRecolhida : ''}`}>
       <div className={styles.marca}>
         <img src={logoLacop} alt="LACOP UFF" className={styles.logoMarca} />
       </div>
+
+      <button
+        type="button"
+        className={styles.botaoRecolher}
+        onClick={() => setRecolhida((atual) => !atual)}
+        aria-label={recolhida ? 'Expandir menu' : 'Recolher menu'}
+      >
+        {recolhida ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+      </button>
 
       <nav className={styles.nav}>
         {ITENS_NAV.map((item) => (
@@ -24,6 +37,7 @@ function Sidebar({ tema, onAlternarTema }) {
             key={item.to}
             to={item.to}
             end={item.fim}
+            title={item.rotulo}
             className={({ isActive }) => `${styles.link} ${isActive ? styles.linkAtivo : ''}`}
           >
             <item.icone size={18} />
@@ -34,11 +48,11 @@ function Sidebar({ tema, onAlternarTema }) {
       </nav>
 
       <div className={styles.rodape}>
-        <button type="button" className={styles.link}>
+        <button type="button" className={styles.link} title="Ajuda">
           <HelpCircle size={18} />
           <span className={styles.rotuloLink}>Ajuda</span>
         </button>
-        <button type="button" className={styles.link}>
+        <button type="button" className={styles.link} title="Sair">
           <LogOut size={18} />
           <span className={styles.rotuloLink}>Sair</span>
         </button>

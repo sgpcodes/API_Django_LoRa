@@ -11,7 +11,7 @@ import styles from './AppLayout.module.css'
 const INTERVALO_VERIFICACAO_TEMA_MS = 60_000
 
 // Casca fixa do app: menu lateral + área de conteúdo, onde cada página
-// (Dashboard, Dados do LoRa, Configurações) é renderizada via <Outlet />.
+// (Dashboard, Dados do LoRa, Perfil) é renderizada via <Outlet />.
 // O tema é controlado aqui porque tanto a sidebar quanto o cabeçalho de
 // cada página precisam dele.
 function AppLayout() {

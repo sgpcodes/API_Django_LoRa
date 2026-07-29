@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import AppLayout from './components/AppLayout'
 import Dashboard from './pages/Dashboard'
 import DadosLora from './pages/DadosLora'
-import Configuracoes from './pages/Configuracoes'
+import Perfil from './pages/Perfil'
 
 function App() {
   return (
@@ -11,7 +11,7 @@ function App() {
         <Route element={<AppLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="dados-lora" element={<DadosLora />} />
-          <Route path="configuracoes" element={<Configuracoes />} />
+          <Route path="perfil" element={<Perfil />} />
         </Route>
       </Routes>
     </BrowserRouter>

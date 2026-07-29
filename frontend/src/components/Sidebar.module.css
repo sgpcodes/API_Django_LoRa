@@ -10,7 +10,12 @@
   border-right: 1px solid var(--color-sidebar-border);
   padding: 1.5rem 1rem;
   box-sizing: border-box;
-  transition: var(--transition-theme);
+  overflow: hidden;
+  transition: width 0.25s ease, var(--transition-theme);
+}
+
+.sidebarRecolhida {
+  width: 84px;
 }
 
 .marca {
@@ -18,6 +23,31 @@
   align-items: center;
   justify-content: center;
   padding: 0.5rem 0.75rem 2rem;
+}
+
+.botaoRecolher {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-end;
+  width: 32px;
+  height: 32px;
+  margin: -0.5rem 0.25rem 1rem auto;
+  border-radius: 8px;
+  border: none;
+  background: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: var(--transition-theme), background-color 0.15s ease, color 0.15s ease;
+}
+
+.botaoRecolher:hover {
+  background-color: var(--color-sidebar-bg-ativo);
+}
+
+.sidebarRecolhida .botaoRecolher {
+  align-self: center;
+  margin: -0.5rem 0 1rem;
 }
 
 .logoMarca {
@@ -53,6 +83,12 @@
 
 .link:hover {
   background-color: var(--color-sidebar-bg-ativo);
+}
+
+.sidebarRecolhida .link {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .linkAtivo {
@@ -129,6 +165,16 @@
   font-size: 0.75rem;
   color: var(--color-text-secondary);
   transition: var(--transition-theme);
+}
+
+.sidebarRecolhida .rotuloLink,
+.sidebarRecolhida .badgeOff,
+.sidebarRecolhida .temaRotulo {
+  display: none;
+}
+
+.sidebarRecolhida .temaBotoes {
+  flex-direction: column;
 }
 
 @media (max-width: 900px) {
