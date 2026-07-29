@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { LayoutGrid, Wifi, User, HelpCircle, LogOut, Sun, Moon, ChevronLeft } from 'lucide-react'
+import { LayoutGrid, Wifi, User, HelpCircle, LogOut, Sun, Moon, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import logoLacop from '../assets/lacop.png'
 import styles from './Sidebar.module.css'
 
@@ -11,36 +11,25 @@ const ITENS_NAV = [
 ]
 
 // Menu lateral fixo: navegação entre as páginas, e atalho de tema no rodapé.
-// Pode ser recolhida (fica só com os ícones). Recolhe pela seta na borda;
-// para abrir de novo, clica em qualquer parte do item de menu que não seja
-// o ícone (clicar no ícone sempre navega, mesmo recolhida).
+// Pode ser recolhida (fica só com os ícones, que continuam clicáveis).
 // "Dados do LoRa" e "Perfil" ainda não têm conteúdo (páginas em branco).
 function Sidebar({ tema, onAlternarTema }) {
   const [recolhida, setRecolhida] = useState(false)
 
-  function aoClicarItem(evento) {
-    if (recolhida && !evento.target.closest(`.${styles.iconeLink}`)) {
-      evento.preventDefault()
-      setRecolhida(false)
-    }
-  }
-
   return (
     <aside className={`${styles.sidebar} ${recolhida ? styles.sidebarRecolhida : ''}`}>
-      {!recolhida && (
-        <button
-          type="button"
-          className={styles.setaFechar}
-          onClick={() => setRecolhida(true)}
-          aria-label="Recolher menu"
-        >
-          <ChevronLeft size={14} />
-        </button>
-      )}
-
       <div className={styles.marca}>
         <img src={logoLacop} alt="LACOP UFF" className={styles.logoMarca} />
       </div>
+
+      <button
+        type="button"
+        className={styles.botaoRecolher}
+        onClick={() => setRecolhida((atual) => !atual)}
+        aria-label={recolhida ? 'Expandir menu' : 'Recolher menu'}
+      >
+        {recolhida ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+      </button>
 
       <nav className={styles.nav}>
         {ITENS_NAV.map((item) => (
@@ -49,12 +38,9 @@ function Sidebar({ tema, onAlternarTema }) {
             to={item.to}
             end={item.fim}
             title={item.rotulo}
-            onClick={aoClicarItem}
             className={({ isActive }) => `${styles.link} ${isActive ? styles.linkAtivo : ''}`}
           >
-            <span className={styles.iconeLink}>
-              <item.icone size={18} />
-            </span>
+            <item.icone size={18} />
             <span className={styles.rotuloLink}>{item.rotulo}</span>
             {item.badge && <span className={styles.badgeOff}>{item.badge}</span>}
           </NavLink>

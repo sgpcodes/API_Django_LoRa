@@ -1,7 +1,7 @@
 .sidebar {
   position: sticky;
   top: 0;
-  height: 100%;
+  height: 100vh;
   width: 240px;
   flex-shrink: 0;
   display: flex;
@@ -10,6 +10,7 @@
   border-right: 1px solid var(--color-sidebar-border);
   padding: 1.5rem 1rem;
   box-sizing: border-box;
+  overflow: hidden;
   transition: width 0.25s ease, var(--transition-theme);
 }
 
@@ -17,34 +18,36 @@
   width: 84px;
 }
 
-.setaFechar {
-  position: absolute;
-  top: 1.75rem;
-  right: -12px;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  border: 1px solid var(--color-sidebar-border);
-  background-color: var(--color-sidebar-bg);
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  z-index: 5;
-  transition: var(--transition-theme), background-color 0.15s ease, color 0.15s ease;
-}
-
-.setaFechar:hover {
-  background-color: var(--color-sidebar-bg-ativo);
-  color: var(--color-sidebar-text-ativo);
-}
-
 .marca {
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0.5rem 0.75rem 2rem;
+}
+
+.botaoRecolher {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-end;
+  width: 32px;
+  height: 32px;
+  margin: -0.5rem 0.25rem 1rem auto;
+  border-radius: 8px;
+  border: none;
+  background: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: var(--transition-theme), background-color 0.15s ease, color 0.15s ease;
+}
+
+.botaoRecolher:hover {
+  background-color: var(--color-sidebar-bg-ativo);
+}
+
+.sidebarRecolhida .botaoRecolher {
+  align-self: center;
+  margin: -0.5rem 0 1rem;
 }
 
 .logoMarca {
@@ -86,13 +89,6 @@
   justify-content: center;
   padding-left: 0;
   padding-right: 0;
-}
-
-.iconeLink {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
 }
 
 .linkAtivo {
