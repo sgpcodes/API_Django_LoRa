@@ -11,7 +11,6 @@ import HumidityLineChart from '../components/HumidityLineChart'
 import MinMaxLineChart from '../components/MinMaxLineChart'
 import {
   buscarLeituras,
-  filtrarLeiturasDeHoje,
   agruparMediaPorHora,
   obterLeituraMaisRecente,
   obterIntervaloPeriodo,
@@ -96,15 +95,15 @@ function Dashboard() {
 
   const leituraAtual = useMemo(() => obterLeituraMaisRecente(leituras), [leituras])
 
-  const dadosGraficoHoje = useMemo(() => {
-    const leiturasDeHoje = filtrarLeiturasDeHoje(leituras)
-    return agruparMediaPorHora(leiturasDeHoje)
-  }, [leituras])
-
   const intervaloSelecionado = useMemo(
     () => obterIntervaloPeriodo(periodo, datasPersonalizadas),
     [periodo, datasPersonalizadas]
   )
+
+  const dadosGraficoPorHora = useMemo(() => {
+    const leiturasDoPeriodo = filtrarPorPeriodo(leituras, intervaloSelecionado)
+    return agruparMediaPorHora(leiturasDoPeriodo)
+  }, [leituras, intervaloSelecionado])
 
   const resumo = useMemo(() => {
     const leiturasDoPeriodo = filtrarPorPeriodo(leituras, intervaloSelecionado)
@@ -223,7 +222,7 @@ function Dashboard() {
       </div>
 
       <section className={styles.grid2Colunas}>
-        <WeatherChart dados={dadosGraficoHoje} />
+        <WeatherChart dados={dadosGraficoPorHora} />
         <TemperatureBarChart dados={diasComRotulo} />
       </section>
 

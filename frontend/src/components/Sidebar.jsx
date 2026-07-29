@@ -36,7 +36,9 @@ function Sidebar({ tema, onAlternarTema }) {
       </button>
 
       <div className={styles.marca}>
-        <img src={logoLacop} alt="LACOP UFF" className={styles.logoMarca} />
+        <div className={styles.logoFundo}>
+          <img src={logoLacop} alt="LACOP UFF" className={styles.logoMarca} />
+        </div>
       </div>
 
       <nav className={styles.nav}>

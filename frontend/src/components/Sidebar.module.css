@@ -1,17 +1,14 @@
 .sidebar {
   position: sticky;
-  top: 1rem;
-  height: calc(100vh - 2rem);
+  top: 0;
+  height: 100vh;
   width: 240px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   background-color: var(--color-sidebar-bg);
-  border: 1px solid var(--color-sidebar-border);
-  border-radius: 20px;
-  box-shadow: var(--shadow-card);
-  margin: 1rem 0 1rem 1rem;
-  padding: 1.5rem 1rem;
+  border-right: 1px solid var(--color-sidebar-border);
+  padding: 1.25rem 1rem;
   box-sizing: border-box;
   overflow: visible;
   transition: width 0.25s ease, var(--transition-theme);
@@ -23,7 +20,7 @@
 
 .botaoRecolher {
   position: absolute;
-  top: 1.75rem;
+  top: 1.5rem;
   right: -13px;
   display: flex;
   align-items: center;
@@ -31,7 +28,7 @@
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  border: 1px solid var(--color-sidebar-border);
+  border: 1px solid var(--color-card-border);
   background-color: var(--color-card-bg);
   color: var(--color-text-secondary);
   box-shadow: var(--shadow-card);
@@ -49,12 +46,25 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0.5rem 0.75rem 2rem;
+  padding: 0.25rem 0 1.25rem;
+}
+
+.logoFundo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0.85rem;
+  border-radius: 16px;
+  background-color: var(--color-card-bg);
+  box-shadow: var(--shadow-card);
+  box-sizing: border-box;
+  transition: var(--transition-theme);
 }
 
 .logoMarca {
   width: 100%;
-  max-width: 160px;
+  max-width: 130px;
   height: auto;
   object-fit: contain;
 }
@@ -101,18 +111,18 @@
 }
 
 .linkAtivo {
-  background-color: var(--color-pill-ativo-bg);
-  color: var(--color-pill-ativo-texto);
+  background-color: var(--color-card-bg);
+  color: var(--color-sidebar-text-ativo);
   font-weight: 600;
 }
 
 .linkAtivo:hover {
-  background-color: var(--color-pill-ativo-bg);
+  background-color: var(--color-card-bg);
 }
 
 .linkAtivo .badgeOff {
-  background-color: rgba(255, 255, 255, 0.25);
-  color: inherit;
+  background-color: var(--color-sidebar-text-ativo);
+  color: var(--color-card-bg);
 }
 
 .rotuloLink {
@@ -129,9 +139,10 @@
   letter-spacing: 0.03em;
   padding: 0.15rem 0.4rem;
   border-radius: 6px;
-  background-color: var(--color-badge-off-bg);
-  color: var(--color-badge-off-texto);
+  background-color: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.85);
   flex-shrink: 0;
+  transition: var(--transition-theme);
 }
 
 .rodape {
@@ -157,7 +168,8 @@
   gap: 0.5rem;
   padding: 0.3rem;
   border-radius: 12px;
-  background-color: var(--color-pill-bg);
+  background-color: rgba(255, 255, 255, 0.12);
+  transition: var(--transition-theme);
 }
 
 .temaBotao {
@@ -169,19 +181,19 @@
   border-radius: 9px;
   border: none;
   background: none;
-  color: var(--color-text-secondary);
+  color: rgba(255, 255, 255, 0.7);
   cursor: pointer;
   transition: var(--transition-theme), background-color 0.15s ease, color 0.15s ease;
 }
 
 .temaBotaoAtivo {
-  background-color: var(--color-accent);
-  color: white;
+  background-color: var(--color-card-bg);
+  color: var(--color-sidebar-text-ativo);
 }
 
 .temaRotulo {
   font-size: 0.75rem;
-  color: var(--color-text-secondary);
+  color: rgba(255, 255, 255, 0.7);
   transition: var(--transition-theme);
 }
 

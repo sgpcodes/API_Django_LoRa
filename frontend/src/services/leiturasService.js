@@ -14,14 +14,6 @@ function media(numeros) {
   return Number((soma / numeros.length).toFixed(1))
 }
 
-// Mantém apenas as leituras feitas no dia de hoje.
-export function filtrarLeiturasDeHoje(leituras) {
-  const hoje = new Date().toDateString()
-  return leituras.filter(
-    (leitura) => new Date(leitura.data_hora).toDateString() === hoje
-  )
-}
-
 // O ESP32 envia uma leitura por minuto, mas o gráfico deve mostrar apenas
 // a média de temperatura de cada hora (00h, 01h, 02h...), então agrupamos
 // as leituras por hora e calculamos a média de cada grupo.
