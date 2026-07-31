@@ -75,6 +75,13 @@
   color: var(--color-status-offline);
 }
 
+.acaoAnalisar {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+}
+
 .botaoAnalisar {
   display: flex;
   align-items: center;
@@ -89,6 +96,12 @@
   cursor: pointer;
   white-space: nowrap;
   transition: var(--transition-theme), opacity 0.15s ease;
+}
+
+.dicaEspera {
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+  transition: var(--transition-theme);
 }
 
 .botaoAnalisar:disabled {

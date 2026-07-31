@@ -46,15 +46,18 @@ function DispositivoLoraCard({ leitura, analisando, erroAnalise, onAnalisar }) {
           </div>
         </div>
 
-        <button
-          type="button"
-          className={styles.botaoAnalisar}
-          onClick={onAnalisar}
-          disabled={analisando}
-        >
-          <RefreshCw size={15} className={analisando ? styles.iconeGirando : undefined} />
-          {analisando ? 'Aguardando o sensor…' : 'Analisar'}
-        </button>
+        <div className={styles.acaoAnalisar}>
+          <button
+            type="button"
+            className={styles.botaoAnalisar}
+            onClick={onAnalisar}
+            disabled={analisando}
+          >
+            <RefreshCw size={15} className={analisando ? styles.iconeGirando : undefined} />
+            {analisando ? 'Aguardando resposta…' : 'Analisar'}
+          </button>
+          {analisando && <span className={styles.dicaEspera}>Pode levar até 1 min</span>}
+        </div>
       </div>
 
       <div className={styles.metricas}>

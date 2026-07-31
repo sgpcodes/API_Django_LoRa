@@ -16,9 +16,10 @@ import styles from './DadosLora.module.css'
 const INTERVALO_ATUALIZACAO_MS = 60_000
 
 // Enquanto espera a resposta de uma análise, confere com esse intervalo se
-// o pedido pendente já foi atendido — não precisa ser rápido, já que o
-// ESP32 só consulta o rádio uma vez por minuto.
-const INTERVALO_POLL_ANALISE_MS = 5_000
+// o pedido pendente já foi atendido. O gargalo real é o check-in da ESP32
+// (~1 min), não esse polling — mas um intervalo curto evita atraso extra
+// perceptível depois que a resposta já chegou.
+const INTERVALO_POLL_ANALISE_MS = 2_500
 
 // Se passar disso sem resposta, desiste e avisa o usuário (pode ser que o
 // ESP32 esteja desligado/desconectado).
