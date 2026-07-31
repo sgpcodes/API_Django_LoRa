@@ -1,4 +1,5 @@
-import { Activity, Clock, Cpu, Radio, RefreshCw, SignalHigh } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Activity, ChevronDown, ChevronUp, Cpu, Radio, RefreshCw, SignalHigh } from 'lucide-react'
 import styles from './DispositivoLoraCard.module.css'
 
 // Depois de quanto tempo sem leitura o dispositivo é considerado offline —
@@ -16,10 +17,14 @@ function formatarDataHora(iso) {
   })
 }
 
-// Um dispositivo LoRa (por enquanto só a ESP32_01, mas cada sensor_id novo
-// que aparecer nas leituras vira um card aqui automaticamente — ver
-// obterUltimaLeituraPorSensor em services/leiturasService.js).
+// Um dispositivo LoRa por sensor_id (cada ESP32 novo que aparecer nas
+// leituras vira um card aqui automaticamente — ver obterUltimaLeituraPorSensor
+// em services/leiturasService.js). O corpo com RSSI/SNR e configuração fica
+// recolhido por padrão — só o essencial (nome, status, botão Analisar) fica
+// sempre visível, pra a lista continuar legível com vários dispositivos.
 function DispositivoLoraCard({ leitura, analisando, erroAnalise, onAnalisar }) {
+  const [detalhesAbertos, setDetalhesAbertos] = useState(false)
+
   const { sensor_id: sensorId, data_hora: dataHora, ultimaAnaliseRssi, ultimaConfiguracao } = leitura
   const online = Date.now() - new Date(dataHora).getTime() < LIMIAR_ONLINE_MS
   const uidRemoto = ultimaConfiguracao?.dados_adicionais?.uid_remoto
@@ -32,6 +37,12 @@ function DispositivoLoraCard({ leitura, analisando, erroAnalise, onAnalisar }) {
   const rssiVolta = dadosAdicionais?.rssi_volta
   const snrIda = dadosAdicionais?.snr_ida
   const snrVolta = dadosAdicionais?.snr_volta
+
+  // Ao clicar em "Analisar", abre os detalhes sozinho — sem isso, o
+  // resultado chegaria escondido atrás do "Detalhes" fechado.
+  useEffect(() => {
+    if (analisando) setDetalhesAbertos(true)
+  }, [analisando])
 
   return (
     <div className={styles.card}>
@@ -51,78 +62,105 @@ function DispositivoLoraCard({ leitura, analisando, erroAnalise, onAnalisar }) {
           </div>
         </div>
 
-        <div className={styles.acaoAnalisar}>
+        <div className={styles.acoesTopo}>
           <button
             type="button"
-            className={styles.botaoAnalisar}
-            onClick={onAnalisar}
-            disabled={analisando}
+            className={styles.botaoDetalhes}
+            onClick={() => setDetalhesAbertos((aberto) => !aberto)}
           >
-            <RefreshCw size={15} className={analisando ? styles.iconeGirando : undefined} />
-            {analisando ? 'Aguardando resposta…' : 'Analisar'}
+            {detalhesAbertos ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+            {detalhesAbertos ? 'Ocultar detalhes' : 'Detalhes'}
           </button>
-          {analisando && <span className={styles.dicaEspera}>Pode levar até 1 min</span>}
+
+          <div className={styles.acaoAnalisar}>
+            <button
+              type="button"
+              className={styles.botaoAnalisar}
+              onClick={onAnalisar}
+              disabled={analisando}
+            >
+              <RefreshCw size={15} className={analisando ? styles.iconeGirando : undefined} />
+              {analisando ? 'Aguardando resposta…' : 'Analisar'}
+            </button>
+            {analisando && <span className={styles.dicaEspera}>Pode levar até 1 min</span>}
+          </div>
         </div>
       </div>
-
-      <div className={styles.metricas}>
-        <div className={styles.metrica}>
-          <div className={styles.metricaCabecalho}>
-            <SignalHigh size={15} />
-            <span>RSSI</span>
-          </div>
-          <span className={styles.metricaValor}>{rssiIda != null ? `${rssiIda} dBm` : '—'}</span>
-        </div>
-
-        <div className={styles.metrica}>
-          <div className={styles.metricaCabecalho}>
-            <Activity size={15} />
-            <span>SNR</span>
-          </div>
-          <span className={styles.metricaValor}>{snrIda != null ? `${snrIda} dB` : '—'}</span>
-        </div>
-
-        {(rssiVolta != null || snrVolta != null) && (
-          <div className={styles.metrica}>
-            <div className={styles.metricaCabecalho}>
-              <Clock size={15} />
-              <span>Volta</span>
-            </div>
-            <span className={styles.metricaValor}>
-              {rssiVolta != null ? `${rssiVolta} dBm` : '—'} · {snrVolta != null ? `${snrVolta} dB` : '—'}
-            </span>
-            <span className={styles.metricaRotuloNeutro}>Sentido rádio → ESP32</span>
-          </div>
-        )}
-      </div>
-
-      {ultimaAnaliseRssi && (
-        <p className={styles.notaAnalise}>
-          Última análise: {formatarDataHora(ultimaAnaliseRssi.data_hora)}
-        </p>
-      )}
-
-      {uidRemoto && (
-        <div className={styles.configuracao}>
-          <div className={styles.configuracaoTitulo}>
-            <Radio size={14} />
-            <span>Configuração do dispositivo (Leitura remota 0xD4)</span>
-          </div>
-
-          <div className={styles.configuracaoGrid}>
-            <div className={styles.configuracaoCampo}>
-              <span className={styles.configuracaoRotulo}>ID do rádio</span>
-              <span className={styles.configuracaoValor}>{uidRemoto}</span>
-            </div>
-          </div>
-
-          <p className={styles.notaAnalise}>
-            Lido em: {formatarDataHora(ultimaConfiguracao.data_hora)}
-          </p>
-        </div>
-      )}
 
       {erroAnalise && <p className={styles.erro}>{erroAnalise}</p>}
+
+      {detalhesAbertos && (
+        <div className={styles.detalhes}>
+          <div className={styles.secaoTitulo}>
+            <SignalHigh size={14} />
+            <span>Qualidade do enlace</span>
+          </div>
+
+          <div className={styles.metricas}>
+            <div className={styles.metrica}>
+              <div className={styles.metricaCabecalho}>
+                <SignalHigh size={14} />
+                <span>RSSI · Ida</span>
+              </div>
+              <span className={styles.metricaValor}>{rssiIda != null ? `${rssiIda} dBm` : '—'}</span>
+              <span className={styles.metricaSentido}>ESP32 → rádio</span>
+            </div>
+
+            <div className={styles.metrica}>
+              <div className={styles.metricaCabecalho}>
+                <SignalHigh size={14} />
+                <span>RSSI · Volta</span>
+              </div>
+              <span className={styles.metricaValor}>{rssiVolta != null ? `${rssiVolta} dBm` : '—'}</span>
+              <span className={styles.metricaSentido}>rádio → ESP32</span>
+            </div>
+
+            <div className={styles.metrica}>
+              <div className={styles.metricaCabecalho}>
+                <Activity size={14} />
+                <span>SNR · Ida</span>
+              </div>
+              <span className={styles.metricaValor}>{snrIda != null ? `${snrIda} dB` : '—'}</span>
+              <span className={styles.metricaSentido}>ESP32 → rádio</span>
+            </div>
+
+            <div className={styles.metrica}>
+              <div className={styles.metricaCabecalho}>
+                <Activity size={14} />
+                <span>SNR · Volta</span>
+              </div>
+              <span className={styles.metricaValor}>{snrVolta != null ? `${snrVolta} dB` : '—'}</span>
+              <span className={styles.metricaSentido}>rádio → ESP32</span>
+            </div>
+          </div>
+
+          {ultimaAnaliseRssi && (
+            <p className={styles.notaAnalise}>
+              Última análise: {formatarDataHora(ultimaAnaliseRssi.data_hora)}
+            </p>
+          )}
+
+          {uidRemoto && (
+            <div className={styles.configuracao}>
+              <div className={styles.secaoTitulo}>
+                <Radio size={14} />
+                <span>Configuração do dispositivo (Leitura remota 0xD4)</span>
+              </div>
+
+              <div className={styles.configuracaoGrid}>
+                <div className={styles.configuracaoCampo}>
+                  <span className={styles.configuracaoRotulo}>ID do rádio</span>
+                  <span className={styles.configuracaoValor}>{uidRemoto}</span>
+                </div>
+              </div>
+
+              <p className={styles.notaAnalise}>
+                Lido em: {formatarDataHora(ultimaConfiguracao.data_hora)}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

@@ -75,6 +75,33 @@
   color: var(--color-status-offline);
 }
 
+.acoesTopo {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.botaoDetalhes {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 10px;
+  border: 1px solid var(--color-card-border);
+  background: none;
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: var(--transition-theme), background-color 0.15s ease, color 0.15s ease;
+}
+
+.botaoDetalhes:hover {
+  background-color: var(--color-pill-bg);
+  color: var(--color-text);
+}
+
 .acaoAnalisar {
   display: flex;
   flex-direction: column;
@@ -122,9 +149,28 @@
   }
 }
 
+.detalhes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-card-border);
+  transition: var(--transition-theme);
+}
+
+.secaoTitulo {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text);
+  transition: var(--transition-theme);
+}
+
 .metricas {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 0.75rem;
 }
 
@@ -157,8 +203,8 @@
   transition: var(--transition-theme);
 }
 
-.metricaRotuloNeutro {
-  font-size: 0.75rem;
+.metricaSentido {
+  font-size: 0.72rem;
   color: var(--color-text-secondary);
   transition: var(--transition-theme);
 }
@@ -174,18 +220,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
-  padding-top: 1rem;
+  padding-top: 0.75rem;
   border-top: 1px solid var(--color-card-border);
-  transition: var(--transition-theme);
-}
-
-.configuracaoTitulo {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--color-text);
   transition: var(--transition-theme);
 }
 
