@@ -1,0 +1,57 @@
+.pagina {
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.infoGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.infoCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  border-radius: 12px;
+  background-color: var(--color-pill-bg);
+  color: var(--color-accent);
+  transition: var(--transition-theme);
+}
+
+.infoCard strong {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--color-text);
+  transition: var(--transition-theme);
+}
+
+.infoCard p {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--color-text-secondary);
+  transition: var(--transition-theme);
+}
+
+.dispositivos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.semDados {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+}
+
+@media (max-width: 900px) {
+  .infoGrid {
+    grid-template-columns: 1fr;
+  }
+}

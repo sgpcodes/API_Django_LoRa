@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .views import LeituraDetailView, LeituraListCreateView
+from .views import LeituraDetailView, LeituraListCreateView, RssiSolicitarView, RssiStatusView
 
 urlpatterns = [
     # GET  /api/leituras/            -> lista todas (ou filtra com ?sensor_id=...)
@@ -13,4 +13,9 @@ urlpatterns = [
 
     # GET /api/leituras/<id>/        -> busca uma leitura pelo ID
     path('leituras/<str:leitura_id>/', LeituraDetailView.as_view(), name='leitura-detail'),
+
+    # GET  /api/rssi/status/         -> o ESP32 consulta a cada check-in se há pedido pendente
+    # POST /api/rssi/solicitar/      -> o botão "Analisar" do dashboard marca um pedido como pendente
+    path('rssi/status/', RssiStatusView.as_view(), name='rssi-status'),
+    path('rssi/solicitar/', RssiSolicitarView.as_view(), name='rssi-solicitar'),
 ]

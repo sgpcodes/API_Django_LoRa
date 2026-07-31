@@ -10,10 +10,13 @@ const OPCOES_PERIODO = [
   { valor: 'personalizado', rotulo: 'Personalizado' },
 ]
 
-// Cabeçalho fixo no topo do conteúdo: saudação, seletor de período (dropdown)
-// e as ações do usuário (notificações, perfil). O nome do usuário está fixo
-// por enquanto — o projeto ainda não tem sistema de login.
+// Cabeçalho fixo no topo do conteúdo: título da página, seletor de período
+// (dropdown — opcional, só aparece se onEscolherPeriodo for passado) e as
+// ações do usuário (tema, notificações, perfil). O nome do usuário está
+// fixo por enquanto — o projeto ainda não tem sistema de login.
 function Header({
+  titulo,
+  subtitulo,
   periodo,
   onEscolherPeriodo,
   dataInicio,
@@ -38,70 +41,72 @@ function Header({
   return (
     <header className={styles.cabecalho}>
       <div className={styles.boasVindas}>
-        <h1 className={styles.titulo}>Bem-vindo ao sistema de monitoramento meteorológico!</h1>
-        <p className={styles.subtitulo}>Acompanhe em tempo real os dados coletados pelos sensores.</p>
+        <h1 className={styles.titulo}>{titulo}</h1>
+        {subtitulo && <p className={styles.subtitulo}>{subtitulo}</p>}
       </div>
 
       <div className={styles.acoes}>
-        <div className={styles.seletorPeriodo}>
-          <button
-            type="button"
-            className={styles.botaoPeriodo}
-            onClick={() => setMenuAberto((aberto) => !aberto)}
-          >
-            <Calendar size={18} />
-            {rotuloAtual}
-            <ChevronDown size={16} />
-          </button>
+        {onEscolherPeriodo && (
+          <div className={styles.seletorPeriodo}>
+            <button
+              type="button"
+              className={styles.botaoPeriodo}
+              onClick={() => setMenuAberto((aberto) => !aberto)}
+            >
+              <Calendar size={18} />
+              {rotuloAtual}
+              <ChevronDown size={16} />
+            </button>
 
-          {menuAberto && (
-            <div className={styles.menuPeriodo}>
-              {OPCOES_PERIODO.map((opcao) => (
-                <button
-                  key={opcao.valor}
-                  type="button"
-                  className={`${styles.itemMenu} ${periodo === opcao.valor ? styles.itemMenuAtivo : ''}`}
-                  onClick={() => escolher(opcao.valor)}
-                >
-                  {opcao.rotulo}
-                </button>
-              ))}
-
-              {periodo === 'personalizado' && (
-                <div className={styles.personalizado}>
-                  <label className={styles.campoData}>
-                    <span>De</span>
-                    <input
-                      type="date"
-                      value={rascunhoInicio}
-                      max={rascunhoFim}
-                      onChange={(evento) => setRascunhoInicio(evento.target.value)}
-                    />
-                  </label>
-                  <label className={styles.campoData}>
-                    <span>Até</span>
-                    <input
-                      type="date"
-                      value={rascunhoFim}
-                      min={rascunhoInicio}
-                      onChange={(evento) => setRascunhoFim(evento.target.value)}
-                    />
-                  </label>
+            {menuAberto && (
+              <div className={styles.menuPeriodo}>
+                {OPCOES_PERIODO.map((opcao) => (
                   <button
+                    key={opcao.valor}
                     type="button"
-                    className={styles.botaoAplicar}
-                    onClick={() => {
-                      onAplicarPersonalizado(rascunhoInicio, rascunhoFim)
-                      setMenuAberto(false)
-                    }}
+                    className={`${styles.itemMenu} ${periodo === opcao.valor ? styles.itemMenuAtivo : ''}`}
+                    onClick={() => escolher(opcao.valor)}
                   >
-                    Aplicar
+                    {opcao.rotulo}
                   </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+                ))}
+
+                {periodo === 'personalizado' && (
+                  <div className={styles.personalizado}>
+                    <label className={styles.campoData}>
+                      <span>De</span>
+                      <input
+                        type="date"
+                        value={rascunhoInicio}
+                        max={rascunhoFim}
+                        onChange={(evento) => setRascunhoInicio(evento.target.value)}
+                      />
+                    </label>
+                    <label className={styles.campoData}>
+                      <span>Até</span>
+                      <input
+                        type="date"
+                        value={rascunhoFim}
+                        min={rascunhoInicio}
+                        onChange={(evento) => setRascunhoFim(evento.target.value)}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      className={styles.botaoAplicar}
+                      onClick={() => {
+                        onAplicarPersonalizado(rascunhoInicio, rascunhoFim)
+                        setMenuAberto(false)
+                      }}
+                    >
+                      Aplicar
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className={styles.temaBotoes}>
           <button

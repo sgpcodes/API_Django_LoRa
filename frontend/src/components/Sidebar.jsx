@@ -6,7 +6,7 @@ import styles from './Sidebar.module.css'
 
 const ITENS_NAV = [
   { to: '/', rotulo: 'Dashboard', icone: LayoutGrid, fim: true },
-  { to: '/dados-lora', rotulo: 'Dados do LoRa', icone: Wifi, badge: 'OFF' },
+  { to: '/dados-lora', rotulo: 'Dados do LoRa', icone: Wifi },
   { to: '/perfil', rotulo: 'Perfil', icone: User },
 ]
 

@@ -3,7 +3,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Leitura
+from .models import Leitura, SolicitacaoRssi
 from .serializers import LeituraSerializer
 
 
@@ -42,17 +42,44 @@ class LeituraListCreateView(APIView):
         serializer.is_valid(raise_exception=True)
 
         try:
-            Leitura.objects.create(**serializer.validated_data)
+            leitura = Leitura.objects.create(**serializer.validated_data)
         except DatabaseError:
             return Response(
                 {'status': 'error', 'message': 'Não foi possível salvar a leitura.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
+        # Se essa leitura veio com o resultado de uma análise de RSSI/SNR
+        # (rssi_ida em dados_adicionais), o pedido pendente foi atendido —
+        # limpa a flag para o ESP32 parar de consultar o rádio a cada ciclo.
+        if 'rssi_ida' in leitura.dados_adicionais:
+            solicitacao = SolicitacaoRssi.obter()
+            if solicitacao.pendente:
+                solicitacao.pendente = False
+                solicitacao.save(update_fields=['pendente', 'atualizado_em'])
+
         return Response(
             {'status': 'success', 'message': 'Leitura salva com sucesso.'},
             status=status.HTTP_201_CREATED,
         )
+
+
+class RssiStatusView(APIView):
+    """GET: o ESP32 consulta em cada check-in se há um pedido de análise pendente."""
+
+    def get(self, request):
+        solicitacao = SolicitacaoRssi.obter()
+        return Response({'pendente': solicitacao.pendente})
+
+
+class RssiSolicitarView(APIView):
+    """POST: o botão "Analisar" do dashboard chama isso para marcar um pedido como pendente."""
+
+    def post(self, request):
+        solicitacao = SolicitacaoRssi.obter()
+        solicitacao.pendente = True
+        solicitacao.save(update_fields=['pendente', 'atualizado_em'])
+        return Response({'status': 'success', 'pendente': True}, status=status.HTTP_201_CREATED)
 
 
 class LeituraDetailView(APIView):

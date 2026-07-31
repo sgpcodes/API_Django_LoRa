@@ -9,6 +9,38 @@ export async function buscarLeituras() {
   return resposta.data
 }
 
+// Pede para a ESP32 receptora consultar o rádio via LoRa (RSSI/SNR) no seu
+// próximo check-in e enviar o resultado junto da leitura seguinte.
+export async function solicitarAnaliseRssi() {
+  await api.post('/api/rssi/solicitar/')
+}
+
+// Diz se ainda há um pedido de análise de RSSI pendente — usado para saber
+// quando a ESP32 já respondeu, sem precisar ficar comparando leituras.
+export async function buscarStatusRssi() {
+  const resposta = await api.get('/api/rssi/status/')
+  return resposta.data.pendente
+}
+
+// Uma "linha" por sensor, com a leitura mais recente dele. Cada sensor_id
+// diferente vira um dispositivo na página de Dados do LoRa — então, quando
+// um novo ESP32 for conectado, ele aparece aqui sozinho, sem precisar mexer
+// no código.
+export function obterUltimaLeituraPorSensor(leituras) {
+  const maisRecentePorSensor = new Map()
+
+  leituras.forEach((leitura) => {
+    const atual = maisRecentePorSensor.get(leitura.sensor_id)
+    if (!atual || new Date(leitura.data_hora) > new Date(atual.data_hora)) {
+      maisRecentePorSensor.set(leitura.sensor_id, leitura)
+    }
+  })
+
+  return Array.from(maisRecentePorSensor.values()).sort((a, b) =>
+    a.sensor_id.localeCompare(b.sensor_id)
+  )
+}
+
 function media(numeros) {
   const soma = numeros.reduce((total, valor) => total + valor, 0)
   return Number((soma / numeros.length).toFixed(1))

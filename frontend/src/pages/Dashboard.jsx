@@ -124,6 +124,8 @@ function Dashboard() {
 
   const cabecalho = (
     <Header
+      titulo="Bem-vindo ao sistema de monitoramento meteorológico!"
+      subtitulo="Acompanhe em tempo real os dados coletados pelos sensores."
       periodo={periodo}
       onEscolherPeriodo={setPeriodo}
       dataInicio={datasPersonalizadas.inicio}
