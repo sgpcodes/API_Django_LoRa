@@ -65,7 +65,7 @@
 
 .logoMarca {
   width: 100%;
-  max-width: 66px;
+  max-width: 84px;
   height: auto;
   object-fit: contain;
 }
@@ -76,7 +76,7 @@
 }
 
 .sidebarRecolhida .logoMarca {
-  max-width: 34px;
+  max-width: 44px;
 }
 
 .nav {
