@@ -22,39 +22,58 @@ export async function buscarStatusRssi() {
   return resposta.data.pendente
 }
 
+// Por sensor, a leitura mais recente que tinha um dado específico em
+// dados_adicionais (ex.: "rssi_ida", "uid_remoto"). Usado para dados que não
+// vêm em toda leitura, mas que devem continuar aparecendo no dashboard até
+// um valor mais novo chegar, em vez de sumir no próximo check-in que não
+// trouxer esse campo.
+function ultimaLeituraComCampo(leituras, campo) {
+  const porSensor = new Map()
+
+  leituras.forEach((leitura) => {
+    if (leitura.dados_adicionais?.[campo] == null) return
+
+    const atual = porSensor.get(leitura.sensor_id)
+    if (!atual || new Date(leitura.data_hora) > new Date(atual.data_hora)) {
+      porSensor.set(leitura.sensor_id, leitura)
+    }
+  })
+
+  return porSensor
+}
+
 // Uma "linha" por sensor, com a leitura mais recente dele. Cada sensor_id
 // diferente vira um dispositivo na página de Dados do LoRa — então, quando
 // um novo ESP32 for conectado, ele aparece aqui sozinho, sem precisar mexer
 // no código.
-// A ESP32 só manda rssi_ida na leitura logo depois de um pedido de
-// "Analisar" — todas as leituras normais de temperatura/umidade que vêm
-// depois disso têm dados_adicionais vazio. Por isso guardamos, separado da
-// última leitura, a última leitura QUE TINHA rssi — assim o resultado da
-// análise continua aparecendo até uma nova análise ser feita, em vez de
-// sumir no próximo check-in de temperatura.
+//
+// Além da leitura mais recente (para status online/offline e valores de
+// temperatura/umidade), cada dispositivo carrega dois retratos "congelados"
+// que só mudam quando um valor novo chega:
+// - ultimaAnaliseRssi: resultado da última vez que "Analisar" foi clicado
+//   (rssi_ida só vem na leitura logo após o pedido, não em toda leitura).
+// - ultimaConfiguracao: último uid_remoto conhecido (config fixa do rádio,
+//   lida uma vez pelo firmware e reenviada depois — mas guardamos do mesmo
+//   jeito, para o caso de faltar numa leitura pontual).
 export function obterUltimaLeituraPorSensor(leituras) {
   const maisRecentePorSensor = new Map()
-  const ultimoRssiPorSensor = new Map()
 
   leituras.forEach((leitura) => {
     const atual = maisRecentePorSensor.get(leitura.sensor_id)
     if (!atual || new Date(leitura.data_hora) > new Date(atual.data_hora)) {
       maisRecentePorSensor.set(leitura.sensor_id, leitura)
     }
-
-    if (leitura.dados_adicionais?.rssi_ida != null) {
-      const atualRssi = ultimoRssiPorSensor.get(leitura.sensor_id)
-      if (!atualRssi || new Date(leitura.data_hora) > new Date(atualRssi.data_hora)) {
-        ultimoRssiPorSensor.set(leitura.sensor_id, leitura)
-      }
-    }
   })
+
+  const ultimoRssiPorSensor = ultimaLeituraComCampo(leituras, 'rssi_ida')
+  const ultimaConfigPorSensor = ultimaLeituraComCampo(leituras, 'uid_remoto')
 
   return Array.from(maisRecentePorSensor.values())
     .sort((a, b) => a.sensor_id.localeCompare(b.sensor_id))
     .map((leitura) => ({
       ...leitura,
       ultimaAnaliseRssi: ultimoRssiPorSensor.get(leitura.sensor_id) ?? null,
+      ultimaConfiguracao: ultimaConfigPorSensor.get(leitura.sensor_id) ?? null,
     }))
 }
 

@@ -1,4 +1,4 @@
-import { Activity, Clock, Cpu, RefreshCw, SignalHigh } from 'lucide-react'
+import { Activity, Clock, Cpu, Radio, RefreshCw, SignalHigh } from 'lucide-react'
 import styles from './DispositivoLoraCard.module.css'
 
 // Depois de quanto tempo sem leitura o dispositivo é considerado offline —
@@ -20,8 +20,9 @@ function formatarDataHora(iso) {
 // que aparecer nas leituras vira um card aqui automaticamente — ver
 // obterUltimaLeituraPorSensor em services/leiturasService.js).
 function DispositivoLoraCard({ leitura, analisando, erroAnalise, onAnalisar }) {
-  const { sensor_id: sensorId, data_hora: dataHora, ultimaAnaliseRssi } = leitura
+  const { sensor_id: sensorId, data_hora: dataHora, ultimaAnaliseRssi, ultimaConfiguracao } = leitura
   const online = Date.now() - new Date(dataHora).getTime() < LIMIAR_ONLINE_MS
+  const uidRemoto = ultimaConfiguracao?.dados_adicionais?.uid_remoto
 
   // O RSSI/SNR vêm da última análise feita (que pode ser de minutos atrás),
   // não da leitura mais recente — as leituras normais de temperatura, entre
@@ -99,6 +100,28 @@ function DispositivoLoraCard({ leitura, analisando, erroAnalise, onAnalisar }) {
         <p className={styles.notaAnalise}>
           Última análise: {formatarDataHora(ultimaAnaliseRssi.data_hora)}
         </p>
+      )}
+
+      {uidRemoto && (
+        <div className={styles.configuracao}>
+          <div className={styles.configuracaoTitulo}>
+            <Radio size={14} />
+            <span>Configuração do dispositivo (Leitura remota 0xD4)</span>
+          </div>
+
+          <div className={styles.configuracaoGrid}>
+            <div className={styles.configuracaoCampo}>
+              <span className={styles.configuracaoRotulo}>ID do rádio</span>
+              <span className={styles.configuracaoValor}>{uidRemoto}</span>
+            </div>
+          </div>
+
+          <p className={styles.notaAnalise}>
+            Lido em: {formatarDataHora(ultimaConfiguracao.data_hora)} · mais
+            campos (frequência, potência, spreading factor...) entram aqui
+            assim que forem confirmados.
+          </p>
+        </div>
       )}
 
       {erroAnalise && <p className={styles.erro}>{erroAnalise}</p>}

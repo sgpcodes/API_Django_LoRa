@@ -170,6 +170,57 @@
   transition: var(--transition-theme);
 }
 
+.configuracao {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-card-border);
+  transition: var(--transition-theme);
+}
+
+.configuracaoTitulo {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text);
+  transition: var(--transition-theme);
+}
+
+.configuracaoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.75rem;
+}
+
+.configuracaoCampo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 8px;
+  background-color: var(--color-pill-bg);
+  transition: var(--transition-theme);
+}
+
+.configuracaoRotulo {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  transition: var(--transition-theme);
+}
+
+.configuracaoValor {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text);
+  transition: var(--transition-theme);
+}
+
 .erro {
   margin: 0;
   font-size: 0.8rem;
