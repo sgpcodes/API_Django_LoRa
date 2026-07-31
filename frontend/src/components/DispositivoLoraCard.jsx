@@ -99,38 +99,34 @@ function DispositivoLoraCard({ leitura, analisando, erroAnalise, onAnalisar }) {
           <div className={styles.metricas}>
             <div className={styles.metrica}>
               <div className={styles.metricaCabecalho}>
-                <SignalHigh size={14} />
+                <SignalHigh size={13} />
                 <span>RSSI · Ida</span>
               </div>
               <span className={styles.metricaValor}>{rssiIda != null ? `${rssiIda} dBm` : '—'}</span>
-              <span className={styles.metricaSentido}>ESP32 → rádio</span>
             </div>
 
             <div className={styles.metrica}>
               <div className={styles.metricaCabecalho}>
-                <SignalHigh size={14} />
+                <SignalHigh size={13} />
                 <span>RSSI · Volta</span>
               </div>
               <span className={styles.metricaValor}>{rssiVolta != null ? `${rssiVolta} dBm` : '—'}</span>
-              <span className={styles.metricaSentido}>rádio → ESP32</span>
             </div>
 
             <div className={styles.metrica}>
               <div className={styles.metricaCabecalho}>
-                <Activity size={14} />
+                <Activity size={13} />
                 <span>SNR · Ida</span>
               </div>
               <span className={styles.metricaValor}>{snrIda != null ? `${snrIda} dB` : '—'}</span>
-              <span className={styles.metricaSentido}>ESP32 → rádio</span>
             </div>
 
             <div className={styles.metrica}>
               <div className={styles.metricaCabecalho}>
-                <Activity size={14} />
+                <Activity size={13} />
                 <span>SNR · Volta</span>
               </div>
               <span className={styles.metricaValor}>{snrVolta != null ? `${snrVolta} dB` : '—'}</span>
-              <span className={styles.metricaSentido}>rádio → ESP32</span>
             </div>
           </div>
 
