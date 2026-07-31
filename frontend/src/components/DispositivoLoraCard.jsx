@@ -117,9 +117,7 @@ function DispositivoLoraCard({ leitura, analisando, erroAnalise, onAnalisar }) {
           </div>
 
           <p className={styles.notaAnalise}>
-            Lido em: {formatarDataHora(ultimaConfiguracao.data_hora)} · mais
-            campos (frequência, potência, spreading factor...) entram aqui
-            assim que forem confirmados.
+            Lido em: {formatarDataHora(ultimaConfiguracao.data_hora)}
           </p>
         </div>
       )}
