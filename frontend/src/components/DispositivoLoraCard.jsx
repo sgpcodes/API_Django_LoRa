@@ -20,9 +20,13 @@ function formatarDataHora(iso) {
 // que aparecer nas leituras vira um card aqui automaticamente — ver
 // obterUltimaLeituraPorSensor em services/leiturasService.js).
 function DispositivoLoraCard({ leitura, analisando, erroAnalise, onAnalisar }) {
-  const { sensor_id: sensorId, data_hora: dataHora, dados_adicionais: dadosAdicionais } = leitura
+  const { sensor_id: sensorId, data_hora: dataHora, ultimaAnaliseRssi } = leitura
   const online = Date.now() - new Date(dataHora).getTime() < LIMIAR_ONLINE_MS
 
+  // O RSSI/SNR vêm da última análise feita (que pode ser de minutos atrás),
+  // não da leitura mais recente — as leituras normais de temperatura, entre
+  // uma análise e outra, não trazem esse dado.
+  const dadosAdicionais = ultimaAnaliseRssi?.dados_adicionais
   const rssiIda = dadosAdicionais?.rssi_ida
   const rssiVolta = dadosAdicionais?.rssi_volta
   const snrIda = dadosAdicionais?.snr_ida
@@ -90,6 +94,12 @@ function DispositivoLoraCard({ leitura, analisando, erroAnalise, onAnalisar }) {
           </div>
         )}
       </div>
+
+      {ultimaAnaliseRssi && (
+        <p className={styles.notaAnalise}>
+          Última análise: {formatarDataHora(ultimaAnaliseRssi.data_hora)}
+        </p>
+      )}
 
       {erroAnalise && <p className={styles.erro}>{erroAnalise}</p>}
     </div>

@@ -163,6 +163,13 @@
   transition: var(--transition-theme);
 }
 
+.notaAnalise {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  transition: var(--transition-theme);
+}
+
 .erro {
   margin: 0;
   font-size: 0.8rem;

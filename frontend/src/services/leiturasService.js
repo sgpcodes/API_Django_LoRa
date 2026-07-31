@@ -26,19 +26,36 @@ export async function buscarStatusRssi() {
 // diferente vira um dispositivo na página de Dados do LoRa — então, quando
 // um novo ESP32 for conectado, ele aparece aqui sozinho, sem precisar mexer
 // no código.
+// A ESP32 só manda rssi_ida na leitura logo depois de um pedido de
+// "Analisar" — todas as leituras normais de temperatura/umidade que vêm
+// depois disso têm dados_adicionais vazio. Por isso guardamos, separado da
+// última leitura, a última leitura QUE TINHA rssi — assim o resultado da
+// análise continua aparecendo até uma nova análise ser feita, em vez de
+// sumir no próximo check-in de temperatura.
 export function obterUltimaLeituraPorSensor(leituras) {
   const maisRecentePorSensor = new Map()
+  const ultimoRssiPorSensor = new Map()
 
   leituras.forEach((leitura) => {
     const atual = maisRecentePorSensor.get(leitura.sensor_id)
     if (!atual || new Date(leitura.data_hora) > new Date(atual.data_hora)) {
       maisRecentePorSensor.set(leitura.sensor_id, leitura)
     }
+
+    if (leitura.dados_adicionais?.rssi_ida != null) {
+      const atualRssi = ultimoRssiPorSensor.get(leitura.sensor_id)
+      if (!atualRssi || new Date(leitura.data_hora) > new Date(atualRssi.data_hora)) {
+        ultimoRssiPorSensor.set(leitura.sensor_id, leitura)
+      }
+    }
   })
 
-  return Array.from(maisRecentePorSensor.values()).sort((a, b) =>
-    a.sensor_id.localeCompare(b.sensor_id)
-  )
+  return Array.from(maisRecentePorSensor.values())
+    .sort((a, b) => a.sensor_id.localeCompare(b.sensor_id))
+    .map((leitura) => ({
+      ...leitura,
+      ultimaAnaliseRssi: ultimoRssiPorSensor.get(leitura.sensor_id) ?? null,
+    }))
 }
 
 function media(numeros) {
