@@ -144,31 +144,10 @@
   transition: var(--transition-theme);
 }
 
-.metricaRotulo {
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
 .metricaRotuloNeutro {
   font-size: 0.75rem;
   color: var(--color-text-secondary);
   transition: var(--transition-theme);
-}
-
-.bom {
-  color: var(--color-status-online);
-}
-
-.atencao {
-  color: var(--color-status-atencao);
-}
-
-.ruim {
-  color: var(--color-status-offline);
-}
-
-.neutro {
-  color: var(--color-text-secondary);
 }
 
 .erro {

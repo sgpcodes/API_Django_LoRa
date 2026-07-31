@@ -6,21 +6,6 @@ import styles from './DispositivoLoraCard.module.css'
 // "offline" por causa de um ciclo atrasado.
 const LIMIAR_ONLINE_MS = 2 * 60 * 1000
 
-function classificarRssi(rssi) {
-  if (rssi == null) return { rotulo: 'Sem sinal', tom: 'neutro' }
-  if (rssi >= -70) return { rotulo: 'Sinal forte', tom: 'bom' }
-  if (rssi >= -85) return { rotulo: 'Sinal bom', tom: 'bom' }
-  if (rssi >= -100) return { rotulo: 'Sinal fraco', tom: 'atencao' }
-  return { rotulo: 'Sinal muito fraco', tom: 'ruim' }
-}
-
-function classificarSnr(snr) {
-  if (snr == null) return { rotulo: 'Sem sinal', tom: 'neutro' }
-  if (snr >= 5) return { rotulo: 'Bom', tom: 'bom' }
-  if (snr >= 0) return { rotulo: 'Regular', tom: 'atencao' }
-  return { rotulo: 'Ruim', tom: 'ruim' }
-}
-
 function formatarDataHora(iso) {
   return new Date(iso).toLocaleString('pt-BR', {
     day: '2-digit',
@@ -42,9 +27,6 @@ function DispositivoLoraCard({ leitura, analisando, erroAnalise, onAnalisar }) {
   const rssiVolta = dadosAdicionais?.rssi_volta
   const snrIda = dadosAdicionais?.snr_ida
   const snrVolta = dadosAdicionais?.snr_volta
-
-  const rssiInfo = classificarRssi(rssiIda)
-  const snrInfo = classificarSnr(snrIda)
 
   return (
     <div className={styles.card}>
@@ -82,7 +64,6 @@ function DispositivoLoraCard({ leitura, analisando, erroAnalise, onAnalisar }) {
             <span>RSSI</span>
           </div>
           <span className={styles.metricaValor}>{rssiIda != null ? `${rssiIda} dBm` : '—'}</span>
-          <span className={`${styles.metricaRotulo} ${styles[rssiInfo.tom]}`}>{rssiInfo.rotulo}</span>
         </div>
 
         <div className={styles.metrica}>
@@ -91,7 +72,6 @@ function DispositivoLoraCard({ leitura, analisando, erroAnalise, onAnalisar }) {
             <span>SNR</span>
           </div>
           <span className={styles.metricaValor}>{snrIda != null ? `${snrIda} dB` : '—'}</span>
-          <span className={`${styles.metricaRotulo} ${styles[snrInfo.tom]}`}>{snrInfo.rotulo}</span>
         </div>
 
         {(rssiVolta != null || snrVolta != null) && (

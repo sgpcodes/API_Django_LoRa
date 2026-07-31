@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
-import { Info, Radio } from 'lucide-react'
 import Header from '../components/Header'
 import StatusMessage from '../components/StatusMessage'
 import DispositivoLoraCard from '../components/DispositivoLoraCard'
@@ -131,30 +130,6 @@ function DadosLora() {
   return (
     <div className={styles.pagina}>
       {cabecalho}
-
-      <div className={styles.infoGrid}>
-        <div className={styles.infoCard}>
-          <Info size={16} />
-          <div>
-            <strong>Como funciona</strong>
-            <p>
-              O RSSI/SNR não vem em toda leitura, só quando você pede. Ao clicar em
-              "Analisar", o dispositivo verifica o rádio no seu próximo check-in
-              (até ~1 min) e o resultado aparece aqui automaticamente.
-            </p>
-          </div>
-        </div>
-        <div className={styles.infoCard}>
-          <Radio size={16} />
-          <div>
-            <strong>RSSI e SNR</strong>
-            <p>
-              RSSI mede a força do sinal recebido, em dBm (quanto mais perto de 0,
-              melhor). SNR mede a relação sinal-ruído, em dB (quanto maior, melhor).
-            </p>
-          </div>
-        </div>
-      </div>
 
       {dispositivos.length === 0 ? (
         <p className={styles.semDados}>Nenhum dispositivo encontrado ainda.</p>
