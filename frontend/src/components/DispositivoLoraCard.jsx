@@ -1,11 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Activity, ChevronDown, ChevronUp, Cpu, Radio, RefreshCw, SignalHigh } from 'lucide-react'
+import { Activity, ChevronDown, ChevronUp, Cpu, Radio, RefreshCw, SignalHigh, Trash2 } from 'lucide-react'
+import { estaOnline } from '../services/leiturasService'
 import styles from './DispositivoLoraCard.module.css'
-
-// Depois de quanto tempo sem leitura o dispositivo é considerado offline —
-// generoso o bastante acima do check-in de ~1 min da ESP32 pra não piscar
-// "offline" por causa de um ciclo atrasado.
-const LIMIAR_ONLINE_MS = 2 * 60 * 1000
 
 function formatarDataHora(iso) {
   return new Date(iso).toLocaleString('pt-BR', {
@@ -22,11 +18,11 @@ function formatarDataHora(iso) {
 // em services/leiturasService.js). O corpo com RSSI/SNR e configuração fica
 // recolhido por padrão — só o essencial (nome, status, botão Analisar) fica
 // sempre visível, pra a lista continuar legível com vários dispositivos.
-function DispositivoLoraCard({ leitura, analisando, erroAnalise, onAnalisar }) {
+function DispositivoLoraCard({ leitura, analisando, erroAnalise, onAnalisar, onRemover }) {
   const [detalhesAbertos, setDetalhesAbertos] = useState(false)
 
   const { sensor_id: sensorId, data_hora: dataHora, ultimaAnaliseRssi, ultimaConfiguracao } = leitura
-  const online = Date.now() - new Date(dataHora).getTime() < LIMIAR_ONLINE_MS
+  const online = estaOnline(dataHora)
   const uidRemoto = ultimaConfiguracao?.dados_adicionais?.uid_remoto
 
   // O RSSI/SNR vêm da última análise feita (que pode ser de minutos atrás),
@@ -37,6 +33,19 @@ function DispositivoLoraCard({ leitura, analisando, erroAnalise, onAnalisar }) {
   const rssiVolta = dadosAdicionais?.rssi_volta
   const snrIda = dadosAdicionais?.snr_ida
   const snrVolta = dadosAdicionais?.snr_volta
+
+  // Parametros de RF (potencia/banda/BW/SF/CR/versão), lidos uma vez via
+  // comando 0xD6 — mesmo "retrato congelado" do uid_remoto, todos chegam
+  // juntos na mesma leitura na maioria das vezes. frequenciaMhz e versaoFw
+  // são campos novos: dispositivos que ainda não mandam esses dados
+  // simplesmente não mostram esses dois campos (checagem "!= null" abaixo).
+  const configRF = ultimaConfiguracao?.dados_adicionais
+  const potenciaDbm = configRF?.potencia_dbm
+  const frequenciaMhz = configRF?.frequencia_mhz
+  const bandwidthKhz = configRF?.bandwidth_khz
+  const spreadingFactor = configRF?.spreading_factor
+  const codingRate = configRF?.coding_rate
+  const versaoFw = configRF?.versao_fw
 
   // Ao clicar em "Analisar", abre os detalhes sozinho — sem isso, o
   // resultado chegaria escondido atrás do "Detalhes" fechado.
@@ -63,6 +72,18 @@ function DispositivoLoraCard({ leitura, analisando, erroAnalise, onAnalisar }) {
         </div>
 
         <div className={styles.acoesTopo}>
+          {!online && (
+            <button
+              type="button"
+              className={styles.botaoRemover}
+              onClick={onRemover}
+              title="Remover da lista (dispositivo inativo)"
+              aria-label={`Remover ${sensorId} da lista`}
+            >
+              <Trash2 size={15} />
+            </button>
+          )}
+
           <button
             type="button"
             className={styles.botaoDetalhes}
@@ -136,18 +157,64 @@ function DispositivoLoraCard({ leitura, analisando, erroAnalise, onAnalisar }) {
             </p>
           )}
 
-          {uidRemoto && (
+          {(uidRemoto || potenciaDbm != null || frequenciaMhz != null || versaoFw != null) && (
             <div className={styles.configuracao}>
               <div className={styles.secaoTitulo}>
                 <Radio size={14} />
-                <span>Configuração do dispositivo (Leitura remota 0xD4)</span>
+                <span>Configuração do dispositivo</span>
               </div>
 
               <div className={styles.configuracaoGrid}>
-                <div className={styles.configuracaoCampo}>
-                  <span className={styles.configuracaoRotulo}>ID do rádio</span>
-                  <span className={styles.configuracaoValor}>{uidRemoto}</span>
-                </div>
+                {uidRemoto && (
+                  <div className={styles.configuracaoCampo}>
+                    <span className={styles.configuracaoRotulo}>ID do rádio</span>
+                    <span className={styles.configuracaoValor}>{uidRemoto}</span>
+                  </div>
+                )}
+
+                {potenciaDbm != null && (
+                  <div className={styles.configuracaoCampo}>
+                    <span className={styles.configuracaoRotulo}>Potência</span>
+                    <span className={styles.configuracaoValor}>{potenciaDbm} dBm</span>
+                  </div>
+                )}
+
+                {frequenciaMhz != null && (
+                  <div className={styles.configuracaoCampo}>
+                    <span className={styles.configuracaoRotulo}>Banda</span>
+                    <span className={styles.configuracaoValor}>{frequenciaMhz} MHz</span>
+                  </div>
+                )}
+
+                {bandwidthKhz != null && (
+                  <div className={styles.configuracaoCampo}>
+                    <span className={styles.configuracaoRotulo}>BW</span>
+                    <span className={styles.configuracaoValor}>{bandwidthKhz} kHz</span>
+                  </div>
+                )}
+
+                {spreadingFactor != null && (
+                  <div className={styles.configuracaoCampo}>
+                    <span className={styles.configuracaoRotulo}>Spreading Factor</span>
+                    <span className={styles.configuracaoValor}>
+                      {spreadingFactor === 0 ? 'FSK' : `SF${spreadingFactor}`}
+                    </span>
+                  </div>
+                )}
+
+                {codingRate != null && (
+                  <div className={styles.configuracaoCampo}>
+                    <span className={styles.configuracaoRotulo}>Coding Rate</span>
+                    <span className={styles.configuracaoValor}>{codingRate}</span>
+                  </div>
+                )}
+
+                {versaoFw != null && (
+                  <div className={styles.configuracaoCampo}>
+                    <span className={styles.configuracaoRotulo}>Versão FW</span>
+                    <span className={styles.configuracaoValor}>{versaoFw}</span>
+                  </div>
+                )}
               </div>
 
               <p className={styles.notaAnalise}>

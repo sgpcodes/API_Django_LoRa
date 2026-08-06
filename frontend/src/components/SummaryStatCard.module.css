@@ -51,3 +51,18 @@
   color: var(--color-text-secondary);
   transition: var(--transition-theme);
 }
+
+.barraProgresso {
+  width: 100%;
+  height: 5px;
+  border-radius: 999px;
+  background-color: var(--color-pill-bg);
+  overflow: hidden;
+  margin-top: 0.15rem;
+}
+
+.barraProgressoPreenchida {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}

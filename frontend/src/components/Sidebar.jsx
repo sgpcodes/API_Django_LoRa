@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { LayoutGrid, Wifi, User, HelpCircle, LogOut, Sun, Moon, ChevronLeft, ChevronRight } from 'lucide-react'
+import { LayoutGrid, Layers, Wifi, User, HelpCircle, LogOut, Sun, Moon, ChevronLeft, ChevronRight } from 'lucide-react'
 import logoLacop from '../assets/lacop.png'
 import styles from './Sidebar.module.css'
 
 const ITENS_NAV = [
   { to: '/', rotulo: 'Dashboard', icone: LayoutGrid, fim: true },
+  { to: '/visao-geral', rotulo: 'Visão Geral', icone: Layers },
   { to: '/dados-lora', rotulo: 'Dados do LoRa', icone: Wifi },
   { to: '/perfil', rotulo: 'Perfil', icone: User },
 ]

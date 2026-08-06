@@ -1,15 +1,20 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import Header from '../components/Header'
 import StatusMessage from '../components/StatusMessage'
 import DispositivoLoraCard from '../components/DispositivoLoraCard'
+import { useSensoresOcultos } from '../hooks/useSensoresOcultos'
 import {
   buscarLeituras,
-  buscarStatusRssi,
   obterUltimaLeituraPorSensor,
   solicitarAnaliseRssi,
 } from '../services/leiturasService'
 import styles from './DadosLora.module.css'
+
+// Chave do localStorage onde ficam os dispositivos removidos manualmente
+// desta página (ver hooks/useSensoresOcultos.js) — separada da usada na
+// Visão Geral, pra remover um sensor aqui não escondê-lo lá.
+const CHAVE_OCULTOS = 'lacop:dadosLora:sensoresOcultosDesde'
 
 // Mesmo ritmo de atualização automática do Dashboard, para a lista de
 // dispositivos (e o status online/offline) se manter em dia sozinha.
@@ -35,9 +40,12 @@ function DadosLora() {
   const [leituras, setLeituras] = useState([])
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState(null)
-  const [analisando, setAnalisando] = useState(false)
-  const [erroAnalise, setErroAnalise] = useState(null)
-  const inicioAnaliseRef = useRef(null)
+
+  // Uma analise pendente por sensor: sensorId -> { inicio, erro }. Assim,
+  // clicar "Analisar" num dispositivo nao mexe no estado dos outros.
+  const [analisesPorSensor, setAnalisesPorSensor] = useState({})
+
+  const { ocultosDesde, ocultarSensor } = useSensoresOcultos(CHAVE_OCULTOS, leituras)
 
   async function carregarLeituras() {
     try {
@@ -57,47 +65,78 @@ function DadosLora() {
     return () => clearInterval(intervalo)
   }, [])
 
-  // Enquanto uma análise está pendente, confere periodicamente se a ESP32
-  // já respondeu (o pedido deixa de estar pendente assim que uma leitura
-  // chega com rssi_ida) — quando isso acontece, busca as leituras de novo
-  // pra pegar o valor fresco.
+  // Enquanto algum sensor tem análise pendente, confere periodicamente se
+  // ele já respondeu — a resposta é detectada pela própria leitura (uma
+  // análise nova de RSSI pra esse sensor, mais recente que o clique),
+  // não pelo status global, já que vários sensores podem estar na fila.
+  const sensoresPendentes = Object.keys(analisesPorSensor)
+
   useEffect(() => {
-    if (!analisando) return undefined
+    if (sensoresPendentes.length === 0) return undefined
 
     const poll = setInterval(async () => {
-      if (Date.now() - inicioAnaliseRef.current > TIMEOUT_ANALISE_MS) {
-        setAnalisando(false)
-        setErroAnalise('O sensor não respondeu a tempo. Confira se ele está ligado e tente de novo.')
-        return
-      }
-
-      try {
-        const pendente = await buscarStatusRssi()
-        if (!pendente) {
-          await carregarLeituras()
-          setAnalisando(false)
-        }
-      } catch {
-        // Falha pontual de rede durante o polling — a próxima tentativa,
-        // alguns segundos depois, cobre isso.
-      }
+      await carregarLeituras()
     }, INTERVALO_POLL_ANALISE_MS)
 
     return () => clearInterval(poll)
-  }, [analisando])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sensoresPendentes.length])
 
-  const dispositivos = useMemo(() => obterUltimaLeituraPorSensor(leituras), [leituras])
+  // Toda vez que leituras novas chegam, confere se alguma análise pendente
+  // já foi respondida (leitura de RSSI mais recente que o inicio do pedido)
+  // ou estourou o tempo limite.
+  useEffect(() => {
+    if (sensoresPendentes.length === 0) return
 
-  async function aoClicarAnalisar() {
-    setErroAnalise(null)
-    setAnalisando(true)
-    inicioAnaliseRef.current = Date.now()
+    const dispositivosAtuais = obterUltimaLeituraPorSensor(leituras)
+    const agora = Date.now()
+
+    setAnalisesPorSensor((atual) => {
+      let mudou = false
+      const proximo = { ...atual }
+
+      for (const sensorId of Object.keys(atual)) {
+        const pedido = atual[sensorId]
+        const dispositivo = dispositivosAtuais.find((d) => d.sensor_id === sensorId)
+        const dataUltimaAnalise = dispositivo?.ultimaAnaliseRssi?.data_hora
+
+        if (dataUltimaAnalise && new Date(dataUltimaAnalise).getTime() >= pedido.inicio) {
+          delete proximo[sensorId]
+          mudou = true
+        } else if (agora - pedido.inicio > TIMEOUT_ANALISE_MS && !pedido.erro) {
+          proximo[sensorId] = {
+            ...pedido,
+            erro: 'O sensor não respondeu a tempo. Confira se ele está ligado e tente de novo.',
+          }
+          mudou = true
+        }
+      }
+
+      return mudou ? proximo : atual
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leituras])
+
+  const todosDispositivos = useMemo(() => obterUltimaLeituraPorSensor(leituras), [leituras])
+
+  const dispositivos = useMemo(
+    () => todosDispositivos.filter((dispositivo) => !(dispositivo.sensor_id in ocultosDesde)),
+    [todosDispositivos, ocultosDesde]
+  )
+
+  async function aoClicarAnalisar(sensorId) {
+    setAnalisesPorSensor((atual) => ({
+      ...atual,
+      [sensorId]: { inicio: Date.now(), erro: null },
+    }))
 
     try {
-      await solicitarAnaliseRssi()
+      await solicitarAnaliseRssi(sensorId)
     } catch {
-      setAnalisando(false)
-      setErroAnalise('Não foi possível solicitar a análise. Tente novamente.')
+      setAnalisesPorSensor((atual) => ({
+        ...atual,
+        [sensorId]: { inicio: Date.now(), erro: 'Não foi possível solicitar a análise. Tente novamente.' },
+      }))
     }
   }
 
@@ -132,17 +171,23 @@ function DadosLora() {
     <div className={styles.pagina}>
       {cabecalho}
 
-      {dispositivos.length === 0 ? (
+      {todosDispositivos.length === 0 ? (
         <p className={styles.semDados}>Nenhum dispositivo encontrado ainda.</p>
+      ) : dispositivos.length === 0 ? (
+        <p className={styles.semDados}>
+          Todos os dispositivos foram removidos desta página. Eles reaparecem sozinhos assim que
+          voltarem a enviar dados.
+        </p>
       ) : (
         <div className={styles.dispositivos}>
           {dispositivos.map((leitura) => (
             <DispositivoLoraCard
               key={leitura.sensor_id}
               leitura={leitura}
-              analisando={analisando}
-              erroAnalise={erroAnalise}
-              onAnalisar={aoClicarAnalisar}
+              analisando={leitura.sensor_id in analisesPorSensor}
+              erroAnalise={analisesPorSensor[leitura.sensor_id]?.erro ?? null}
+              onAnalisar={() => aoClicarAnalisar(leitura.sensor_id)}
+              onRemover={() => ocultarSensor(leitura.sensor_id)}
             />
           ))}
         </div>

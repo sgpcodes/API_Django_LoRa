@@ -81,6 +81,27 @@
   gap: 0.6rem;
 }
 
+.botaoRemover {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--color-card-border);
+  background: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: var(--transition-theme), background-color 0.15s ease, color 0.15s ease;
+}
+
+.botaoRemover:hover {
+  background-color: rgba(239, 68, 68, 0.14);
+  color: var(--color-status-offline);
+  border-color: transparent;
+}
+
 .botaoDetalhes {
   display: flex;
   align-items: center;

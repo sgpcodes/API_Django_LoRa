@@ -4,7 +4,9 @@ import styles from './SummaryStatCard.module.css'
 // Card usado no resumo do período selecionado (temperatura média, máxima,
 // mínima, umidade média). "legenda" é o texto pequeno embaixo do valor;
 // "tendencia" ('alta' | 'baixa' | undefined) adiciona uma setinha nela.
-function SummaryStatCard({ icone: Icone, cor, rotulo, valor, legenda, tendencia }) {
+// "progresso" (0-100, opcional) desenha uma barrinha embaixo — usado no
+// card "Sensores ativos" da Visão Geral.
+function SummaryStatCard({ icone: Icone, cor, rotulo, valor, legenda, tendencia, progresso }) {
   const IconeTendencia = tendencia === 'alta' ? ArrowUp : tendencia === 'baixa' ? ArrowDown : null
 
   return (
@@ -21,6 +23,14 @@ function SummaryStatCard({ icone: Icone, cor, rotulo, valor, legenda, tendencia 
           {IconeTendencia && <IconeTendencia size={12} />}
           {legenda}
         </span>
+      )}
+      {progresso != null && (
+        <div className={styles.barraProgresso}>
+          <div
+            className={styles.barraProgressoPreenchida}
+            style={{ width: `${Math.min(100, Math.max(0, progresso))}%`, backgroundColor: cor }}
+          />
+        </div>
       )}
     </div>
   )

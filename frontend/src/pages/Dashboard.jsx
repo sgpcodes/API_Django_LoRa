@@ -18,6 +18,8 @@ import {
   filtrarPorPeriodo,
   agruparPorDia,
   calcularResumo,
+  obterSensoresDisponiveis,
+  datasPersonalizadasIniciais,
 } from '../services/leiturasService'
 import styles from './Dashboard.module.css'
 
@@ -52,20 +54,6 @@ function formatarLegendaComparativa(delta, unidade) {
   return `${Math.abs(delta)}${unidade} ${direcao} da média anterior`
 }
 
-function paraStringData(data) {
-  const ano = data.getFullYear()
-  const mes = String(data.getMonth() + 1).padStart(2, '0')
-  const dia = String(data.getDate()).padStart(2, '0')
-  return `${ano}-${mes}-${dia}`
-}
-
-function datasPersonalizadasIniciais() {
-  const hoje = new Date()
-  const seteDiasAtras = new Date(hoje)
-  seteDiasAtras.setDate(hoje.getDate() - 6)
-  return { inicio: paraStringData(seteDiasAtras), fim: paraStringData(hoje) }
-}
-
 function Dashboard() {
   const { tema, onAlternarTema } = useOutletContext()
 
@@ -74,6 +62,7 @@ function Dashboard() {
   const [erro, setErro] = useState(null)
   const [periodo, setPeriodo] = useState('hoje')
   const [datasPersonalizadas, setDatasPersonalizadas] = useState(datasPersonalizadasIniciais)
+  const [sensorSelecionado, setSensorSelecionado] = useState(null)
 
   useEffect(() => {
     async function carregarLeituras() {
@@ -93,7 +82,26 @@ function Dashboard() {
     return () => clearInterval(intervalo)
   }, [])
 
-  const leituraAtual = useMemo(() => obterLeituraMaisRecente(leituras), [leituras])
+  // Lista de sensores vem dos próprios dados: um ESP32 novo aparece no
+  // seletor sozinho assim que a primeira leitura dele chegar.
+  const sensoresDisponiveis = useMemo(() => obterSensoresDisponiveis(leituras), [leituras])
+
+  // Se nada foi escolhido ainda (ou o sensor escolhido sumiu da lista), cai
+  // no dono da leitura mais recente — assim o dashboard sempre abre em cima
+  // de um dispositivo que está de fato enviando dados.
+  const sensorAtivo = useMemo(() => {
+    if (sensorSelecionado && sensoresDisponiveis.includes(sensorSelecionado)) {
+      return sensorSelecionado
+    }
+    return obterLeituraMaisRecente(leituras)?.sensor_id ?? sensoresDisponiveis[0] ?? null
+  }, [sensorSelecionado, sensoresDisponiveis, leituras])
+
+  const leiturasDoSensor = useMemo(
+    () => (sensorAtivo ? leituras.filter((leitura) => leitura.sensor_id === sensorAtivo) : []),
+    [leituras, sensorAtivo]
+  )
+
+  const leituraAtual = useMemo(() => obterLeituraMaisRecente(leiturasDoSensor), [leiturasDoSensor])
 
   const intervaloSelecionado = useMemo(
     () => obterIntervaloPeriodo(periodo, datasPersonalizadas),
@@ -101,31 +109,34 @@ function Dashboard() {
   )
 
   const dadosGraficoPorHora = useMemo(() => {
-    const leiturasDoPeriodo = filtrarPorPeriodo(leituras, intervaloSelecionado)
+    const leiturasDoPeriodo = filtrarPorPeriodo(leiturasDoSensor, intervaloSelecionado)
     return agruparMediaPorHora(leiturasDoPeriodo)
-  }, [leituras, intervaloSelecionado])
+  }, [leiturasDoSensor, intervaloSelecionado])
 
   const resumo = useMemo(() => {
-    const leiturasDoPeriodo = filtrarPorPeriodo(leituras, intervaloSelecionado)
+    const leiturasDoPeriodo = filtrarPorPeriodo(leiturasDoSensor, intervaloSelecionado)
     const leiturasPeriodoAnterior = filtrarPorPeriodo(
-      leituras,
+      leiturasDoSensor,
       obterIntervaloAnterior(intervaloSelecionado)
     )
     return calcularResumo(leiturasDoPeriodo, leiturasPeriodoAnterior)
-  }, [leituras, intervaloSelecionado])
+  }, [leiturasDoSensor, intervaloSelecionado])
 
   const diasComRotulo = useMemo(() => {
-    const leiturasDoPeriodo = filtrarPorPeriodo(leituras, intervaloSelecionado)
+    const leiturasDoPeriodo = filtrarPorPeriodo(leiturasDoSensor, intervaloSelecionado)
     return agruparPorDia(leiturasDoPeriodo).map((dia) => ({
       ...dia,
       rotulo: dia.data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
     }))
-  }, [leituras, intervaloSelecionado])
+  }, [leiturasDoSensor, intervaloSelecionado])
 
   const cabecalho = (
     <Header
       titulo="Bem-vindo ao sistema de monitoramento meteorológico!"
       subtitulo="Acompanhe em tempo real os dados coletados pelos sensores."
+      sensores={sensoresDisponiveis}
+      sensorSelecionado={sensorAtivo}
+      onEscolherSensor={setSensorSelecionado}
       periodo={periodo}
       onEscolherPeriodo={setPeriodo}
       dataInicio={datasPersonalizadas.inicio}

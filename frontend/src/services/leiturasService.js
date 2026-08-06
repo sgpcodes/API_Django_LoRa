@@ -9,17 +9,18 @@ export async function buscarLeituras() {
   return resposta.data
 }
 
-// Pede para a ESP32 receptora consultar o rádio via LoRa (RSSI/SNR) no seu
-// próximo check-in e enviar o resultado junto da leitura seguinte.
-export async function solicitarAnaliseRssi() {
-  await api.post('/api/rssi/solicitar/')
+// Pede para o RX consultar um rádio específico via LoRa (RSSI/SNR) no seu
+// próximo check-in e enviar o resultado junto da leitura seguinte desse
+// sensor. Precisa do sensor_id porque agora há vários dispositivos.
+export async function solicitarAnaliseRssi(sensorId) {
+  await api.post('/api/rssi/solicitar/', { sensor_id: sensorId })
 }
 
-// Diz se ainda há um pedido de análise de RSSI pendente — usado para saber
-// quando a ESP32 já respondeu, sem precisar ficar comparando leituras.
+// Diz se ainda há algum pedido de análise de RSSI pendente e, se houver,
+// para qual sensor (o RX só processa um por vez).
 export async function buscarStatusRssi() {
   const resposta = await api.get('/api/rssi/status/')
-  return resposta.data.pendente
+  return resposta.data
 }
 
 // Por sensor, a leitura mais recente que tinha um dado específico em
@@ -105,6 +106,133 @@ export function agruparMediaPorHora(leituras) {
     }))
 }
 
+// sensor_id distintos presentes nas leituras, em ordem alfabética — alimenta
+// o seletor de dispositivo do Dashboard e a Visão Geral. Como vem dos dados
+// (e não de uma lista fixa no código), um ESP32 novo aparece sozinho assim
+// que a primeira leitura dele chegar, sem precisar mexer no frontend.
+export function obterSensoresDisponiveis(leituras) {
+  const sensores = new Set(leituras.map((leitura) => leitura.sensor_id))
+  return Array.from(sensores).sort((a, b) => a.localeCompare(b))
+}
+
+// Depois de quanto tempo sem leitura um dispositivo é considerado offline —
+// generoso o bastante acima do check-in de ~1 min da ESP32 pra não piscar
+// "offline" por causa de um ciclo atrasado. Compartilhado entre o card de
+// Dados do LoRa e a tabela da Visão Geral, pra não haver dois critérios
+// diferentes de "online" no mesmo app.
+const LIMIAR_ONLINE_MS = 2 * 60 * 1000
+
+export function estaOnline(dataHoraISO) {
+  return Date.now() - new Date(dataHoraISO).getTime() < LIMIAR_ONLINE_MS
+}
+
+// Paleta fixa pra identificar cada sensor visualmente (tabela e gráficos da
+// Visão Geral) de forma consistente. Ciclando com "%", o 9º sensor reusa a
+// cor do 1º em vez de quebrar — melhor que sensor sem cor.
+export const CORES_SENSOR = [
+  '#2563eb', // azul
+  '#16a34a', // verde
+  '#7c3aed', // roxo
+  '#dc2626', // vermelho
+  '#ea580c', // laranja
+  '#0891b2', // ciano
+  '#db2777', // rosa
+  '#65a30d', // verde-oliva
+]
+
+export function corDoSensor(sensores, sensorId) {
+  const indice = sensores.indexOf(sensorId)
+  return CORES_SENSOR[indice % CORES_SENSOR.length] ?? CORES_SENSOR[0]
+}
+
+// Uma linha por sensor, pra tabela "Resumo por sensor" da Visão Geral:
+// valores atuais (última leitura) + máxima/mínima dentro do período
+// selecionado no filtro.
+export function montarResumoPorSensor(leituras, leiturasDoPeriodo) {
+  const maisRecentes = obterUltimaLeituraPorSensor(leituras)
+
+  const porSensorPeriodo = new Map()
+  leiturasDoPeriodo.forEach((leitura) => {
+    const lista = porSensorPeriodo.get(leitura.sensor_id) ?? []
+    lista.push(leitura)
+    porSensorPeriodo.set(leitura.sensor_id, lista)
+  })
+
+  return maisRecentes.map((leitura) => {
+    const doPeriodo = porSensorPeriodo.get(leitura.sensor_id) ?? []
+    const temperaturas = doPeriodo.map((item) => item.temperatura)
+
+    return {
+      sensorId: leitura.sensor_id,
+      temperaturaAtual: leitura.temperatura,
+      umidadeAtual: leitura.umidade,
+      temperaturaMaxima: temperaturas.length ? Math.max(...temperaturas) : null,
+      temperaturaMinima: temperaturas.length ? Math.min(...temperaturas) : null,
+      ultimaAtualizacao: leitura.data_hora,
+      online: estaOnline(leitura.data_hora),
+    }
+  })
+}
+
+// Resumo agregando todos os sensores juntos (cards do topo da Visão Geral):
+// médias gerais e quem bateu a máxima/mínima do período.
+export function montarResumoGeral(leiturasDoPeriodo) {
+  if (leiturasDoPeriodo.length === 0) return null
+
+  const temperaturas = leiturasDoPeriodo.map((leitura) => leitura.temperatura)
+  const umidades = leiturasDoPeriodo.map((leitura) => leitura.umidade)
+
+  const leituraMaisQuente = leiturasDoPeriodo.reduce((maior, leitura) =>
+    leitura.temperatura > maior.temperatura ? leitura : maior
+  )
+  const leituraMaisFria = leiturasDoPeriodo.reduce((menor, leitura) =>
+    leitura.temperatura < menor.temperatura ? leitura : menor
+  )
+
+  return {
+    temperaturaMedia: media(temperaturas),
+    umidadeMedia: media(umidades),
+    temperaturaMaxima: leituraMaisQuente.temperatura,
+    temperaturaMaximaSensor: leituraMaisQuente.sensor_id,
+    temperaturaMaximaHorario: leituraMaisQuente.data_hora,
+    temperaturaMinima: leituraMaisFria.temperatura,
+    temperaturaMinimaSensor: leituraMaisFria.sensor_id,
+    temperaturaMinimaHorario: leituraMaisFria.data_hora,
+  }
+}
+
+// Uma série por sensor, agrupada por hora — alimenta os gráficos "todos os
+// sensores" da Visão Geral. Formato: [{ hora: '11h', ESP32_01: 21.4, ESP32_02: 23.1 }, ...].
+// Quando um sensor não teve leitura numa hora específica, a chave dele fica
+// ausente naquele ponto (o recharts simplesmente não desenha ali).
+export function agruparMediaPorHoraPorSensor(leituras, sensores, campo) {
+  const acumuladoPorHora = new Map()
+
+  leituras.forEach((leitura) => {
+    const hora = new Date(leitura.data_hora).getHours()
+    const linha = acumuladoPorHora.get(hora) ?? {}
+    const acumuladoSensor = linha[leitura.sensor_id] ?? { soma: 0, quantidade: 0 }
+
+    acumuladoSensor.soma += leitura[campo]
+    acumuladoSensor.quantidade += 1
+    linha[leitura.sensor_id] = acumuladoSensor
+    acumuladoPorHora.set(hora, linha)
+  })
+
+  return Array.from(acumuladoPorHora.entries())
+    .sort(([horaA], [horaB]) => horaA - horaB)
+    .map(([hora, linha]) => {
+      const ponto = { hora: `${String(hora).padStart(2, '0')}h` }
+      sensores.forEach((sensorId) => {
+        const acumuladoSensor = linha[sensorId]
+        if (acumuladoSensor) {
+          ponto[sensorId] = Number((acumuladoSensor.soma / acumuladoSensor.quantidade).toFixed(1))
+        }
+      })
+      return ponto
+    })
+}
+
 // A leitura mais recente é usada para os dados em destaque no topo do
 // dashboard (temperatura atual, umidade, sensor e horário).
 export function obterLeituraMaisRecente(leituras) {
@@ -153,6 +281,22 @@ export function obterIntervaloPeriodo(periodo, personalizado) {
     default:
       return { inicio: inicioDeHoje, fim: fimDeHoje }
   }
+}
+
+export function paraStringData(data) {
+  const ano = data.getFullYear()
+  const mes = String(data.getMonth() + 1).padStart(2, '0')
+  const dia = String(data.getDate()).padStart(2, '0')
+  return `${ano}-${mes}-${dia}`
+}
+
+// Ponto de partida do filtro "personalizado" (últimos 7 dias) — usado tanto
+// no Dashboard quanto na Visão Geral antes do usuário escolher outras datas.
+export function datasPersonalizadasIniciais() {
+  const hoje = new Date()
+  const seteDiasAtras = new Date(hoje)
+  seteDiasAtras.setDate(hoje.getDate() - 6)
+  return { inicio: paraStringData(seteDiasAtras), fim: paraStringData(hoje) }
 }
 
 // Período imediatamente anterior, com a mesma duração do período

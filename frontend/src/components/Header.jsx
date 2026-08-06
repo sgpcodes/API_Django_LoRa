@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Bell, ChevronDown, Calendar, Sun, Moon } from 'lucide-react'
+import { Bell, ChevronDown, Calendar, Cpu, Sun, Moon } from 'lucide-react'
 import styles from './Header.module.css'
 
 const OPCOES_PERIODO = [
@@ -17,6 +17,9 @@ const OPCOES_PERIODO = [
 function Header({
   titulo,
   subtitulo,
+  sensores,
+  sensorSelecionado,
+  onEscolherSensor,
   periodo,
   onEscolherPeriodo,
   dataInicio,
@@ -26,6 +29,7 @@ function Header({
   onAlternarTema,
 }) {
   const [menuAberto, setMenuAberto] = useState(false)
+  const [menuSensorAberto, setMenuSensorAberto] = useState(false)
   const [rascunhoInicio, setRascunhoInicio] = useState(dataInicio)
   const [rascunhoFim, setRascunhoFim] = useState(dataFim)
 
@@ -46,6 +50,38 @@ function Header({
       </div>
 
       <div className={styles.acoes}>
+        {sensores && sensores.length > 0 && (
+          <div className={styles.seletorPeriodo}>
+            <button
+              type="button"
+              className={styles.botaoPeriodo}
+              onClick={() => setMenuSensorAberto((aberto) => !aberto)}
+            >
+              <Cpu size={18} />
+              {sensorSelecionado ?? 'Dispositivo'}
+              <ChevronDown size={16} />
+            </button>
+
+            {menuSensorAberto && (
+              <div className={styles.menuPeriodo}>
+                {sensores.map((sensorId) => (
+                  <button
+                    key={sensorId}
+                    type="button"
+                    className={`${styles.itemMenu} ${sensorSelecionado === sensorId ? styles.itemMenuAtivo : ''}`}
+                    onClick={() => {
+                      onEscolherSensor(sensorId)
+                      setMenuSensorAberto(false)
+                    }}
+                  >
+                    {sensorId}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {onEscolherPeriodo && (
           <div className={styles.seletorPeriodo}>
             <button
