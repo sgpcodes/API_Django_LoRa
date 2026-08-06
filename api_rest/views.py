@@ -50,10 +50,10 @@ class LeituraListCreateView(APIView):
             )
 
         # Se essa leitura veio com o resultado de uma análise de RSSI/SNR
-        # (rssi_ida em dados_adicionais), o pedido pendente foi atendido —
-        # limpa a flag para o ESP32 parar de consultar o rádio a cada ciclo.
+        # (rssi_ida em dados_adicionais), o pedido pendente desse sensor foi
+        # atendido — limpa a flag para o RX parar de consultar esse rádio.
         if 'rssi_ida' in leitura.dados_adicionais:
-            solicitacao = SolicitacaoRssi.obter()
+            solicitacao = SolicitacaoRssi.obter(leitura.sensor_id)
             if solicitacao.pendente:
                 solicitacao.pendente = False
                 solicitacao.save(update_fields=['pendente', 'atualizado_em'])
@@ -65,21 +65,36 @@ class LeituraListCreateView(APIView):
 
 
 class RssiStatusView(APIView):
-    """GET: o ESP32 consulta em cada check-in se há um pedido de análise pendente."""
+    """GET: o RX consulta em cada check-in se há algum pedido de análise
+    pendente e, se houver, para qual sensor — o RX so processa um pedido
+    por vez, entao devolve sempre o mais antigo pendente."""
 
     def get(self, request):
-        solicitacao = SolicitacaoRssi.obter()
-        return Response({'pendente': solicitacao.pendente})
+        solicitacao = SolicitacaoRssi.proxima_pendente()
+        if solicitacao is None:
+            return Response({'pendente': False})
+        return Response({'pendente': True, 'sensor_id': solicitacao.sensor_id})
 
 
 class RssiSolicitarView(APIView):
-    """POST: o botão "Analisar" do dashboard chama isso para marcar um pedido como pendente."""
+    """POST: o botão "Analisar" do dashboard chama isso, indicando pra qual
+    sensor (campo "sensor_id" no corpo), pra marcar um pedido como pendente."""
 
     def post(self, request):
-        solicitacao = SolicitacaoRssi.obter()
+        sensor_id = request.data.get('sensor_id')
+        if not sensor_id:
+            return Response(
+                {'status': 'error', 'message': 'Campo "sensor_id" é obrigatório.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        solicitacao = SolicitacaoRssi.obter(sensor_id)
         solicitacao.pendente = True
         solicitacao.save(update_fields=['pendente', 'atualizado_em'])
-        return Response({'status': 'success', 'pendente': True}, status=status.HTTP_201_CREATED)
+        return Response(
+            {'status': 'success', 'pendente': True, 'sensor_id': sensor_id},
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class LeituraDetailView(APIView):

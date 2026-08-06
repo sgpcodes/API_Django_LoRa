@@ -3,24 +3,32 @@ from django.db import models
 
 class SolicitacaoRssi(models.Model):
     """
-    Flag simples e global (o sistema tem apenas um sensor/rádio) indicando
-    se há um pedido de análise de RSSI/SNR pendente. O ESP32 receptor
-    consulta essa flag a cada check-in (GET /api/rssi/status/) e, se
-    estiver pendente, consulta o rádio via LoRa e envia o resultado junto
-    da próxima leitura — que por sua vez limpa a flag automaticamente.
+    Pedido de análise de RSSI/SNR pendente para um sensor específico — o
+    sistema agora tem vários TX (ESP32_01, ESP32_02, ...), então cada um tem
+    sua própria linha/flag. O ESP32 receptor consulta a cada check-in
+    (GET /api/rssi/status/) se há algum pedido pendente e, se houver, para
+    qual sensor_id; consulta esse rádio específico via LoRa e envia o
+    resultado junto da próxima leitura desse sensor — que por sua vez limpa
+    a flag automaticamente.
     """
 
+    sensor_id = models.CharField(max_length=100, unique=True)
     pendente = models.BooleanField(default=False)
     atualizado_em = models.DateTimeField(auto_now=True)
 
     @classmethod
-    def obter(cls):
-        """Sempre a mesma linha (id=1) — não há uma por sensor porque só existe um."""
-        solicitacao, _ = cls.objects.get_or_create(pk=1)
+    def obter(cls, sensor_id):
+        """Uma linha por sensor — cria na primeira vez que esse sensor_id aparece."""
+        solicitacao, _ = cls.objects.get_or_create(sensor_id=sensor_id)
         return solicitacao
 
+    @classmethod
+    def proxima_pendente(cls):
+        """A solicitação pendente mais antiga (o RX so consulta uma por vez)."""
+        return cls.objects.filter(pendente=True).order_by('atualizado_em').first()
+
     def __str__(self):
-        return 'pendente' if self.pendente else 'sem pedido pendente'
+        return f'{self.sensor_id}: ' + ('pendente' if self.pendente else 'sem pedido pendente')
 
 
 class Leitura(models.Model):
