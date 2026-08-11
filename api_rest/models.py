@@ -1,4 +1,14 @@
+import datetime
+
 from django.db import models
+from django.utils import timezone
+
+# Se um pedido de análise fica pendente por mais tempo que isso sem o sensor
+# responder (ex.: dispositivo desligado/fora de alcance), ele é tratado como
+# abandonado e expira sozinho — bem maior que o check-in do RX (~1 min) e que
+# o tempo que o frontend espera antes de desistir (~3 min), pra não expirar
+# um pedido que ainda tem chance real de ser atendido.
+TEMPO_LIMITE_PENDENCIA = datetime.timedelta(minutes=5)
 
 
 class SolicitacaoRssi(models.Model):
@@ -9,7 +19,9 @@ class SolicitacaoRssi(models.Model):
     (GET /api/rssi/status/) se há algum pedido pendente e, se houver, para
     qual sensor_id; consulta esse rádio específico via LoRa e envia o
     resultado junto da próxima leitura desse sensor — que por sua vez limpa
-    a flag automaticamente.
+    a flag automaticamente. Sem expiração, um sensor que nunca responde
+    deixaria a flag pendente pra sempre, fazendo o RX consultar o rádio a
+    cada ciclo indefinidamente — o oposto do "só quando o usuário pede".
     """
 
     sensor_id = models.CharField(max_length=100, unique=True)
@@ -24,7 +36,11 @@ class SolicitacaoRssi(models.Model):
 
     @classmethod
     def proxima_pendente(cls):
-        """A solicitação pendente mais antiga (o RX so consulta uma por vez)."""
+        """A solicitação pendente mais antiga (o RX so consulta uma por vez).
+        Antes de procurar, limpa pedidos pendentes há mais que
+        TEMPO_LIMITE_PENDENCIA — abandonados, não vão ser atendidos."""
+        limite = timezone.now() - TEMPO_LIMITE_PENDENCIA
+        cls.objects.filter(pendente=True, atualizado_em__lt=limite).update(pendente=False)
         return cls.objects.filter(pendente=True).order_by('atualizado_em').first()
 
     def __str__(self):
