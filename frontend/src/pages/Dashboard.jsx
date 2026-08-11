@@ -185,38 +185,16 @@ function Dashboard() {
         <SummaryStatCard
           icone={Thermometer}
           cor="var(--color-accent)"
-          rotulo="Temperatura média"
-          valor={resumo ? `${resumo.temperaturaMedia}°C` : '—'}
-          legenda={
-            resumo
-              ? formatarLegendaComparativa(resumo.deltaTemperaturaMedia, '°C')
-              : 'Sem leituras no período selecionado'
-          }
-          tendencia={
-            resumo?.deltaTemperaturaMedia == null
-              ? undefined
-              : resumo.deltaTemperaturaMedia >= 0
-                ? 'alta'
-                : 'baixa'
-          }
+          rotulo="Temperatura atual"
+          valor={`${leituraAtual.temperatura}°C`}
+          legenda={`Última leitura: ${formatarHorario(leituraAtual.data_hora)}`}
         />
         <SummaryStatCard
           icone={Droplets}
           cor="var(--color-accent)"
-          rotulo="Umidade média"
-          valor={resumo ? `${resumo.umidadeMedia}%` : '—'}
-          legenda={
-            resumo
-              ? formatarLegendaComparativa(resumo.deltaUmidadeMedia, '%')
-              : 'Sem leituras no período selecionado'
-          }
-          tendencia={
-            resumo?.deltaUmidadeMedia == null
-              ? undefined
-              : resumo.deltaUmidadeMedia >= 0
-                ? 'alta'
-                : 'baixa'
-          }
+          rotulo="Umidade atual"
+          valor={`${leituraAtual.umidade}%`}
+          legenda={`Última leitura: ${formatarHorario(leituraAtual.data_hora)}`}
         />
         <SummaryStatCard
           icone={Cpu}
