@@ -116,11 +116,12 @@ export function obterSensoresDisponiveis(leituras) {
 }
 
 // Depois de quanto tempo sem leitura um dispositivo é considerado offline —
-// generoso o bastante acima do check-in de ~1 min da ESP32 pra não piscar
-// "offline" por causa de um ciclo atrasado. Compartilhado entre o card de
-// Dados do LoRa e a tabela da Visão Geral, pra não haver dois critérios
+// mesmo padrão de 5 min usado no timeout de espera do RSSI (frontend) e na
+// expiração de pedido de RSSI (backend), pra não ter três critérios de
+// tempo diferentes no mesmo sistema. Compartilhado entre o card de Dados
+// do LoRa e a tabela da Visão Geral, pra não haver dois critérios
 // diferentes de "online" no mesmo app.
-const LIMIAR_ONLINE_MS = 2 * 60 * 1000
+const LIMIAR_ONLINE_MS = 5 * 60 * 1000
 
 export function estaOnline(dataHoraISO) {
   return Date.now() - new Date(dataHoraISO).getTime() < LIMIAR_ONLINE_MS

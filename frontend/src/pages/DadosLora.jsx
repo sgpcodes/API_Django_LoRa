@@ -27,11 +27,11 @@ const INTERVALO_ATUALIZACAO_MS = 60_000
 const INTERVALO_POLL_ANALISE_MS = 2_500
 
 // Se passar disso sem resposta, desiste e avisa o usuário (pode ser que o
-// ESP32 esteja desligado/desconectado). Precisa ser bem maior que o
-// check-in da ESP32 (~1 min): o pedido as vezes nao e atendido no primeiro
-// ciclo (radio remoto nao respondeu a tempo), e o RX so tenta de novo no
-// proximo ciclo do mesmo TX -- 100s so dava pra 1 tentativa.
-const TIMEOUT_ANALISE_MS = 180_000
+// ESP32 esteja desligado/desconectado). Mesmo padrão de 5 min usado no
+// limiar online/offline e na expiração do pedido no backend
+// (TEMPO_LIMITE_PENDENCIA, em api_rest/models.py) — os três tempos do
+// sistema alinhados no mesmo valor.
+const TIMEOUT_ANALISE_MS = 5 * 60 * 1000
 
 // Página "Dados do LoRa": mostra, por dispositivo (sensor_id), a força do
 // sinal do link LoRa (RSSI/SNR) sob demanda. Diferente da temperatura, que
