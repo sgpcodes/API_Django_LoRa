@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Outlet } from 'react-router-dom'
+import { Menu } from 'lucide-react'
 import Sidebar from './Sidebar'
 import { obterTemaPorHorario } from '../services/climaService'
 import styles from './AppLayout.module.css'
@@ -16,6 +17,7 @@ const INTERVALO_VERIFICACAO_TEMA_MS = 60_000
 // cada página precisam dele.
 function AppLayout() {
   const [tema, setTema] = useState(obterTemaPorHorario)
+  const [menuMobileAberto, setMenuMobileAberto] = useState(false)
   const temaEscolhidoManualmente = useRef(false)
 
   useEffect(() => {
@@ -34,8 +36,24 @@ function AppLayout() {
 
   return (
     <div className={styles.app} data-theme={tema}>
-      <Sidebar tema={tema} onAlternarTema={alternarTema} />
+      <Sidebar
+        tema={tema}
+        onAlternarTema={alternarTema}
+        abertaMobile={menuMobileAberto}
+        onFecharMobile={() => setMenuMobileAberto(false)}
+      />
       <main className={styles.conteudo}>
+        {/* Só aparece em telas estreitas (ver AppLayout.module.css) — a
+            sidebar some pra fora da tela nesse tamanho, então precisa de
+            um jeito de trazer ela de volta como um menu gaveta. */}
+        <button
+          type="button"
+          className={styles.botaoMenuMobile}
+          onClick={() => setMenuMobileAberto(true)}
+          aria-label="Abrir menu"
+        >
+          <Menu size={20} />
+        </button>
         <Outlet context={{ tema, onAlternarTema: alternarTema }} />
       </main>
     </div>

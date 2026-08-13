@@ -7,6 +7,10 @@
   gap: 0.85rem;
 }
 
+.pagina > * {
+  min-width: 0;
+}
+
 .dispositivos {
   display: flex;
   flex-direction: column;

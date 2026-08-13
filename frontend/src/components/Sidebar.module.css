@@ -43,6 +43,14 @@
   transform: translateY(-50%) scale(1.08);
 }
 
+.botaoFecharMobile {
+  display: none;
+}
+
+.fundoEscurecido {
+  display: none;
+}
+
 .marca {
   display: flex;
   align-items: center;
@@ -222,5 +230,41 @@
     position: fixed;
     z-index: 20;
     transform: translateX(-100%);
+  }
+
+  .sidebarAbertaMobile {
+    transform: translateX(0);
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Recolher-pra-ícones é um recurso de tela larga; no mobile a sidebar já
+     vira uma gaveta que some por completo, então esse botão vira o de
+     fechar a gaveta. */
+  .botaoRecolher {
+    display: none;
+  }
+
+  .botaoFecharMobile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    border: none;
+    background-color: rgba(255, 255, 255, 0.14);
+    color: rgba(255, 255, 255, 0.9);
+    cursor: pointer;
+  }
+
+  .fundoEscurecido {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 19;
+    background-color: rgba(10, 15, 30, 0.5);
   }
 }

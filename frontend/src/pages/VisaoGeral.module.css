@@ -7,6 +7,13 @@
   gap: 0.85rem;
 }
 
+/* Sem isso, um filho com conteúdo largo (ex.: a tabela de resumo, que não
+   quebra linha) força a própria seção a crescer além da tela em vez de
+   rolar por dentro. */
+.pagina > * {
+  min-width: 0;
+}
+
 .cardsPrincipais {
   display: grid;
   grid-template-columns: repeat(5, 1fr);

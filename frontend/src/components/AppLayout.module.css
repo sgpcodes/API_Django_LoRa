@@ -12,3 +12,27 @@
   padding: 1.75rem clamp(1rem, 3vw, 2.5rem) 3rem;
   box-sizing: border-box;
 }
+
+.botaoMenuMobile {
+  display: none;
+}
+
+/* Mesmo ponto de corte usado no Sidebar.module.css para esconder a
+   sidebar — os dois precisam concordar, senão sobra tela sem nenhum jeito
+   de abrir o menu. */
+@media (max-width: 900px) {
+  .botaoMenuMobile {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    margin-bottom: 1rem;
+    border-radius: 10px;
+    border: 1px solid var(--color-card-border);
+    background-color: var(--color-card-bg);
+    color: var(--color-text);
+    cursor: pointer;
+    transition: var(--transition-theme);
+  }
+}
