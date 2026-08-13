@@ -103,7 +103,11 @@ function DispositivoLoraCard({ leitura, analisando, erroAnalise, onAnalisar, onR
               <RefreshCw size={15} className={analisando ? styles.iconeGirando : undefined} />
               {analisando ? 'Aguardando resposta…' : 'Analisar'}
             </button>
-            {analisando && <span className={styles.dicaEspera}>Pode levar até 1 min</span>}
+            <span className={styles.dicaEspera}>
+              {ultimaAnaliseRssi
+                ? `Última leitura de RSSI: ${formatarDataHora(ultimaAnaliseRssi.data_hora)}`
+                : 'Nenhuma leitura de RSSI ainda'}
+            </span>
           </div>
         </div>
       </div>
@@ -150,12 +154,6 @@ function DispositivoLoraCard({ leitura, analisando, erroAnalise, onAnalisar, onR
               <span className={styles.metricaValor}>{snrVolta != null ? `${snrVolta} dB` : '—'}</span>
             </div>
           </div>
-
-          {ultimaAnaliseRssi && (
-            <p className={styles.notaAnalise}>
-              Última análise: {formatarDataHora(ultimaAnaliseRssi.data_hora)}
-            </p>
-          )}
 
           {(uidRemoto || potenciaDbm != null || frequenciaMhz != null || versaoFw != null) && (
             <div className={styles.configuracao}>
