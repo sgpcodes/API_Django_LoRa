@@ -13,6 +13,14 @@ function formatarDataHora(iso) {
   })
 }
 
+// "agora", "há 1 min", "há 2 min"... Usado na dica de última leitura de
+// RSSI, que fica sempre visível — precisão de segundos ali só atrapalharia.
+function formatarTempoRelativo(iso) {
+  const minutos = Math.floor((Date.now() - new Date(iso).getTime()) / 60_000)
+  if (minutos <= 0) return 'agora'
+  return `há ${minutos} min`
+}
+
 // Um dispositivo LoRa por sensor_id (cada ESP32 novo que aparecer nas
 // leituras vira um card aqui automaticamente — ver obterUltimaLeituraPorSensor
 // em services/leiturasService.js). O corpo com RSSI/SNR e configuração fica
@@ -105,7 +113,7 @@ function DispositivoLoraCard({ leitura, analisando, erroAnalise, onAnalisar, onR
             </button>
             <span className={styles.dicaEspera}>
               {ultimaAnaliseRssi
-                ? `Última leitura de RSSI: ${formatarDataHora(ultimaAnaliseRssi.data_hora)}`
+                ? `Última leitura de RSSI: ${formatarTempoRelativo(ultimaAnaliseRssi.data_hora)}`
                 : 'Nenhuma leitura de RSSI ainda'}
             </span>
           </div>

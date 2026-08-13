@@ -26,12 +26,16 @@ const INTERVALO_ATUALIZACAO_MS = 60_000
 // perceptível depois que a resposta já chegou.
 const INTERVALO_POLL_ANALISE_MS = 2_500
 
-// Se passar disso sem resposta, desiste e avisa o usuário (pode ser que o
-// ESP32 esteja desligado/desconectado). Mesmo padrão de 5 min usado no
-// limiar online/offline e na expiração do pedido no backend
-// (TEMPO_LIMITE_PENDENCIA, em api_rest/models.py) — os três tempos do
-// sistema alinhados no mesmo valor.
-const TIMEOUT_ANALISE_MS = 5 * 60 * 1000
+// Paciência da tela: depois disso sem resposta, o botão volta ao normal e
+// avisa que falhou. É só a UI desistindo de esperar — o pedido em si
+// continua valendo no backend por mais tempo (TEMPO_LIMITE_PENDENCIA, em
+// api_rest/models.py, 5 min), porque o check-in real do RX pode acontecer
+// depois desses 30s. Ou seja: é normal o valor de RSSI aparecer sozinho um
+// pouco depois, mesmo com a tela já tendo mostrado "falha".
+const TIMEOUT_ANALISE_MS = 30_000
+
+// Quanto tempo a mensagem de falha fica visível antes de sumir sozinha.
+const DURACAO_ERRO_MS = 3_000
 
 // Página "Dados do LoRa": mostra, por dispositivo (sensor_id), a força do
 // sinal do link LoRa (RSSI/SNR) sob demanda. Diferente da temperatura, que
@@ -44,11 +48,29 @@ function DadosLora() {
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState(null)
 
-  // Uma analise pendente por sensor: sensorId -> { inicio, erro }. Assim,
-  // clicar "Analisar" num dispositivo nao mexe no estado dos outros.
+  // Uma analise pendente por sensor: sensorId -> { inicio }. Assim, clicar
+  // "Analisar" num dispositivo nao mexe no estado dos outros.
   const [analisesPorSensor, setAnalisesPorSensor] = useState({})
 
+  // Mensagens de falha são passageiras (ver DURACAO_ERRO_MS) e vivem
+  // separadas de analisesPorSensor: assim que uma falha, o sensor já sai
+  // de "pendente" (botão volta ao normal na hora), e a mensagem em si some
+  // sozinha um pouco depois.
+  const [errosTemporarios, setErrosTemporarios] = useState({})
+
   const { ocultosDesde, ocultarSensor } = useSensoresOcultos(CHAVE_OCULTOS, leituras)
+
+  function mostrarErroTemporario(sensorId, mensagem) {
+    setErrosTemporarios((atual) => ({ ...atual, [sensorId]: mensagem }))
+    setTimeout(() => {
+      setErrosTemporarios((atual) => {
+        if (!(sensorId in atual)) return atual
+        const proximo = { ...atual }
+        delete proximo[sensorId]
+        return proximo
+      })
+    }, DURACAO_ERRO_MS)
+  }
 
   async function carregarLeituras() {
     try {
@@ -87,35 +109,44 @@ function DadosLora() {
 
   // Toda vez que leituras novas chegam, confere se alguma análise pendente
   // já foi respondida (leitura de RSSI mais recente que o inicio do pedido)
-  // ou estourou o tempo limite.
+  // ou estourou o tempo limite — nos dois casos, o sensor sai de "pendente"
+  // (o botão volta ao normal na hora); no caso de timeout, mostra a
+  // mensagem de falha por alguns segundos.
   useEffect(() => {
     if (sensoresPendentes.length === 0) return
 
+    // Calculado aqui fora, a partir do estado atual — e não dentro do
+    // updater do setAnalisesPorSensor logo abaixo, porque essa função pode
+    // rodar depois deste trecho (não é síncrona), então "sensoresExpirados"
+    // poderia ainda estar vazio na hora do forEach.
     const dispositivosAtuais = obterUltimaLeituraPorSensor(leituras)
     const agora = Date.now()
+    const sensoresParaRemover = []
+    const sensoresExpirados = []
 
-    setAnalisesPorSensor((atual) => {
-      let mudou = false
-      const proximo = { ...atual }
+    for (const sensorId of Object.keys(analisesPorSensor)) {
+      const pedido = analisesPorSensor[sensorId]
+      const dispositivo = dispositivosAtuais.find((d) => d.sensor_id === sensorId)
+      const dataUltimaAnalise = dispositivo?.ultimaAnaliseRssi?.data_hora
 
-      for (const sensorId of Object.keys(atual)) {
-        const pedido = atual[sensorId]
-        const dispositivo = dispositivosAtuais.find((d) => d.sensor_id === sensorId)
-        const dataUltimaAnalise = dispositivo?.ultimaAnaliseRssi?.data_hora
-
-        if (dataUltimaAnalise && new Date(dataUltimaAnalise).getTime() >= pedido.inicio) {
-          delete proximo[sensorId]
-          mudou = true
-        } else if (agora - pedido.inicio > TIMEOUT_ANALISE_MS && !pedido.erro) {
-          proximo[sensorId] = {
-            ...pedido,
-            erro: 'O sensor não respondeu a tempo. Confira se ele está ligado e tente de novo.',
-          }
-          mudou = true
-        }
+      if (dataUltimaAnalise && new Date(dataUltimaAnalise).getTime() >= pedido.inicio) {
+        sensoresParaRemover.push(sensorId)
+      } else if (agora - pedido.inicio > TIMEOUT_ANALISE_MS) {
+        sensoresParaRemover.push(sensorId)
+        sensoresExpirados.push(sensorId)
       }
+    }
 
-      return mudou ? proximo : atual
+    if (sensoresParaRemover.length > 0) {
+      setAnalisesPorSensor((atual) => {
+        const proximo = { ...atual }
+        sensoresParaRemover.forEach((sensorId) => delete proximo[sensorId])
+        return proximo
+      })
+    }
+
+    sensoresExpirados.forEach((sensorId) => {
+      mostrarErroTemporario(sensorId, 'O sensor não respondeu a tempo. Confira se ele está ligado e tente de novo.')
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leituras])
@@ -130,16 +161,18 @@ function DadosLora() {
   async function aoClicarAnalisar(sensorId) {
     setAnalisesPorSensor((atual) => ({
       ...atual,
-      [sensorId]: { inicio: Date.now(), erro: null },
+      [sensorId]: { inicio: Date.now() },
     }))
 
     try {
       await solicitarAnaliseRssi(sensorId)
     } catch {
-      setAnalisesPorSensor((atual) => ({
-        ...atual,
-        [sensorId]: { inicio: Date.now(), erro: 'Não foi possível solicitar a análise. Tente novamente.' },
-      }))
+      setAnalisesPorSensor((atual) => {
+        const proximo = { ...atual }
+        delete proximo[sensorId]
+        return proximo
+      })
+      mostrarErroTemporario(sensorId, 'Não foi possível solicitar a análise. Tente novamente.')
     }
   }
 
@@ -188,7 +221,7 @@ function DadosLora() {
               key={leitura.sensor_id}
               leitura={leitura}
               analisando={leitura.sensor_id in analisesPorSensor}
-              erroAnalise={analisesPorSensor[leitura.sensor_id]?.erro ?? null}
+              erroAnalise={errosTemporarios[leitura.sensor_id] ?? null}
               onAnalisar={() => aoClicarAnalisar(leitura.sensor_id)}
               onRemover={() => ocultarSensor(leitura.sensor_id)}
             />
