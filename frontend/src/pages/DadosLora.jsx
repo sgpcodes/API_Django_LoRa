@@ -27,14 +27,13 @@ const INTERVALO_ATUALIZACAO_MS = 60_000
 const INTERVALO_POLL_ANALISE_MS = 2_500
 
 // Paciência da tela: depois disso sem resposta, o botão volta ao normal e
-// avisa que falhou. Precisa cobrir pelo menos um ciclo real de check-in do
-// RX — medido em produção, entre 60-90s de um check-in pro outro, às vezes
-// levando 2 ciclos quando o rádio remoto não responde no primeiro. 15s
-// dava falso alarme quase toda vez, mesmo quando o pedido ia ser atendido
-// segundos depois. O pedido em si vale mais tempo ainda no backend
-// (TEMPO_LIMITE_PENDENCIA, em api_rest/models.py, 5 min) — mesmo a tela
-// desistindo aqui, o valor pode aparecer sozinho um pouco depois.
-const TIMEOUT_ANALISE_MS = 2 * 60 * 1000
+// avisa que falhou. Pedido explícito de manter em 30s, mesmo sabendo que o
+// ciclo real do RX costuma levar 60-90s (às vezes 2 ciclos) — ou seja, é
+// esperado que a mensagem de falha apareça com frequência mesmo quando o
+// pedido ainda vai ser atendido segundos depois. O pedido em si vale mais
+// tempo no backend (TEMPO_LIMITE_PENDENCIA, em api_rest/models.py, 5 min)
+// — mesmo a tela desistindo aqui, o valor pode aparecer sozinho depois.
+const TIMEOUT_ANALISE_MS = 30_000
 
 // Quanto tempo a mensagem de falha fica visível antes de sumir sozinha.
 const DURACAO_ERRO_MS = 3_000
