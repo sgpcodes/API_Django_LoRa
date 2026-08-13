@@ -30,9 +30,9 @@ const INTERVALO_POLL_ANALISE_MS = 2_500
 // avisa que falhou. É só a UI desistindo de esperar — o pedido em si
 // continua valendo no backend por mais tempo (TEMPO_LIMITE_PENDENCIA, em
 // api_rest/models.py, 5 min), porque o check-in real do RX pode acontecer
-// depois desses 30s. Ou seja: é normal o valor de RSSI aparecer sozinho um
+// depois desses 15s. Ou seja: é normal o valor de RSSI aparecer sozinho um
 // pouco depois, mesmo com a tela já tendo mostrado "falha".
-const TIMEOUT_ANALISE_MS = 30_000
+const TIMEOUT_ANALISE_MS = 15_000
 
 // Quanto tempo a mensagem de falha fica visível antes de sumir sozinha.
 const DURACAO_ERRO_MS = 3_000
