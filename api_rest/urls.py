@@ -1,6 +1,11 @@
-from django.urls import path
+from django.urls import include, path
+from rest_framework.routers import DefaultRouter
 
-from .views import LeituraDetailView, LeituraListCreateView, RssiSolicitarView, RssiStatusView
+from .views import EstacaoViewSet, LeituraDetailView, LeituraListCreateView, RssiSolicitarView, RssiStatusView
+
+router = DefaultRouter()
+# GET/POST /api/estacoes/, GET/PUT/PATCH/DELETE /api/estacoes/<id>/
+router.register('estacoes', EstacaoViewSet, basename='estacao')
 
 urlpatterns = [
     # GET  /api/leituras/            -> lista todas (ou filtra com ?sensor_id=...)
@@ -18,4 +23,6 @@ urlpatterns = [
     # POST /api/rssi/solicitar/      -> o botão "Analisar" do dashboard marca um pedido como pendente
     path('rssi/status/', RssiStatusView.as_view(), name='rssi-status'),
     path('rssi/solicitar/', RssiSolicitarView.as_view(), name='rssi-solicitar'),
+
+    path('', include(router.urls)),
 ]

@@ -1,0 +1,417 @@
+/* Ocupa a tela inteira — sem largura máxima, então não sobra vazio em
+   monitores largos. A "moldura" é só uma margem fininha (14px) com
+   cantos arredondados e sombra, não uma caixa pequena centralizada. */
+.fundo {
+  height: 100vh;
+  overflow: hidden;
+  padding: 14px;
+  display: flex;
+  background: linear-gradient(135deg, #7ea2d8 0%, #3f5f94 100%);
+}
+
+.pagina {
+  flex: 1;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 0.85fr 1.15fr;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 25px 60px rgba(20, 40, 80, 0.35);
+}
+
+/* ---- Painel de marketing (esquerda) ----
+   A imagem (frontend/src/assets/fundo-autenticacao.png) já traz logo,
+   texto de chamada, cards de dado e ícones prontos — este painel é só
+   uma moldura pra ela, sem conteúdo próprio. */
+
+.painelMarketing {
+  background-size: cover;
+  background-position: left top;
+  background-repeat: no-repeat;
+  background-color: #cfe0f7; /* cor média da imagem, evita "flash" branco enquanto carrega */
+}
+
+/* ---- Painel do formulário (direita) ---- */
+
+.painelFormulario {
+  display: flex;
+  /* Não usa align-items/justify-content:center aqui: com conteúdo maior
+     que a área visível, centralizar por essas propriedades "esconde" o
+     topo do conteúdo atrás da borda, sem deixar rolar até ele. Quem
+     centraliza é o próprio .cartao, via margin:auto (mesmo efeito
+     quando cabe tudo, mas sem esse problema quando não cabe). */
+  padding: 2rem;
+  background-color: var(--color-card-bg);
+  overflow-y: auto;
+  /* Sem isso, um item de grid/flex recusa encolher abaixo da altura do
+     próprio conteúdo por padrão — o overflow-y:auto nunca chega a valer
+     porque o item só cresce, e o excesso fica escondido atrás do
+     `overflow: hidden` do `.fundo` em vez de aparecer como scroll. */
+  min-height: 0;
+}
+
+.cartao {
+  width: 100%;
+  max-width: 620px;
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem 0;
+}
+
+.cabecalhoForm {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.2rem;
+}
+
+.iconeCabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background-color: var(--color-pill-bg);
+  color: var(--color-accent);
+  flex-shrink: 0;
+}
+
+.tituloForm {
+  margin: 0;
+  font-size: 1.55rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.subtituloForm {
+  margin: 0.15rem 0 0;
+  font-size: 0.95rem;
+  color: var(--color-text-secondary);
+}
+
+.linha2Colunas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.rotulo {
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.inputComIcone {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 10px;
+  background-color: var(--color-input-bg);
+  border: 1px solid var(--color-card-border);
+  color: var(--color-text-secondary);
+  transition: var(--transition-theme);
+}
+
+.inputComIcone:focus-within {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.inputComIcone input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 0.98rem;
+  color: var(--color-text);
+}
+
+.botaoOlho {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.botaoOlho:hover {
+  color: var(--color-accent);
+}
+
+.blocoPlanos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.separadorTexto {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.separadorTexto::before,
+.separadorTexto::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background-color: var(--color-card-border);
+}
+
+.gradePlanos {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.85rem;
+}
+
+.cardPlano {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.55rem;
+  padding: 1.25rem 1.1rem;
+  border-radius: 14px;
+  background-color: var(--color-input-bg);
+  border: 1px solid var(--color-card-border);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.cardPlano:hover {
+  border-color: var(--color-accent);
+}
+
+.cardPlanoSelecionado {
+  border-color: var(--color-accent);
+  background-color: var(--color-pill-bg);
+}
+
+.seloPlano {
+  position: absolute;
+  top: -0.65rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  background-color: var(--color-accent);
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.radioPlano {
+  position: absolute;
+  top: 0.9rem;
+  right: 0.9rem;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  border: 2px solid var(--color-card-border);
+}
+
+.cardPlanoSelecionado .radioPlano {
+  border-color: var(--color-accent);
+  background-color: var(--color-accent);
+  box-shadow: inset 0 0 0 2px var(--color-card-bg);
+}
+
+.nomePlano {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.precoPlano {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+.precoPeriodo {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.listaRecursosPlano {
+  list-style: none;
+  margin: 0.3rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  width: 100%;
+}
+
+.listaRecursosPlano li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  line-height: 1.35;
+  color: var(--color-text-secondary);
+}
+
+.listaRecursosPlano svg {
+  flex-shrink: 0;
+  margin-top: 0.2rem;
+  width: 15px;
+  height: 15px;
+  color: var(--color-accent);
+}
+
+.erro {
+  margin: 0;
+  padding: 0.5rem 0.7rem;
+  border-radius: 8px;
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--color-status-offline);
+  font-size: 0.82rem;
+}
+
+.botaoPrincipal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.85rem;
+  border: none;
+  border-radius: 10px;
+  background-color: var(--color-accent);
+  color: #ffffff;
+  font-size: 1.02rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.botaoPrincipal:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.botaoPrincipal:not(:disabled):hover {
+  opacity: 0.9;
+}
+
+.divisorOu {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: -0.3rem 0;
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+}
+
+.divisorOu::before,
+.divisorOu::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background-color: var(--color-card-border);
+}
+
+.opcaoCredenciada {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 12px;
+  background-color: var(--color-input-bg);
+  border: 1px solid var(--color-card-border);
+  color: var(--color-accent);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.opcaoCredenciada:hover {
+  border-color: var(--color-accent);
+}
+
+.opcaoCredenciadaTexto {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.opcaoCredenciadaTexto strong {
+  font-size: 0.95rem;
+  color: var(--color-text);
+}
+
+.opcaoCredenciadaTexto small {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+
+.linkLogin {
+  margin: 0;
+  text-align: center;
+  font-size: 0.92rem;
+  color: var(--color-text-secondary);
+}
+
+.linkLogin a {
+  color: var(--color-accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.linkLogin a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 980px) {
+  .pagina {
+    grid-template-columns: 1fr;
+    border-radius: 20px;
+  }
+
+  /* Sem largura de sobra pra imagem e formulário lado a lado — vira uma
+     faixa no topo (a imagem é quadrada, então "cover" numa faixa baixa
+     mantém logo/texto/estação visíveis, que ficam na metade de cima). */
+  .painelMarketing {
+    min-height: 200px;
+  }
+
+  .gradePlanos {
+    grid-template-columns: 1fr;
+  }
+
+  .linha2Colunas {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .painelMarketing {
+    display: none;
+  }
+}

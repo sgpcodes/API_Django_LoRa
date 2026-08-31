@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutGrid,
   Layers,
@@ -14,13 +14,14 @@ import {
   X,
 } from 'lucide-react'
 import logoLacop from '../assets/lacop.png'
+import { logout } from '../services/authService'
 import styles from './Sidebar.module.css'
 
 const ITENS_NAV = [
-  { to: '/', rotulo: 'Dashboard', icone: LayoutGrid, fim: true },
-  { to: '/visao-geral', rotulo: 'Visão Geral', icone: Layers },
-  { to: '/dados-lora', rotulo: 'Dados do LoRa', icone: Wifi },
-  { to: '/perfil', rotulo: 'Perfil', icone: User },
+  { to: '/app', rotulo: 'Dashboard', icone: LayoutGrid, fim: true },
+  { to: '/app/visao-geral', rotulo: 'Visão Geral', icone: Layers },
+  { to: '/app/dados-lora', rotulo: 'Dados do LoRa', icone: Wifi },
+  { to: '/app/perfil', rotulo: 'Perfil', icone: User },
 ]
 
 // Menu lateral: navegação entre as páginas, e atalho de tema no rodapé.
@@ -33,6 +34,12 @@ const ITENS_NAV = [
 // escurecido atrás que fecha ao ser clicado.
 function Sidebar({ tema, onAlternarTema, abertaMobile, onFecharMobile }) {
   const [recolhida, setRecolhida] = useState(false)
+  const navigate = useNavigate()
+
+  function aoClicarSair() {
+    logout()
+    navigate('/login', { replace: true })
+  }
 
   function aoClicarAba(evento) {
     if (recolhida && !evento.target.closest(`.${styles.iconeLink}`)) {
@@ -102,7 +109,7 @@ function Sidebar({ tema, onAlternarTema, abertaMobile, onFecharMobile }) {
             <HelpCircle size={18} />
             <span className={styles.rotuloLink}>Ajuda</span>
           </button>
-          <button type="button" className={styles.link} title="Sair">
+          <button type="button" className={styles.link} title="Sair" onClick={aoClicarSair}>
             <LogOut size={18} />
             <span className={styles.rotuloLink}>Sair</span>
           </button>

@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 import os
+from datetime import timedelta
 from pathlib import Path
 
 import dj_database_url
@@ -55,8 +56,15 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'corsheaders',
+    'contas',
     'api_rest',
 ]
+
+# Usuario customizado (app contas) no lugar do auth.User padrão do Django —
+# Gestor e Usuário final são o mesmo model, diferenciados por um campo
+# `role` (ver contas/models.py). Precisa estar definido ANTES da primeira
+# migration que referencia usuário ser aplicada.
+AUTH_USER_MODEL = 'contas.Usuario'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -113,6 +121,28 @@ DATABASES = {
 }
 
 
+# Django REST Framework
+# Autenticação via JWT (access + refresh token) para Gestor/Usuário (RN20).
+# As views que o hardware (ESP32) chama diretamente continuam com
+# permission_classes = [AllowAny] explícito nelas mesmas — a estação ainda
+# não manda token nenhum (isso fica para quando o firmware for adaptado),
+# então o padrão do projeto (IsAuthenticated) não pode se aplicar a elas.
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+}
+
+
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
 
@@ -161,4 +191,33 @@ STORAGES = {
 # para simplificar. Se um dia houver um frontend específico, troque por
 # CORS_ALLOWED_ORIGINS = ['https://meu-frontend.com'].
 CORS_ALLOW_ALL_ORIGINS = True
+
+
+# E-mail (confirmação de cadastro — contas/emails.py)
+#
+# Provedor configurado via variável de ambiente RESEND_API_KEY (SMTP do
+# Resend: https://resend.com, tem plano gratuito). Enquanto essa variável
+# não existir (ex.: ambiente local sem configurar nada), o Django usa o
+# backend de console — o e-mail "é enviado" só no sentido de aparecer
+# impresso no log do servidor, ninguém recebe de verdade. Isso deixa o
+# fluxo inteiro testável sem depender de provedor nenhum, e vira envio
+# real assim que a variável for definida — sem mudar código.
+_resend_api_key = os.environ.get('RESEND_API_KEY')
+
+if _resend_api_key:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = 'smtp.resend.com'
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+    EMAIL_HOST_USER = 'resend'
+    EMAIL_HOST_PASSWORD = _resend_api_key
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'onboarding@resend.dev')
+
+# URL do frontend publicado — usada para montar o link de confirmação de
+# e-mail (contas/emails.py). Em produção, defina FRONTEND_URL com o
+# domínio real do Vercel; em dev local aponta pro Vite.
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
 

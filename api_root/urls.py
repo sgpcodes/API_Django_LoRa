@@ -19,5 +19,8 @@ from django.urls import include, path
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    # Login (JWT), CRUD de Usuário/Plano/Funcionalidade/Assinatura.
+    path('api/', include('contas.urls')),
+    # Telemetria: leituras, RSSI, Estações.
     path('api/', include('api_rest.urls')),
 ]

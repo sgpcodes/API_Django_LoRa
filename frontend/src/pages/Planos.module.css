@@ -1,0 +1,178 @@
+.pagina {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  padding: 3rem 1.5rem 2rem;
+  background-color: var(--color-bg);
+  transition: var(--transition-theme);
+}
+
+.cabecalho {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  text-align: center;
+  max-width: 560px;
+}
+
+.logo {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  margin-bottom: 0.25rem;
+}
+
+.titulo {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--color-text);
+  transition: var(--transition-theme);
+}
+
+.subtitulo {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  transition: var(--transition-theme);
+}
+
+.grade {
+  width: 100%;
+  max-width: 1080px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.cartao {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1.6rem 1.4rem;
+  border-radius: 16px;
+  background-color: var(--color-card-bg);
+  border: 1px solid var(--color-card-border);
+  box-shadow: var(--shadow-card);
+  transition: var(--transition-theme);
+}
+
+.cartaoDestaque {
+  border-color: var(--color-accent);
+}
+
+.selo {
+  position: absolute;
+  top: -0.6rem;
+  right: 1.2rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background-color: var(--color-accent);
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.nomePlano {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--color-text);
+  transition: var(--transition-theme);
+}
+
+.resumoPlano {
+  margin: -0.5rem 0 0;
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+  line-height: 1.45;
+  transition: var(--transition-theme);
+}
+
+.listaRecursos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  flex: 1;
+}
+
+.itemRecurso {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--color-text);
+  transition: var(--transition-theme);
+}
+
+.iconeCheck {
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+  color: var(--color-accent);
+}
+
+.emBreve {
+  align-self: flex-start;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  background-color: var(--color-badge-off-bg);
+  color: var(--color-badge-off-texto);
+  font-size: 0.72rem;
+  font-weight: 600;
+  transition: var(--transition-theme);
+}
+
+.rodape {
+  margin-top: auto;
+  padding-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.linkCriarConta {
+  padding: 0.55rem 1.1rem;
+  border-radius: 999px;
+  background-color: var(--color-accent);
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.linkCriarConta:hover {
+  opacity: 0.9;
+}
+
+.linkGerenciador {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.linkGerenciador:hover {
+  color: var(--color-accent);
+}
+
+@media (max-width: 860px) {
+  .grade {
+    grid-template-columns: 1fr;
+    max-width: 420px;
+  }
+}
