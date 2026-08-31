@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, IdCard, KeyRound, Lock, Mail, MailCheck, User } from 'lucide-react'
 import fundoAutenticacao from '../assets/fundo-autenticacao.png'
-import { cadastrar, reenviarConfirmacaoPublico } from '../services/authService'
+import { cadastrar, login, reenviarConfirmacaoPublico } from '../services/authService'
 import { buscarPlanos } from '../services/planosService'
 import styles from './Cadastro.module.css'
 
@@ -12,6 +12,7 @@ import styles from './Cadastro.module.css'
 // - digitando o token da organização -> vira Gestor (acesso total),
 //   sem precisar escolher plano nenhum.
 function Cadastro() {
+  const navigate = useNavigate()
   const [cadastroConcluido, setCadastroConcluido] = useState(false)
   const [emailCadastrado, setEmailCadastrado] = useState('')
   const [reenviando, setReenviando] = useState(false)
@@ -69,9 +70,18 @@ function Cadastro() {
         planoId: modoCredenciada ? null : planoSelecionadoId,
         tokenCredenciamento: modoCredenciada ? tokenCredenciamento : null,
       })
-      // Não loga automaticamente: o cadastro só se completa de verdade
-      // com o e-mail confirmado (RN) — mostra a tela pedindo isso em vez
-      // de já cair no dashboard.
+      if (modoCredenciada) {
+        // Conta Gestor: exceção temporária (ver
+        // TokenObtainPairComRoleSerializer.validate no backend) — sem
+        // domínio verificado no Resend, o e-mail de confirmação não
+        // chegaria pra quem não é o dono da conta Resend. Loga direto.
+        await login(email, senha)
+        navigate('/app')
+        return
+      }
+      // Usuário comum: o cadastro só se completa de verdade com o
+      // e-mail confirmado (RN) — mostra a tela pedindo isso em vez de
+      // já cair no dashboard.
       setEmailCadastrado(email)
       setCadastroConcluido(true)
     } catch (erroRequisicao) {
