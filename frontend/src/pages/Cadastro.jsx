@@ -329,7 +329,7 @@ function Cadastro() {
             {erro && <p className={styles.erro}>{erro}</p>}
 
             <button type="submit" className={styles.botaoPrincipal} disabled={carregando}>
-              {carregando ? 'Criando...' : modoCredenciada ? 'Criar conta credenciada' : 'Criar conta'}
+              {carregando ? 'Criando...' : modoCredenciada ? 'Criar conta administrativa' : 'Criar conta'}
               {!carregando && <ArrowRight size={16} />}
             </button>
 
