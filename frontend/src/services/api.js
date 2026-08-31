@@ -1,10 +1,11 @@
 import axios from 'axios'
 import { logout, obterAccessToken, renovarAccessToken } from './authService'
+import { API_BASE_URL } from './config'
 
 // A URL base vem do .env (VITE_API_URL), para trocar de localhost para o
 // Render sem precisar mexer em nenhum outro arquivo do projeto.
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: API_BASE_URL,
 })
 
 // Toda chamada feita por esta instância (dashboard, planos, etc.) sai com o

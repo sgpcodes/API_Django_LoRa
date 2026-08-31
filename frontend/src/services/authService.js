@@ -8,8 +8,7 @@
 // deste módulo para anexar/renovar o token — importar api.js aqui de volta
 // criaria um import circular.
 import axios from 'axios'
-
-const apiBaseUrl = import.meta.env.VITE_API_URL
+import { API_BASE_URL as apiBaseUrl } from './config'
 
 const CHAVE_ACCESS = 'agroclimatico_access_token'
 const CHAVE_REFRESH = 'agroclimatico_refresh_token'
