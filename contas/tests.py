@@ -312,6 +312,21 @@ class CadastroPublicoTests(APITestCase):
         self.assertTrue(usuario.eh_gestor)
         self.assertFalse(Assinatura.objects.filter(usuario=usuario).exists())
 
+    def test_cadastro_credenciado_loga_mesmo_sem_confirmar_email(self):
+        # Exceção temporária (ver TokenObtainPairComRoleSerializer.validate):
+        # sem domínio verificado no Resend, o e-mail de confirmação só
+        # chega pro dono da conta Resend — bloquear Gestor deixaria
+        # qualquer outra pessoa credenciada sem conseguir entrar.
+        self.client.post('/api/auth/cadastro/', self._payload(token_credenciamento=TOKEN_SEMEADO))
+        usuario = Usuario.objects.get(email='nova@exemplo.com')
+        self.assertFalse(usuario.email_verificado)
+
+        resposta = self.client.post(
+            '/api/auth/token/', {'username': 'nova@exemplo.com', 'password': 'senha-forte-123'},
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertIn('access', resposta.data)
+
     def test_cadastro_com_token_errado_e_rejeitado(self):
         resposta = self.client.post('/api/auth/cadastro/', self._payload(token_credenciamento='token-errado'))
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)

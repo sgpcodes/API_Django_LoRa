@@ -18,9 +18,15 @@ class TokenObtainPairComRoleSerializer(TokenObtainPairSerializer):
     RN: a pessoa só completa o cadastro (consegue entrar de verdade) com
     o e-mail confirmado — usuário/senha corretos não bastam se
     `email_verificado` ainda for `False`. Superusuário (`createsuperuser`,
-    acesso de shell no servidor) é a única exceção: é criado por um meio
-    já confiável, não pelo cadastro público, não faz sentido travar por
-    e-mail.
+    acesso de shell no servidor) é uma exceção: é criado por um meio já
+    confiável, não pelo cadastro público, não faz sentido travar por e-mail.
+
+    Exceção temporária: contas Gestor (entrada credenciada) também não são
+    travadas por e-mail. Motivo: sem domínio verificado no Resend, o envio
+    só chega na caixa do próprio dono da conta Resend — bloquear Gestor
+    deixaria qualquer outra pessoa credenciada incapaz de entrar. Reverter
+    assim que houver domínio próprio verificado (voltar a checar
+    `email_verificado` também para GESTOR).
     """
 
     default_error_messages = {
@@ -30,7 +36,8 @@ class TokenObtainPairComRoleSerializer(TokenObtainPairSerializer):
 
     def validate(self, attrs):
         dados = super().validate(attrs)
-        if not self.user.email_verificado and not self.user.is_superuser:
+        isento = self.user.is_superuser or self.user.role == Usuario.Role.GESTOR
+        if not self.user.email_verificado and not isento:
             raise serializers.ValidationError(
                 {'detail': self.error_messages['email_nao_confirmado'], 'codigo': 'email_nao_confirmado'},
             )
