@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Thermometer, Droplets, Gauge, Wind } from 'lucide-react'
 import CabecalhoStandard from '../components/CabecalhoStandard'
 import SummaryStatCard from '../components/SummaryStatCard'
-import WeatherChart from '../components/WeatherChart'
+import GraficoHistoricoCarrossel from '../components/GraficoHistoricoCarrossel'
 import CondicoesAtuaisCard from '../components/CondicoesAtuaisCard'
 import HistoricoVentoTable from '../components/HistoricoVentoTable'
 import ResumoDiaCard from '../components/ResumoDiaCard'
@@ -66,11 +66,6 @@ function Dashboard() {
     )
   }
 
-  const dadosGrafico = clima.historicoTemperaturaPorDia.map((dia) => ({
-    hora: dia.rotulo,
-    temperaturaMedia: dia.temperaturaMedia,
-  }))
-
   return (
     <div className={styles.pagina}>
       {cabecalho}
@@ -132,7 +127,7 @@ function Dashboard() {
       </div>
 
       <section className={styles.grid2Colunas}>
-        <WeatherChart dados={dadosGrafico} />
+        <GraficoHistoricoCarrossel series={clima.seriesHistoricoDiario} />
         <CondicoesAtuaisCard clima={clima} />
       </section>
 

@@ -132,6 +132,17 @@ function normalizar(dados, diasHistorico) {
     temperaturaMedia: dia.media,
   }))
 
+  // Formato uniforme { rotulo, valor } pro carrossel de gráficos do
+  // Dashboard (ver components/GraficoHistoricoCarrossel.jsx) — uma série
+  // por métrica, todas com a mesma forma.
+  const paraSerie = (diario) => diario.map((dia) => ({ rotulo: dia.rotulo, valor: dia.media }))
+  const seriesHistoricoDiario = {
+    temperatura: paraSerie(diarioTemperatura),
+    umidade: paraSerie(diarioUmidade),
+    pressao: paraSerie(diarioPressao),
+    vento: paraSerie(diarioVento),
+  }
+
   const resumoDia = calcularResumoDia(diarioTemperatura, diarioUmidade, diarioPressao, diarioVento)
 
   const historicoVento = horas
@@ -163,6 +174,7 @@ function normalizar(dados, diasHistorico) {
     atualizadoEm: atual.time,
     historicoTemperaturaPorDia,
     historicoVento,
+    seriesHistoricoDiario,
     resumoDia,
   }
 }
