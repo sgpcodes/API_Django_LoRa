@@ -389,7 +389,9 @@ function Perfil() {
                 <div>
                   <span className={styles.rotuloResumo}>Limite de estações</span>
                   <span className={styles.valorResumo}>
-                    {estacoesUsadas} de {plano?.max_estacoes ?? '—'} utilizada{plano?.max_estacoes === 1 ? '' : 's'}
+                    {plano?.max_estacoes == null
+                      ? `${estacoesUsadas} vinculada${estacoesUsadas === 1 ? '' : 's'} · ilimitado`
+                      : `${estacoesUsadas} de ${plano.max_estacoes} utilizada${plano.max_estacoes === 1 ? '' : 's'}`}
                   </span>
                 </div>
               </div>
@@ -418,7 +420,9 @@ function Perfil() {
                 </li>
                 <li>
                   <Check size={14} />
-                  Até {plano?.max_estacoes ?? '—'} estação(ões) vinculada(s)
+                  {plano?.max_estacoes == null
+                    ? 'Estações ilimitadas'
+                    : `Até ${plano.max_estacoes} estação(ões) vinculada(s)`}
                 </li>
                 {plano?.funcionalidades_detalhe?.map((funcionalidade) => (
                   <li key={funcionalidade.id}>
