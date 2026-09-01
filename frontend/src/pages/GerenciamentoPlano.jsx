@@ -22,7 +22,7 @@ import {
 } from 'lucide-react'
 import { buscarPlanos } from '../services/planosService'
 import { obterClaimsDoToken } from '../services/authService'
-import imagemApoioPlanos from '../assets/apoio-planos.jpeg'
+import imagemApoioPlanos from '../assets/apoio-planos.png'
 import styles from './GerenciamentoPlano.module.css'
 
 const ICONE_POR_PLANO = { Standard: Crown, Pro: TrendingUp, Plus: Rocket }
