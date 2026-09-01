@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom'
 import { Menu } from 'lucide-react'
 import Sidebar from './Sidebar'
 import { obterTemaPorHorario } from '../services/climaService'
+import { obterCorPrincipal, salvarCorPrincipal, variaveisCssDaCor } from '../services/aparenciaService'
 import styles from './AppLayout.module.css'
 
 // O tema (dia/noite) segue o relógio do computador por padrão, então
@@ -13,10 +14,11 @@ const INTERVALO_VERIFICACAO_TEMA_MS = 60_000
 
 // Casca fixa do app: menu lateral + área de conteúdo, onde cada página
 // (Dashboard, Dados do LoRa, Perfil) é renderizada via <Outlet />.
-// O tema é controlado aqui porque tanto a sidebar quanto o cabeçalho de
-// cada página precisam dele.
+// Tema e cor principal são controlados aqui (não em cada página) porque a
+// sidebar e o cabeçalho de qualquer página precisam dos dois.
 function AppLayout() {
   const [tema, setTema] = useState(obterTemaPorHorario)
+  const [corPrincipal, setCorPrincipal] = useState(obterCorPrincipal)
   const [menuMobileAberto, setMenuMobileAberto] = useState(false)
   const temaEscolhidoManualmente = useRef(false)
 
@@ -34,8 +36,17 @@ function AppLayout() {
     setTema((atual) => (atual === 'dia' ? 'noite' : 'dia'))
   }
 
+  // Só muda quando a pessoa escolhe de novo em Configurações — nunca
+  // sozinha. Salva na hora (mesma conta, mesmo navegador) e já aplica em
+  // tudo (as variáveis CSS ficam no elemento raiz do app, herdadas por
+  // qualquer componente dentro, sidebar incluída).
+  function mudarCorPrincipal(valor) {
+    salvarCorPrincipal(valor)
+    setCorPrincipal(valor)
+  }
+
   return (
-    <div className={styles.app} data-theme={tema}>
+    <div className={styles.app} data-theme={tema} style={variaveisCssDaCor(corPrincipal)}>
       <Sidebar
         tema={tema}
         onAlternarTema={alternarTema}
@@ -54,7 +65,14 @@ function AppLayout() {
         >
           <Menu size={20} />
         </button>
-        <Outlet context={{ tema, onAlternarTema: alternarTema }} />
+        <Outlet
+          context={{
+            tema,
+            onAlternarTema: alternarTema,
+            corPrincipal,
+            onMudarCorPrincipal: mudarCorPrincipal,
+          }}
+        />
       </main>
     </div>
   )

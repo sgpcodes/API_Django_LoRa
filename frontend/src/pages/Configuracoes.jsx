@@ -23,15 +23,8 @@ import {
 } from 'lucide-react'
 import { obterEstacaoVinculada, desvincularEstacao } from '../services/estacaoService'
 import { buscarMeuPerfil, trocarMinhaSenha } from '../services/perfilService'
+import { CORES_PRINCIPAIS } from '../services/aparenciaService'
 import styles from './Configuracoes.module.css'
-
-const CORES_PRINCIPAIS = [
-  { valor: 'azul', hex: '#2f6fed' },
-  { valor: 'verde', hex: '#22c55e' },
-  { valor: 'roxo', hex: '#8b5cf6' },
-  { valor: 'laranja', hex: '#f59e0b' },
-  { valor: 'vermelho', hex: '#ef4444' },
-]
 
 function Toggle({ ativo, onClick }) {
   return (
@@ -48,7 +41,7 @@ function Toggle({ ativo, onClick }) {
 // tema (compartilhado com o resto do app) e troca de senha.
 function Configuracoes() {
   const navigate = useNavigate()
-  const { tema, onAlternarTema } = useOutletContext()
+  const { tema, onAlternarTema, corPrincipal, onMudarCorPrincipal } = useOutletContext()
   const estacao = obterEstacaoVinculada()
   const [perfil, setPerfil] = useState(null)
 
@@ -71,8 +64,6 @@ function Configuracoes() {
   const [unidadeTempoGraficos, setUnidadeTempoGraficos] = useState('1h')
   const [retencaoDados, setRetencaoDados] = useState('30dias')
 
-  // Aparência
-  const [corPrincipal, setCorPrincipal] = useState('azul')
 
   // Unidades de medida
   const [unidadeTemperatura, setUnidadeTemperatura] = useState('c')
@@ -139,7 +130,7 @@ function Configuracoes() {
     setIntervaloAtualizacao('5min')
     setUnidadeTempoGraficos('1h')
     setRetencaoDados('30dias')
-    setCorPrincipal('azul')
+    onMudarCorPrincipal('azul')
     setUnidadeTemperatura('c')
     setUnidadeVento('kmh')
     setUnidadePrecipitacao('mm')
@@ -309,7 +300,7 @@ function Configuracoes() {
                       className={styles.swatch}
                       style={{ backgroundColor: cor.hex }}
                       aria-label={cor.valor}
-                      onClick={() => setCorPrincipal(cor.valor)}
+                      onClick={() => onMudarCorPrincipal(cor.valor)}
                     >
                       {corPrincipal === cor.valor && <Check size={14} color="#fff" />}
                     </button>
