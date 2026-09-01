@@ -1,6 +1,7 @@
+from django.db.models import Q
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
-from rest_framework import serializers
+from rest_framework import exceptions, serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from .models import Assinatura, Funcionalidade, Plano, TokenCredenciamento, Usuario
@@ -10,10 +11,20 @@ from .validacao import limpar_cpf, validar_cpf
 
 class TokenObtainPairComRoleSerializer(TokenObtainPairSerializer):
     """Igual ao par de token padrão do simplejwt, só que embute `role`,
-    `username` e `precisa_recredenciar` no próprio token JWT (claims) —
-    assim o frontend sabe se é Gestor/Usuário, e se precisa pedir o token
-    de credenciamento de novo, sem precisar de uma segunda chamada à API
-    logo após o login.
+    `username`, `plano` e `precisa_recredenciar` no próprio token JWT
+    (claims) — assim o frontend sabe se é Gestor/Usuário (e qual plano,
+    nesse caso), sem precisar de uma segunda chamada à API logo após o
+    login.
+
+    `validate()` é reescrito do zero (não chama `super().validate()`) por
+    causa do e-mail duplicado entre papéis: uma mesma pessoa pode ter uma
+    conta Gestor e uma conta Usuário com o mesmo e-mail de login, cada uma
+    com sua própria senha (ver `Usuario.Meta.constraints`). A resolução
+    padrão do simplejwt/Django (`authenticate` por `username` único) não
+    dá conta disso — aqui, em vez disso, juntamos todas as contas que
+    batem com o identificador digitado (por e-mail OU por `username`, pra
+    não quebrar contas antigas/de teste que não usam e-mail como login) e
+    testamos a senha em cada uma até achar a que bate.
 
     RN: a pessoa só completa o cadastro (consegue entrar de verdade) com
     o e-mail confirmado — usuário/senha corretos não bastam se
@@ -35,13 +46,30 @@ class TokenObtainPairComRoleSerializer(TokenObtainPairSerializer):
     }
 
     def validate(self, attrs):
-        dados = super().validate(attrs)
+        identificador = attrs[self.username_field]
+        senha = attrs['password']
+
+        candidatos = Usuario.objects.filter(
+            Q(email__iexact=identificador) | Q(username__iexact=identificador),
+            is_active=True,
+        ).distinct()
+
+        self.user = next(
+            (candidato for candidato in candidatos if candidato.check_password(senha)), None,
+        )
+        if self.user is None:
+            raise exceptions.AuthenticationFailed(
+                self.error_messages['no_active_account'], 'no_active_account',
+            )
+
         isento = self.user.is_superuser or self.user.role == Usuario.Role.GESTOR
         if not self.user.email_verificado and not isento:
             raise serializers.ValidationError(
                 {'detail': self.error_messages['email_nao_confirmado'], 'codigo': 'email_nao_confirmado'},
             )
-        return dados
+
+        refresh = self.get_token(self.user)
+        return {'refresh': str(refresh), 'access': str(refresh.access_token)}
 
     @classmethod
     def get_token(cls, user):
@@ -49,6 +77,8 @@ class TokenObtainPairComRoleSerializer(TokenObtainPairSerializer):
         token['role'] = user.role
         token['username'] = user.username
         token['precisa_recredenciar'] = user.precisa_recredenciar
+        assinatura_ativa = user.assinaturas.filter(encerrada_em__isnull=True).select_related('plano').first()
+        token['plano'] = assinatura_ativa.plano.nome if assinatura_ativa else None
         return token
 
 
@@ -63,6 +93,13 @@ class UsuarioSerializer(serializers.ModelSerializer):
     # Só usado na troca de senha por autoedição (RN08: "alterar senha
     # mediante confirmação da senha atual") — não é campo do model.
     senha_atual = serializers.CharField(write_only=True, required=False)
+    # Sem isso, o `UniqueTogetherValidator` gerado pra constraint
+    # `email_unico_por_papel` exige `email` no payload de toda criação,
+    # nem que seja pra checar unicidade (é assim que o DRF trata qualquer
+    # campo de uma UniqueConstraint de múltiplos campos, mesmo com
+    # `required=False` no campo) — `default=''` faz o DRF preencher
+    # sozinho quando o Gestor cria uma conta sem e-mail.
+    email = serializers.EmailField(required=False, allow_blank=True, default='')
 
     class Meta:
         model = Usuario
@@ -155,8 +192,10 @@ class CadastroSerializer(serializers.Serializer):
     token_credenciamento = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     def validate_email(self, email):
-        if Usuario.objects.filter(username__iexact=email).exists():
-            raise serializers.ValidationError('Já existe uma conta com este e-mail.')
+        # A checagem de duplicidade por papel entra em `validate()` — só lá
+        # dá pra saber se é cadastro de Usuário ou de Gestor (mesmo e-mail
+        # pode ter uma conta de cada tipo, só não duas do mesmo tipo; ver
+        # `Usuario.Meta.constraints`, mesmo padrão já usado pro CPF).
         return email
 
     def validate_cpf(self, cpf):
@@ -194,6 +233,15 @@ class CadastroSerializer(serializers.Serializer):
                 {'cpf': f'Já existe uma conta {rotulo} com este CPF.'}
             )
 
+        # Mesma lógica pro e-mail: uma conta Gestor e uma conta Usuário
+        # podem compartilhar o mesmo e-mail de login (cada uma com sua
+        # própria senha) — só não duas do mesmo papel.
+        if Usuario.objects.filter(email__iexact=attrs['email'], role=papel_pretendido).exists():
+            rotulo = 'Gestor' if papel_pretendido == Usuario.Role.GESTOR else 'Usuário'
+            raise serializers.ValidationError(
+                {'email': f'Já existe uma conta {rotulo} com este e-mail.'}
+            )
+
         return attrs
 
     def create(self, validated_data):
@@ -201,9 +249,20 @@ class CadastroSerializer(serializers.Serializer):
         validated_data.pop('token_credenciamento', None)
         plano = validated_data.pop('plano', None)
 
+        # `username` (campo do Django, não o que a pessoa digita — ela só
+        # vê/usa o e-mail) precisa continuar único no banco mesmo quando o
+        # e-mail se repete numa conta de outro papel. Nesse caso, sufixa
+        # por dentro; login continua resolvendo pelo `email`, nunca por
+        # este valor (ver TokenObtainPairComRoleSerializer.validate).
+        email = validated_data['email']
+        role = Usuario.Role.GESTOR if credenciamento_versao is not None else Usuario.Role.USUARIO
+        username = email
+        if Usuario.objects.filter(username__iexact=username).exists():
+            username = f'{email}#{role}'
+
         usuario = Usuario(
-            username=validated_data['email'],
-            email=validated_data['email'],
+            username=username,
+            email=email,
             first_name=validated_data['nome_completo'],
             cpf=validated_data['cpf'],
         )

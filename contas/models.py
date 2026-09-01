@@ -104,6 +104,14 @@ class Usuario(AbstractUser):
       sozinho) para permitir várias contas sem CPF fora desse fluxo
       (ex.: criadas via admin) sem violar a unicidade — duas strings
       vazias colidiriam, mas `NULL` não colide com `NULL` no banco.
+    - `email`: mesma lógica do CPF — único por (`email`, `role`), não
+      sozinho. A mesma pessoa pode logar numa conta Gestor e numa conta
+      Usuário com o mesmo e-mail, uma de cada tipo (ver
+      `Meta.constraints`). Continua sendo o valor que a pessoa digita pra
+      logar (RN20) — a resolução de qual conta é qual, quando há duas
+      com o mesmo e-mail, é feita testando a senha contra cada uma (ver
+      `TokenObtainPairComRoleSerializer.validate`), não pelo campo
+      `username` puro.
     - `email_verificado`: RN de confirmação de e-mail — vira `True`
       quando a pessoa clica no link enviado por `contas.emails`. Não
       bloqueia login (a conta funciona normalmente antes de confirmar);
@@ -137,6 +145,16 @@ class Usuario(AbstractUser):
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=['cpf', 'role'], name='cpf_unico_por_papel'),
+            # `condition`: só vale pra e-mail preenchido — diferente do cpf
+            # (que usa null=True pra isso), o `email` herdado do
+            # AbstractUser default pra string vazia (''), não NULL, então
+            # sem essa condição contas sem e-mail (ex.: criadas via admin)
+            # colidiriam todas entre si.
+            models.UniqueConstraint(
+                fields=['email', 'role'],
+                condition=~models.Q(email=''),
+                name='email_unico_por_papel',
+            ),
         ]
 
     @property

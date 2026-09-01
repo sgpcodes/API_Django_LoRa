@@ -32,6 +32,15 @@ function MolduraAuth({ children }) {
   )
 }
 
+// Selo de tipo de conta na lista de contas salvas — importante quando o
+// mesmo e-mail tem uma conta Gestor e uma conta Usuário (cada uma com sua
+// senha): sem isso, as duas apareceriam como itens idênticos na lista.
+function rotuloConta(conta) {
+  if (conta.role === 'gestor') return 'Administrador'
+  if (conta.plano) return conta.plano
+  return 'Usuário'
+}
+
 // Porta de entrada do site — hoje é a própria rota "/" (ver App.jsx) e
 // também "/login". Comportamento adaptativo por navegador:
 // 0. primeiro acesso nesta máquina (nenhuma conta salva ainda): tela de
@@ -103,7 +112,7 @@ function Login() {
 
   function aoEnviarComConta(evento) {
     evento.preventDefault()
-    autenticar(contaEscolhida, senha)
+    autenticar(contaEscolhida.username, senha)
   }
 
   function aoEnviarFormularioCompleto(evento) {
@@ -247,15 +256,23 @@ function Login() {
 
           <div className={styles.listaContas}>
             {contasSalvas.map((conta) => (
-              <button key={conta} type="button" className={styles.itemConta} onClick={() => setContaEscolhida(conta)}>
+              <button
+                key={`${conta.username}::${conta.role}`}
+                type="button"
+                className={styles.itemConta}
+                onClick={() => setContaEscolhida(conta)}
+              >
                 <UserCircle2 size={22} />
-                <span className={styles.itemContaTexto}>{conta}</span>
+                <span className={styles.itemContaTexto}>
+                  <span>{conta.username}</span>
+                  {conta.role && <span className={styles.itemContaSelo}>{rotuloConta(conta)}</span>}
+                </span>
                 <span
                   className={styles.itemContaRemover}
                   onClick={(evento) => aoEsquecerConta(conta, evento)}
                   role="button"
                   tabIndex={-1}
-                  aria-label={`Esquecer conta ${conta}`}
+                  aria-label={`Esquecer conta ${conta.username}`}
                 >
                   remover
                 </span>
@@ -283,7 +300,8 @@ function Login() {
           <img src={logoLacop} alt="LACOP UFF" className={styles.logo} />
           <div className={styles.contaAtual}>
             <UserCircle2 size={22} />
-            <span>{contaEscolhida}</span>
+            <span>{contaEscolhida.username}</span>
+            {contaEscolhida.role && <span className={styles.itemContaSelo}>{rotuloConta(contaEscolhida)}</span>}
           </div>
 
           <label className={styles.campo}>

@@ -45,6 +45,7 @@ export function obterClaimsDoToken() {
     return {
       role: payload.role ?? null,
       username: payload.username ?? null,
+      plano: payload.plano ?? null,
       precisaRecredenciar: Boolean(payload.precisa_recredenciar),
     }
   } catch {
@@ -56,34 +57,49 @@ export function obterPapelDoToken() {
   return obterClaimsDoToken()?.role ?? null
 }
 
-// "Contas salvas neste navegador" — só os identificadores (e-mail/usuário)
-// já usados aqui, pra tela de login oferecer "entrar com esta conta, só
-// falta a senha" em vez de pedir usuário de novo toda vez. Isso NÃO é
-// sessão múltipla (só um par de tokens fica ativo por vez) — é apenas uma
-// lista de atalho.
+// "Contas salvas neste navegador" — os identificadores (e-mail/usuário) já
+// usados aqui, pra tela de login oferecer "entrar com esta conta, só falta
+// a senha" em vez de pedir usuário de novo toda vez. Isso NÃO é sessão
+// múltipla (só um par de tokens fica ativo por vez) — é apenas uma lista
+// de atalho.
+//
+// Cada item é `{ username, role, plano }`, não só o username: como agora o
+// mesmo e-mail pode logar em duas contas diferentes (uma Gestor, uma
+// Usuário — ver Usuario.Meta.constraints no backend), a chave de
+// identidade de uma conta salva é (username + role), não só o username.
+// `role`/`plano` também alimentam o selo "Administrador"/"Standard"/etc.
+// na lista, pra dar pra diferenciar as duas.
+function chaveConta({ username, role }) {
+  return `${username}::${role}`
+}
+
 export function obterContasSalvas() {
   try {
-    return JSON.parse(localStorage.getItem(CHAVE_CONTAS_SALVAS)) ?? []
+    const dados = JSON.parse(localStorage.getItem(CHAVE_CONTAS_SALVAS)) ?? []
+    // Migra o formato antigo (lista de strings, de antes da conta poder se
+    // repetir por e-mail) sem apagar o que já estava salvo no navegador.
+    return dados.map((conta) => (typeof conta === 'string' ? { username: conta, role: null, plano: null } : conta))
   } catch {
     return []
   }
 }
 
-function lembrarConta(username) {
+function lembrarConta(conta) {
   const atuais = obterContasSalvas()
-  if (atuais.includes(username)) return
-  localStorage.setItem(CHAVE_CONTAS_SALVAS, JSON.stringify([...atuais, username]))
+  const semEssaConta = atuais.filter((atual) => chaveConta(atual) !== chaveConta(conta))
+  localStorage.setItem(CHAVE_CONTAS_SALVAS, JSON.stringify([...semEssaConta, conta]))
 }
 
-export function esquecerConta(username) {
-  const restantes = obterContasSalvas().filter((conta) => conta !== username)
+export function esquecerConta(conta) {
+  const restantes = obterContasSalvas().filter((atual) => chaveConta(atual) !== chaveConta(conta))
   localStorage.setItem(CHAVE_CONTAS_SALVAS, JSON.stringify(restantes))
 }
 
 export async function login(username, password) {
   const resposta = await axios.post(`${apiBaseUrl}/api/auth/token/`, { username, password })
   salvarTokens(resposta.data)
-  lembrarConta(username)
+  const claims = obterClaimsDoToken()
+  lembrarConta({ username, role: claims?.role ?? null, plano: claims?.plano ?? null })
   return resposta.data
 }
 

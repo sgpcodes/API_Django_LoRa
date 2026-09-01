@@ -426,6 +426,50 @@ class CadastroPublicoTests(APITestCase):
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(Usuario.objects.filter(email='outra-plano-diferente@exemplo.com').exists())
 
+    def test_email_duplicado_no_mesmo_papel_e_rejeitado(self):
+        self.client.post('/api/auth/cadastro/', self._payload(plano=self.plano.pk))
+        resposta = self.client.post('/api/auth/cadastro/', self._payload(
+            cpf='529.982.247-25', plano=self.plano.pk,  # mesmo e-mail, CPF diferente
+        ))
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Usuario.objects.filter(email='nova@exemplo.com').count(), 1)
+
+    def test_mesmo_email_pode_ter_conta_usuario_e_conta_gestor_cada_uma_com_sua_senha(self):
+        resposta_usuario = self.client.post(
+            '/api/auth/cadastro/', self._payload(plano=self.plano.pk, password='senha-usuario-123', confirmar_senha='senha-usuario-123'),
+        )
+        self.assertEqual(resposta_usuario.status_code, status.HTTP_201_CREATED)
+
+        resposta_gestor = self.client.post('/api/auth/cadastro/', self._payload(
+            cpf='529.982.247-25', token_credenciamento=TOKEN_SEMEADO,
+            password='senha-gestor-456', confirmar_senha='senha-gestor-456',
+        ))
+        self.assertEqual(resposta_gestor.status_code, status.HTTP_201_CREATED)
+
+        self.assertEqual(Usuario.objects.filter(email='nova@exemplo.com').count(), 2)
+
+        usuario = Usuario.objects.get(email='nova@exemplo.com', role=Usuario.Role.USUARIO)
+        usuario.email_verificado = True
+        usuario.save(update_fields=['email_verificado'])
+
+        # Login com cada senha entra na conta certa (resolvida por senha,
+        # já que o e-mail sozinho não distingue mais qual das duas é).
+        resposta_login_usuario = self.client.post(
+            '/api/auth/token/', {'username': 'nova@exemplo.com', 'password': 'senha-usuario-123'},
+        )
+        self.assertEqual(resposta_login_usuario.status_code, status.HTTP_200_OK)
+
+        resposta_login_gestor = self.client.post(
+            '/api/auth/token/', {'username': 'nova@exemplo.com', 'password': 'senha-gestor-456'},
+        )
+        self.assertEqual(resposta_login_gestor.status_code, status.HTTP_200_OK)
+
+        from rest_framework_simplejwt.tokens import AccessToken
+        papel_usuario = AccessToken(resposta_login_usuario.data['access'])['role']
+        papel_gestor = AccessToken(resposta_login_gestor.data['access'])['role']
+        self.assertEqual(papel_usuario, Usuario.Role.USUARIO)
+        self.assertEqual(papel_gestor, Usuario.Role.GESTOR)
+
     def test_mesmo_cpf_pode_ter_conta_usuario_e_conta_gestor(self):
         """RN: "PF/PJ no mesmo banco" — a mesma pessoa pode ter uma conta
         Usuário (com plano) e uma conta Gestor (credenciada) com o mesmo
