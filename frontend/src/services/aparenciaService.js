@@ -11,6 +11,7 @@ export const CORES_PRINCIPAIS = [
   { valor: 'roxo', hex: '#8b5cf6' },
   { valor: 'laranja', hex: '#f59e0b' },
   { valor: 'vermelho', hex: '#ef4444' },
+  { valor: 'rosa', hex: '#ec4899' },
 ]
 
 function chaveDoUsuario() {
