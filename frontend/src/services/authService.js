@@ -86,7 +86,12 @@ export function obterContasSalvas() {
 
 function lembrarConta(conta) {
   const atuais = obterContasSalvas()
-  const semEssaConta = atuais.filter((atual) => chaveConta(atual) !== chaveConta(conta))
+  // Também descarta qualquer entrada "fantasma" do formato antigo pra esse
+  // mesmo username (role null, de antes desta funcionalidade existir) —
+  // senão ela fica presa na lista pra sempre, duplicada, sem selo.
+  const semEssaConta = atuais.filter(
+    (atual) => chaveConta(atual) !== chaveConta(conta) && !(atual.username === conta.username && atual.role === null),
+  )
   localStorage.setItem(CHAVE_CONTAS_SALVAS, JSON.stringify([...semEssaConta, conta]))
 }
 
