@@ -4,7 +4,7 @@ import CabecalhoStandard from '../components/CabecalhoStandard'
 import SummaryStatCard from '../components/SummaryStatCard'
 import GraficoHistoricoCarrossel from '../components/GraficoHistoricoCarrossel'
 import CondicoesAtuaisCard from '../components/CondicoesAtuaisCard'
-import HistoricoVentoTable from '../components/HistoricoVentoTable'
+import HistoricoDiarioTable from '../components/HistoricoDiarioTable'
 import ResumoDiaCard from '../components/ResumoDiaCard'
 import StatusEstacaoCard from '../components/StatusEstacaoCard'
 import StatusMessage from '../components/StatusMessage'
@@ -19,19 +19,21 @@ import styles from './Dashboard.module.css'
 // verdade (services/leiturasService.js) continua existindo, só não está
 // ligado por enquanto — ver pages/DashboardLora.jsx.
 const INTERVALO_ATUALIZACAO_MS = 15 * 60_000
-const DIAS_HISTORICO_STANDARD = 30 // RN09/RN21
+const DIAS_HISTORICO_PADRAO = 7 // só vira 30 (limite do plano Standard, RN09/RN21) se a pessoa escolher
 
 function Dashboard() {
   const [clima, setClima] = useState(null)
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState(null)
+  const [indiceMetrica, setIndiceMetrica] = useState(0)
+  const [diasHistorico, setDiasHistorico] = useState(DIAS_HISTORICO_PADRAO)
 
   const estacao = obterEstacaoVinculada()
 
   useEffect(() => {
     async function carregarClima() {
       try {
-        const dados = await buscarClimaAtual(undefined, DIAS_HISTORICO_STANDARD)
+        const dados = await buscarClimaAtual(undefined, diasHistorico)
         setClima(dados)
         setErro(null)
       } catch {
@@ -41,10 +43,11 @@ function Dashboard() {
       }
     }
 
+    setCarregando(true)
     carregarClima()
     const intervalo = setInterval(carregarClima, INTERVALO_ATUALIZACAO_MS)
     return () => clearInterval(intervalo)
-  }, [])
+  }, [diasHistorico])
 
   const cabecalho = <CabecalhoStandard identificadorEstacao={estacao?.identificador ?? '—'} />
 
@@ -127,12 +130,18 @@ function Dashboard() {
       </div>
 
       <section className={styles.grid2Colunas}>
-        <GraficoHistoricoCarrossel series={clima.seriesHistoricoDiario} />
+        <GraficoHistoricoCarrossel
+          series={clima.seriesHistoricoDiario}
+          indice={indiceMetrica}
+          onMudarIndice={setIndiceMetrica}
+          diasHistorico={diasHistorico}
+          onMudarDiasHistorico={setDiasHistorico}
+        />
         <CondicoesAtuaisCard clima={clima} />
       </section>
 
       <section className={styles.grid2Colunas}>
-        <HistoricoVentoTable registros={clima.historicoVento} diasHistorico={DIAS_HISTORICO_STANDARD} />
+        <HistoricoDiarioTable tabela={clima.tabelaHistoricoDiario} indice={indiceMetrica} diasHistorico={diasHistorico} />
         <div className={styles.colunaLateral}>
           <ResumoDiaCard resumo={clima.resumoDia} />
           <StatusEstacaoCard operacional />

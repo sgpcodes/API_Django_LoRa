@@ -8,29 +8,24 @@ import {
   CartesianGrid,
   Tooltip,
 } from 'recharts'
-import { ChevronLeft, ChevronRight, Thermometer, Droplets, Gauge, Wind } from 'lucide-react'
+import { ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
+import { METRICAS_CLIMA, OPCOES_PERIODO } from '../services/metricasClima'
 import styles from './GraficoHistoricoCarrossel.module.css'
-
-// Uma métrica por "página" do carrossel — ícone, título, unidade e a
-// chave em `series` (ver climaExternoService.js/seriesHistoricoDiario).
-const METRICAS = [
-  { chave: 'temperatura', titulo: 'Temperatura', unidade: '°C', icone: Thermometer },
-  { chave: 'umidade', titulo: 'Umidade', unidade: '%', icone: Droplets },
-  { chave: 'pressao', titulo: 'Pressão', unidade: 'hPa', icone: Gauge },
-  { chave: 'vento', titulo: 'Vento', unidade: 'km/h', icone: Wind },
-]
 
 // Gráfico histórico do Dashboard, com setinhas pra passar entre as
 // métricas (temperatura, umidade, pressão, vento) sem ocupar mais espaço
-// na tela — só um gráfico por vez, igual um carrossel.
-function GraficoHistoricoCarrossel({ series }) {
-  const [indice, setIndice] = useState(0)
-  const metrica = METRICAS[indice]
+// na tela — só um gráfico por vez, igual um carrossel. Controlado de fora
+// (índice vem do Dashboard) porque a tabela de histórico logo abaixo
+// (HistoricoDiarioTable) navega em conjunto, sincronizada com o mesmo
+// índice — trocar aqui troca a tabela também.
+function GraficoHistoricoCarrossel({ series, indice, onMudarIndice, diasHistorico, onMudarDiasHistorico }) {
+  const [seletorPeriodoAberto, setSeletorPeriodoAberto] = useState(false)
+  const metrica = METRICAS_CLIMA[indice]
   const Icone = metrica.icone
   const dados = series[metrica.chave] ?? []
 
   function irPara(delta) {
-    setIndice((atual) => (atual + delta + METRICAS.length) % METRICAS.length)
+    onMudarIndice((METRICAS_CLIMA.length + indice + delta) % METRICAS_CLIMA.length)
   }
 
   return (
@@ -40,12 +35,41 @@ function GraficoHistoricoCarrossel({ series }) {
           <Icone size={18} />
           {metrica.titulo}
         </h2>
+
         <div className={styles.navegacao}>
+          <div className={styles.seletorPeriodo}>
+            <button
+              type="button"
+              className={styles.botaoPeriodo}
+              onClick={() => setSeletorPeriodoAberto((atual) => !atual)}
+            >
+              Últimos {diasHistorico} dias
+              <ChevronDown size={13} />
+            </button>
+            {seletorPeriodoAberto && (
+              <div className={styles.dropdownPeriodo}>
+                {OPCOES_PERIODO.map((opcao) => (
+                  <button
+                    key={opcao.dias}
+                    type="button"
+                    className={styles.itemDropdownPeriodo}
+                    onClick={() => {
+                      onMudarDiasHistorico(opcao.dias)
+                      setSeletorPeriodoAberto(false)
+                    }}
+                  >
+                    {opcao.rotulo}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           <button type="button" className={styles.botaoSeta} onClick={() => irPara(-1)} aria-label="Métrica anterior">
             <ChevronLeft size={16} />
           </button>
           <div className={styles.pontos}>
-            {METRICAS.map((item, i) => (
+            {METRICAS_CLIMA.map((item, i) => (
               <span key={item.chave} className={`${styles.ponto} ${i === indice ? styles.pontoAtivo : ''}`} />
             ))}
           </div>

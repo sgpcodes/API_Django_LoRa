@@ -62,10 +62,23 @@ function media(numeros) {
   return Number((validos.reduce((soma, numero) => soma + numero, 0) / validos.length).toFixed(1))
 }
 
-// Agrupa as leituras horárias de um campo em médias diárias — alimenta o
-// gráfico histórico principal (rótulo dd/mm) e o resumo do dia, respeitando
-// os `dias` de histórico do plano contratado (RN09/RN21: Standard = 30
-// dias).
+// Média circular (vetorial) de direções em graus — não dá pra tirar média
+// aritmética direto de direção de vento: a média entre 350° e 10° tem que
+// dar 0°/360°, não 180°. Converte cada direção num vetor unitário, tira a
+// média dos vetores, e converte o ângulo resultante de volta pra graus.
+function mediaCircular(graus) {
+  const validos = graus.filter((valor) => valor != null)
+  if (validos.length === 0) return null
+  const somaSeno = validos.reduce((soma, g) => soma + Math.sin((g * Math.PI) / 180), 0)
+  const somaCosseno = validos.reduce((soma, g) => soma + Math.cos((g * Math.PI) / 180), 0)
+  const anguloMedio = (Math.atan2(somaSeno, somaCosseno) * 180) / Math.PI
+  return Math.round((anguloMedio + 360) % 360)
+}
+
+// Agrupa as leituras horárias de um campo em pontos diários (média, mínima
+// e máxima) — alimenta o gráfico histórico, a tabela diária e o resumo do
+// dia, respeitando os `dias` de histórico do plano contratado (RN09/RN21:
+// Standard = 30 dias).
 function agruparPorDia(horas, valores, dias) {
   const porDia = new Map()
 
@@ -78,11 +91,46 @@ function agruparPorDia(horas, valores, dias) {
 
   return Array.from(porDia.entries())
     .slice(-dias)
-    .map(([dataISO, lista]) => ({
-      data: dataISO,
-      rotulo: dataISO.slice(8, 10) + '/' + dataISO.slice(5, 7),
-      media: media(lista),
-    }))
+    .map(([dataISO, lista]) => {
+      const validos = lista.filter((valor) => valor != null)
+      return {
+        data: dataISO,
+        rotulo: dataISO.slice(8, 10) + '/' + dataISO.slice(5, 7),
+        media: media(lista),
+        minimo: validos.length ? Number(Math.min(...validos).toFixed(1)) : null,
+        maximo: validos.length ? Number(Math.max(...validos).toFixed(1)) : null,
+      }
+    })
+}
+
+// Igual a `agruparPorDia`, mas específico pra vento: velocidade média,
+// rajada máxima do dia e direção predominante (média circular).
+function agruparVentoPorDia(horas, velocidades, rajadas, direcoes, dias) {
+  const porDia = new Map()
+
+  horas.forEach((horaISO, indice) => {
+    const chave = horaISO.slice(0, 10)
+    const grupo = porDia.get(chave) ?? { velocidades: [], rajadas: [], direcoes: [] }
+    grupo.velocidades.push(velocidades[indice])
+    grupo.rajadas.push(rajadas[indice])
+    grupo.direcoes.push(direcoes[indice])
+    porDia.set(chave, grupo)
+  })
+
+  return Array.from(porDia.entries())
+    .slice(-dias)
+    .map(([dataISO, grupo]) => {
+      const rajadasValidas = grupo.rajadas.filter((valor) => valor != null)
+      const direcaoMedia = mediaCircular(grupo.direcoes)
+      return {
+        data: dataISO,
+        rotulo: dataISO.slice(8, 10) + '/' + dataISO.slice(5, 7),
+        velocidadeMedia: media(grupo.velocidades),
+        rajadaMaxima: rajadasValidas.length ? Number(Math.max(...rajadasValidas).toFixed(1)) : null,
+        direcaoGraus: direcaoMedia,
+        direcaoTexto: direcaoTexto(direcaoMedia),
+      }
+    })
 }
 
 function delta(hoje, ontem) {
@@ -125,6 +173,9 @@ function normalizar(dados, diasHistorico) {
   const diarioUmidade = agruparPorDia(horas, dados.hourly.relative_humidity_2m, diasHistorico)
   const diarioPressao = agruparPorDia(horas, dados.hourly.surface_pressure, diasHistorico)
   const diarioVento = agruparPorDia(horas, dados.hourly.wind_speed_10m, diasHistorico)
+  const diarioVentoCompleto = agruparVentoPorDia(
+    horas, dados.hourly.wind_speed_10m, dados.hourly.wind_gusts_10m, dados.hourly.wind_direction_10m, diasHistorico,
+  )
 
   const historicoTemperaturaPorDia = diarioTemperatura.map((dia) => ({
     data: dia.data,
@@ -143,17 +194,18 @@ function normalizar(dados, diasHistorico) {
     vento: paraSerie(diarioVento),
   }
 
-  const resumoDia = calcularResumoDia(diarioTemperatura, diarioUmidade, diarioPressao, diarioVento)
+  // Uma linha por dia (mais recente primeiro) pro carrossel de tabelas do
+  // Dashboard (ver components/HistoricoDiarioTable.jsx) — mais completa
+  // que a série do gráfico (mín/máx pras métricas simples; vento com
+  // direção/rajada, que não fazem sentido pras outras).
+  const tabelaHistoricoDiario = {
+    temperatura: [...diarioTemperatura].reverse(),
+    umidade: [...diarioUmidade].reverse(),
+    pressao: [...diarioPressao].reverse(),
+    vento: [...diarioVentoCompleto].reverse(),
+  }
 
-  const historicoVento = horas
-    .map((horaISO, indice) => ({
-      dataHora: horaISO,
-      direcaoGraus: dados.hourly.wind_direction_10m[indice],
-      direcaoTexto: direcaoTexto(dados.hourly.wind_direction_10m[indice]),
-      velocidade: dados.hourly.wind_speed_10m[indice],
-      rajada: dados.hourly.wind_gusts_10m[indice],
-    }))
-    .reverse() // mais recente primeiro, como na tabela de referência
+  const resumoDia = calcularResumoDia(diarioTemperatura, diarioUmidade, diarioPressao, diarioVento)
 
   return {
     temperatura: atual.temperature_2m,
@@ -173,8 +225,8 @@ function normalizar(dados, diasHistorico) {
     condicaoTexto: descricaoTempo(atual.weather_code),
     atualizadoEm: atual.time,
     historicoTemperaturaPorDia,
-    historicoVento,
     seriesHistoricoDiario,
+    tabelaHistoricoDiario,
     resumoDia,
   }
 }
