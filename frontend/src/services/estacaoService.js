@@ -39,3 +39,9 @@ export async function vincularEstacao(identificador) {
   localStorage.setItem(chaveDoUsuario(), JSON.stringify(registro))
   return registro
 }
+
+// Usada pela tela de Configurações ("Estação e dados") — desfaz o vínculo
+// simbólico. Na próxima vez que entrar, a conta passa pela Tela 3 de novo.
+export function desvincularEstacao() {
+  localStorage.removeItem(chaveDoUsuario())
+}
