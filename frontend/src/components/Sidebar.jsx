@@ -3,10 +3,8 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutGrid,
   Bell,
-  User,
   Settings,
   CreditCard,
-  ShoppingCart,
   HelpCircle,
   LogOut,
   Sun,
@@ -25,13 +23,15 @@ import styles from './Sidebar.module.css'
 // Menu da conta Standard/Pro/Plus (Seção 2.2 da especificação de fluxo).
 // "Visão Geral" e "Dados do LoRa" (dashboard da estação real) saíram do
 // menu, mas as páginas continuam existindo — ver pages/DashboardLora.jsx.
+// "Perfil" não tem item próprio no menu — o chip da conta no rodapé (ver
+// mais abaixo) já leva pra lá. "Checkout" também não: só é alcançado de
+// dentro do fluxo de upgrade (Gerenciamento de Plano → "Fazer upgrade"),
+// não faz sentido como link permanente no menu.
 const ITENS_NAV = [
   { to: '/app', rotulo: 'Dashboard', icone: LayoutGrid, fim: true },
   { to: '/app/notificacoes', rotulo: 'Notificações', icone: Bell },
-  { to: '/app/perfil', rotulo: 'Perfil', icone: User },
   { to: '/app/configuracoes', rotulo: 'Configurações', icone: Settings },
   { to: '/app/plano', rotulo: 'Gerenciamento de Plano', icone: CreditCard },
-  { to: '/app/checkout', rotulo: 'Checkout (Upgrade)', icone: ShoppingCart },
 ]
 
 // Primeiro e segundo nome dão as iniciais do avatar ("SG"); o resto do
@@ -145,14 +145,19 @@ function Sidebar({ tema, onAlternarTema, abertaMobile, onFecharMobile }) {
           </div>
         )}
 
-        <button type="button" className={styles.contaChip} title={nome}>
+        <NavLink
+          to="/app/perfil"
+          title={`Perfil de ${nome}`}
+          onClick={aoClicarAba}
+          className={({ isActive }) => `${styles.contaChip} ${isActive ? styles.contaChipAtiva : ''}`}
+        >
           <span className={styles.avatar}>{iniciais}</span>
           <span className={styles.contaTexto}>
             <span className={styles.contaNome}>{nome}</span>
             <span className={styles.contaPlano}>Conta Standard</span>
           </span>
           <ChevronDown size={14} className={styles.contaChevron} />
-        </button>
+        </NavLink>
 
         <div className={styles.rodape}>
           <button type="button" className={styles.link} title="Ajuda">
