@@ -129,18 +129,18 @@
 }
 
 .linkAtivo {
-  background-color: var(--color-card-bg);
-  color: var(--color-sidebar-text-ativo);
+  background-color: var(--color-sidebar-selecionado-bg);
+  color: #ffffff;
   font-weight: 600;
 }
 
 .linkAtivo:hover {
-  background-color: var(--color-card-bg);
+  background-color: var(--color-sidebar-selecionado-bg);
 }
 
 .linkAtivo .badgeOff {
-  background-color: var(--color-sidebar-text-ativo);
-  color: var(--color-card-bg);
+  background-color: #ffffff;
+  color: var(--color-sidebar-selecionado-bg);
 }
 
 .rotuloLink {

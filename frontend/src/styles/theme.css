@@ -32,11 +32,12 @@
   --color-table-header: #8593ad;
   --color-table-linha-hover: rgba(74, 111, 165, 0.05);
 
-  --color-sidebar-bg: #4a6fa5;
-  --color-sidebar-border: rgba(255, 255, 255, 0.14);
-  --color-sidebar-text: rgba(255, 255, 255, 0.75);
+  --color-sidebar-bg: #0f1c42;
+  --color-sidebar-border: rgba(255, 255, 255, 0.1);
+  --color-sidebar-text: rgba(255, 255, 255, 0.72);
   --color-sidebar-text-ativo: #4a6fa5;
-  --color-sidebar-bg-ativo: rgba(255, 255, 255, 0.14);
+  --color-sidebar-bg-ativo: rgba(255, 255, 255, 0.08);
+  --color-sidebar-selecionado-bg: #2f6fed;
   --color-badge-off-bg: #eef1f6;
   --color-badge-off-texto: #8593ad;
 }
@@ -61,11 +62,12 @@
   --color-table-header: #6c7ba3;
   --color-table-linha-hover: rgba(255, 255, 255, 0.04);
 
-  --color-sidebar-bg: #4a6fa5;
-  --color-sidebar-border: rgba(255, 255, 255, 0.14);
-  --color-sidebar-text: rgba(255, 255, 255, 0.75);
+  --color-sidebar-bg: #0f1c42;
+  --color-sidebar-border: rgba(255, 255, 255, 0.1);
+  --color-sidebar-text: rgba(255, 255, 255, 0.72);
   --color-sidebar-text-ativo: #4a6fa5;
-  --color-sidebar-bg-ativo: rgba(255, 255, 255, 0.14);
+  --color-sidebar-bg-ativo: rgba(255, 255, 255, 0.08);
+  --color-sidebar-selecionado-bg: #2f6fed;
   --color-badge-off-bg: rgba(255, 255, 255, 0.06);
   --color-badge-off-texto: #93a5c9;
 }
