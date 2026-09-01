@@ -98,12 +98,49 @@ class UsuarioViewSetTests(APITestCase):
         # Fora do queryset dele -> 404, não 403 (não revela nem que a conta existe)
         self.assertEqual(resposta.status_code, status.HTTP_404_NOT_FOUND)
 
+    def test_usuario_comum_ve_a_propria_conta_pelo_endpoint_me(self):
+        self.client.force_authenticate(self.usuario1)
+        resposta = self.client.get('/api/usuarios/me/')
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(resposta.data['username'], 'usuario1')
+
+    def test_gestor_tambem_ve_a_propria_conta_pelo_endpoint_me(self):
+        self.client.force_authenticate(self.gestor)
+        resposta = self.client.get('/api/usuarios/me/')
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(resposta.data['username'], 'gestor1')
+
     def test_usuario_comum_edita_a_propria_conta(self):
         self.client.force_authenticate(self.usuario1)
         resposta = self.client.patch(f'/api/usuarios/{self.usuario1.pk}/', {'telefone': '21999999999'})
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.usuario1.refresh_from_db()
         self.assertEqual(self.usuario1.telefone, '21999999999')
+
+    def test_usuario_comum_troca_a_propria_senha_informando_a_atual(self):
+        self.client.force_authenticate(self.usuario1)
+        resposta = self.client.patch(
+            f'/api/usuarios/{self.usuario1.pk}/', {'senha_atual': 'x', 'password': 'senha-nova-123'},
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.usuario1.refresh_from_db()
+        self.assertTrue(self.usuario1.check_password('senha-nova-123'))
+
+    def test_usuario_comum_nao_troca_senha_com_senha_atual_errada(self):
+        self.client.force_authenticate(self.usuario1)
+        resposta = self.client.patch(
+            f'/api/usuarios/{self.usuario1.pk}/', {'senha_atual': 'errada', 'password': 'senha-nova-123'},
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.usuario1.refresh_from_db()
+        self.assertTrue(self.usuario1.check_password('x'))
+
+    def test_gestor_redefine_senha_de_outra_conta_sem_precisar_da_senha_atual_dela(self):
+        self.client.force_authenticate(self.gestor)
+        resposta = self.client.patch(f'/api/usuarios/{self.usuario1.pk}/', {'password': 'senha-nova-123'})
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.usuario1.refresh_from_db()
+        self.assertTrue(self.usuario1.check_password('senha-nova-123'))
 
     def test_usuario_comum_nao_consegue_virar_gestor_sozinho(self):
         """RN19 (menor privilégio): tentar se autopromover via payload é

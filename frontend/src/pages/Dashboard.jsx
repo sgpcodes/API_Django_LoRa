@@ -1,154 +1,52 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useOutletContext } from 'react-router-dom'
-import { Cpu, Clock, Thermometer, ThermometerSun, ThermometerSnowflake, Droplets } from 'lucide-react'
-import Header from '../components/Header'
-import WeatherChart from '../components/WeatherChart'
-import StatusMessage from '../components/StatusMessage'
+import { useEffect, useState } from 'react'
+import { Thermometer, Droplets, Gauge, Wind } from 'lucide-react'
+import CabecalhoStandard from '../components/CabecalhoStandard'
 import SummaryStatCard from '../components/SummaryStatCard'
-import HistoryTable from '../components/HistoryTable'
-import TemperatureBarChart from '../components/TemperatureBarChart'
-import HumidityLineChart from '../components/HumidityLineChart'
-import MinMaxLineChart from '../components/MinMaxLineChart'
-import {
-  buscarLeituras,
-  agruparMediaPorHora,
-  obterLeituraMaisRecente,
-  obterIntervaloPeriodo,
-  obterIntervaloAnterior,
-  filtrarPorPeriodo,
-  agruparPorDia,
-  calcularResumo,
-  obterSensoresDisponiveis,
-  datasPersonalizadasIniciais,
-} from '../services/leiturasService'
+import WeatherChart from '../components/WeatherChart'
+import CondicoesAtuaisCard from '../components/CondicoesAtuaisCard'
+import HistoricoVentoTable from '../components/HistoricoVentoTable'
+import ResumoDiaCard from '../components/ResumoDiaCard'
+import StatusEstacaoCard from '../components/StatusEstacaoCard'
+import StatusMessage from '../components/StatusMessage'
+import { buscarClimaAtual } from '../services/climaExternoService'
+import { obterEstacaoVinculada } from '../services/estacaoService'
 import styles from './Dashboard.module.css'
 
-// Busca novas leituras periodicamente para o dashboard se manter atualizado
-// sozinho. A ESP32 envia uma leitura a cada 1 minuto, então buscamos nesse
-// ritmo para os cards e os gráficos acompanharem cada leitura nova assim
-// que ela chegar.
-const INTERVALO_ATUALIZACAO_MS = 60_000
-
-function formatarHorario(dataHoraISO) {
-  return new Date(dataHoraISO).toLocaleTimeString('pt-BR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
-function formatarDataCurta(dataHoraISO) {
-  return new Date(dataHoraISO).toLocaleDateString('pt-BR')
-}
-
-function formatarDataHoraCurta(dataHoraISO) {
-  const data = new Date(dataHoraISO)
-  const dataFormatada = data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
-  const hora = data.getHours()
-  return `Registrada em ${dataFormatada} às ${hora}h`
-}
-
-function formatarLegendaComparativa(delta, unidade) {
-  if (delta == null) return 'Sem período anterior para comparar'
-  if (delta === 0) return `Igual à média do período anterior`
-  const direcao = delta > 0 ? 'acima' : 'abaixo'
-  return `${Math.abs(delta)}${unidade} ${direcao} da média anterior`
-}
+// Dashboard da conta Standard (Tela 4 da especificação de fluxo). Os dados
+// exibidos vêm de uma API externa de meteorologia enquanto a estação LoRa
+// própria não está pronta com todos os sensores — ver
+// services/climaExternoService.js. O dashboard que lê a estação de
+// verdade (services/leiturasService.js) continua existindo, só não está
+// ligado por enquanto — ver pages/DashboardLora.jsx.
+const INTERVALO_ATUALIZACAO_MS = 15 * 60_000
+const DIAS_HISTORICO_STANDARD = 30 // RN09/RN21
 
 function Dashboard() {
-  const { tema, onAlternarTema } = useOutletContext()
-
-  const [leituras, setLeituras] = useState([])
+  const [clima, setClima] = useState(null)
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState(null)
-  const [periodo, setPeriodo] = useState('hoje')
-  const [datasPersonalizadas, setDatasPersonalizadas] = useState(datasPersonalizadasIniciais)
-  const [sensorSelecionado, setSensorSelecionado] = useState(null)
+
+  const estacao = obterEstacaoVinculada()
 
   useEffect(() => {
-    async function carregarLeituras() {
+    async function carregarClima() {
       try {
-        const dados = await buscarLeituras()
-        setLeituras(dados)
+        const dados = await buscarClimaAtual(undefined, DIAS_HISTORICO_STANDARD)
+        setClima(dados)
         setErro(null)
       } catch {
-        setErro('Não foi possível conectar à API. Verifique se o backend está rodando.')
+        setErro('Não foi possível buscar os dados de clima agora. Tentando de novo em instantes.')
       } finally {
         setCarregando(false)
       }
     }
 
-    carregarLeituras()
-    const intervalo = setInterval(carregarLeituras, INTERVALO_ATUALIZACAO_MS)
+    carregarClima()
+    const intervalo = setInterval(carregarClima, INTERVALO_ATUALIZACAO_MS)
     return () => clearInterval(intervalo)
   }, [])
 
-  // Lista de sensores vem dos próprios dados: um ESP32 novo aparece no
-  // seletor sozinho assim que a primeira leitura dele chegar.
-  const sensoresDisponiveis = useMemo(() => obterSensoresDisponiveis(leituras), [leituras])
-
-  // Se nada foi escolhido ainda (ou o sensor escolhido sumiu da lista), cai
-  // no dono da leitura mais recente — assim o dashboard sempre abre em cima
-  // de um dispositivo que está de fato enviando dados.
-  const sensorAtivo = useMemo(() => {
-    if (sensorSelecionado && sensoresDisponiveis.includes(sensorSelecionado)) {
-      return sensorSelecionado
-    }
-    return obterLeituraMaisRecente(leituras)?.sensor_id ?? sensoresDisponiveis[0] ?? null
-  }, [sensorSelecionado, sensoresDisponiveis, leituras])
-
-  const leiturasDoSensor = useMemo(
-    () => (sensorAtivo ? leituras.filter((leitura) => leitura.sensor_id === sensorAtivo) : []),
-    [leituras, sensorAtivo]
-  )
-
-  const leituraAtual = useMemo(() => obterLeituraMaisRecente(leiturasDoSensor), [leiturasDoSensor])
-
-  const intervaloSelecionado = useMemo(
-    () => obterIntervaloPeriodo(periodo, datasPersonalizadas),
-    [periodo, datasPersonalizadas]
-  )
-
-  const dadosGraficoPorHora = useMemo(() => {
-    const leiturasDoPeriodo = filtrarPorPeriodo(leiturasDoSensor, intervaloSelecionado)
-    return agruparMediaPorHora(leiturasDoPeriodo)
-  }, [leiturasDoSensor, intervaloSelecionado])
-
-  const resumo = useMemo(() => {
-    const leiturasDoPeriodo = filtrarPorPeriodo(leiturasDoSensor, intervaloSelecionado)
-    const leiturasPeriodoAnterior = filtrarPorPeriodo(
-      leiturasDoSensor,
-      obterIntervaloAnterior(intervaloSelecionado)
-    )
-    return calcularResumo(leiturasDoPeriodo, leiturasPeriodoAnterior)
-  }, [leiturasDoSensor, intervaloSelecionado])
-
-  const diasComRotulo = useMemo(() => {
-    const leiturasDoPeriodo = filtrarPorPeriodo(leiturasDoSensor, intervaloSelecionado)
-    return agruparPorDia(leiturasDoPeriodo).map((dia) => ({
-      ...dia,
-      rotulo: dia.data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-    }))
-  }, [leiturasDoSensor, intervaloSelecionado])
-
-  const cabecalho = (
-    <Header
-      titulo="Bem-vindo ao sistema de monitoramento meteorológico!"
-      subtitulo="Acompanhe em tempo real os dados coletados pelos sensores."
-      sensores={sensoresDisponiveis}
-      sensorSelecionado={sensorAtivo}
-      onEscolherSensor={setSensorSelecionado}
-      periodo={periodo}
-      onEscolherPeriodo={setPeriodo}
-      dataInicio={datasPersonalizadas.inicio}
-      dataFim={datasPersonalizadas.fim}
-      onAplicarPersonalizado={(inicio, fim) => {
-        setDatasPersonalizadas({ inicio, fim })
-        setPeriodo('personalizado')
-      }}
-      tema={tema}
-      onAlternarTema={onAlternarTema}
-    />
-  )
+  const cabecalho = <CabecalhoStandard identificadorEstacao={estacao?.identificador ?? '—'} />
 
   if (carregando) {
     return (
@@ -159,23 +57,19 @@ function Dashboard() {
     )
   }
 
-  if (erro) {
+  if (erro || !clima) {
     return (
       <div className={styles.pagina}>
         {cabecalho}
-        <StatusMessage texto={erro} />
+        <StatusMessage texto={erro ?? 'Nenhum dado disponível.'} />
       </div>
     )
   }
 
-  if (!leituraAtual) {
-    return (
-      <div className={styles.pagina}>
-        {cabecalho}
-        <StatusMessage texto="Nenhuma leitura cadastrada ainda." />
-      </div>
-    )
-  }
+  const dadosGrafico = clima.historicoTemperaturaPorDia.map((dia) => ({
+    hora: dia.rotulo,
+    temperaturaMedia: dia.temperaturaMedia,
+  }))
 
   return (
     <div className={styles.pagina}>
@@ -185,94 +79,69 @@ function Dashboard() {
         <SummaryStatCard
           icone={Thermometer}
           cor="var(--color-accent)"
-          rotulo="Temperatura atual"
-          valor={`${leituraAtual.temperatura}°C`}
-          legenda={`Última leitura: ${formatarHorario(leituraAtual.data_hora)}`}
+          rotulo="Temperatura"
+          valor={`${clima.temperatura}°C`}
+          legenda={
+            clima.resumoDia.deltaTemperatura == null
+              ? undefined
+              : `${Math.abs(clima.resumoDia.deltaTemperatura)}°C ${clima.resumoDia.deltaTemperatura >= 0 ? 'acima' : 'abaixo'} da média anterior`
+          }
+          tendencia={
+            clima.resumoDia.deltaTemperatura == null
+              ? undefined
+              : clima.resumoDia.deltaTemperatura >= 0
+                ? 'alta'
+                : 'baixa'
+          }
         />
         <SummaryStatCard
           icone={Droplets}
           cor="var(--color-accent)"
-          rotulo="Umidade atual"
-          valor={`${leituraAtual.umidade}%`}
-          legenda={`Última leitura: ${formatarHorario(leituraAtual.data_hora)}`}
+          rotulo="Umidade"
+          valor={`${clima.umidade}%`}
+          legenda={
+            clima.resumoDia.deltaUmidade == null
+              ? undefined
+              : `${Math.abs(clima.resumoDia.deltaUmidade)}% ${clima.resumoDia.deltaUmidade >= 0 ? 'acima' : 'abaixo'} da média anterior`
+          }
+          tendencia={
+            clima.resumoDia.deltaUmidade == null ? undefined : clima.resumoDia.deltaUmidade >= 0 ? 'alta' : 'baixa'
+          }
         />
         <SummaryStatCard
-          icone={Cpu}
+          icone={Gauge}
           cor="var(--color-accent)"
-          rotulo="Sensor"
-          valor={leituraAtual.sensor_id}
-          legenda={`Última atualização: ${formatarHorario(leituraAtual.data_hora)}`}
+          rotulo="Pressão"
+          valor={`${clima.pressao} hPa`}
+          legenda={
+            clima.resumoDia.deltaPressao == null
+              ? undefined
+              : `${Math.abs(clima.resumoDia.deltaPressao)} hPa ${clima.resumoDia.deltaPressao >= 0 ? 'acima' : 'abaixo'} da média anterior`
+          }
+          tendencia={
+            clima.resumoDia.deltaPressao == null ? undefined : clima.resumoDia.deltaPressao >= 0 ? 'alta' : 'baixa'
+          }
         />
         <SummaryStatCard
-          icone={Clock}
+          icone={Wind}
           cor="var(--color-accent)"
-          rotulo="Última atualização"
-          valor={formatarHorario(leituraAtual.data_hora)}
-          legenda={formatarDataCurta(leituraAtual.data_hora)}
+          rotulo="Vento"
+          valor={`${clima.vento.velocidade} km/h`}
+          legenda={`${clima.vento.direcaoTexto} · Rajadas ${clima.vento.rajada} km/h`}
         />
       </div>
 
       <section className={styles.grid2Colunas}>
-        <WeatherChart dados={dadosGraficoPorHora} />
-        <TemperatureBarChart dados={diasComRotulo} />
+        <WeatherChart dados={dadosGrafico} />
+        <CondicoesAtuaisCard clima={clima} />
       </section>
-
-      {resumo ? (
-        <section className={styles.resumoGrid}>
-          <SummaryStatCard
-            icone={Thermometer}
-            cor="var(--color-media)"
-            rotulo="Temperatura média"
-            valor={`${resumo.temperaturaMedia}°C`}
-            legenda={formatarLegendaComparativa(resumo.deltaTemperaturaMedia, '°C')}
-            tendencia={
-              resumo.deltaTemperaturaMedia == null
-                ? undefined
-                : resumo.deltaTemperaturaMedia >= 0
-                  ? 'alta'
-                  : 'baixa'
-            }
-          />
-          <SummaryStatCard
-            icone={ThermometerSun}
-            cor="var(--color-maxima)"
-            rotulo="Temperatura máxima"
-            valor={`${resumo.temperaturaMaxima}°C`}
-            legenda={formatarDataHoraCurta(resumo.temperaturaMaximaHorario)}
-          />
-          <SummaryStatCard
-            icone={ThermometerSnowflake}
-            cor="var(--color-minima)"
-            rotulo="Temperatura mínima"
-            valor={`${resumo.temperaturaMinima}°C`}
-            legenda={formatarDataHoraCurta(resumo.temperaturaMinimaHorario)}
-          />
-          <SummaryStatCard
-            icone={Droplets}
-            cor="var(--color-umidade)"
-            rotulo="Umidade média"
-            valor={`${resumo.umidadeMedia}%`}
-            legenda={formatarLegendaComparativa(resumo.deltaUmidadeMedia, '%')}
-            tendencia={
-              resumo.deltaUmidadeMedia == null
-                ? undefined
-                : resumo.deltaUmidadeMedia >= 0
-                  ? 'alta'
-                  : 'baixa'
-            }
-          />
-        </section>
-      ) : (
-        <p className={styles.semDados}>Nenhuma leitura encontrada no período selecionado.</p>
-      )}
 
       <section className={styles.grid2Colunas}>
-        <HistoryTable dias={diasComRotulo} />
-        <MinMaxLineChart dados={diasComRotulo} />
-      </section>
-
-      <section className={styles.grid1Coluna}>
-        <HumidityLineChart dados={diasComRotulo} />
+        <HistoricoVentoTable registros={clima.historicoVento} diasHistorico={DIAS_HISTORICO_STANDARD} />
+        <div className={styles.colunaLateral}>
+          <ResumoDiaCard resumo={clima.resumoDia} />
+          <StatusEstacaoCard operacional />
+        </div>
       </section>
     </div>
   )

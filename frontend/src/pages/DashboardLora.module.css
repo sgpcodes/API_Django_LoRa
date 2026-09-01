@@ -34,12 +34,6 @@
   align-items: stretch;
 }
 
-.colunaLateral {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
 .grid1Coluna {
   display: grid;
   grid-template-columns: 1fr;

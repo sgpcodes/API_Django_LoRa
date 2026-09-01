@@ -2,27 +2,53 @@ import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutGrid,
-  Layers,
-  Wifi,
+  Bell,
   User,
+  Settings,
+  CreditCard,
+  ShoppingCart,
   HelpCircle,
   LogOut,
   Sun,
   Moon,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  Radio,
   X,
 } from 'lucide-react'
 import logoLacop from '../assets/lacop.png'
-import { logout } from '../services/authService'
+import { logout, obterClaimsDoToken } from '../services/authService'
+import { obterEstacaoVinculada } from '../services/estacaoService'
 import styles from './Sidebar.module.css'
 
+// Menu da conta Standard/Pro/Plus (Seção 2.2 da especificação de fluxo).
+// "Visão Geral" e "Dados do LoRa" (dashboard da estação real) saíram do
+// menu, mas as páginas continuam existindo — ver pages/DashboardLora.jsx.
 const ITENS_NAV = [
   { to: '/app', rotulo: 'Dashboard', icone: LayoutGrid, fim: true },
-  { to: '/app/visao-geral', rotulo: 'Visão Geral', icone: Layers },
-  { to: '/app/dados-lora', rotulo: 'Dados do LoRa', icone: Wifi },
+  { to: '/app/notificacoes', rotulo: 'Notificações', icone: Bell },
   { to: '/app/perfil', rotulo: 'Perfil', icone: User },
+  { to: '/app/configuracoes', rotulo: 'Configurações', icone: Settings },
+  { to: '/app/plano', rotulo: 'Gerenciamento de Plano', icone: CreditCard },
+  { to: '/app/checkout', rotulo: 'Checkout (Upgrade)', icone: ShoppingCart },
 ]
+
+// Primeiro e segundo nome dão as iniciais do avatar ("SG"); o resto do
+// e-mail vira o nome exibido — mesma dedução usada no cabeçalho do
+// Dashboard (ver CabecalhoStandard.jsx), até existir um endpoint "/me"
+// com o nome completo de verdade.
+function nomeEIniciais(username) {
+  if (!username) return { nome: '—', iniciais: '—' }
+  const parteLocal = username.split('@')[0]
+  const palavras = parteLocal.split(/[._-]/).filter(Boolean)
+  const nome = palavras.map((palavra) => palavra.charAt(0).toUpperCase() + palavra.slice(1)).join(' ')
+  const iniciais = palavras
+    .slice(0, 2)
+    .map((palavra) => palavra.charAt(0).toUpperCase())
+    .join('')
+  return { nome, iniciais }
+}
 
 // Menu lateral: navegação entre as páginas, e atalho de tema no rodapé.
 // Em telas largas, pode ser recolhida (fica só com os ícones) — recolhida,
@@ -35,6 +61,8 @@ const ITENS_NAV = [
 function Sidebar({ tema, onAlternarTema, abertaMobile, onFecharMobile }) {
   const [recolhida, setRecolhida] = useState(false)
   const navigate = useNavigate()
+  const estacao = obterEstacaoVinculada()
+  const { nome, iniciais } = nomeEIniciais(obterClaimsDoToken()?.username)
 
   function aoClicarSair() {
     logout()
@@ -103,6 +131,28 @@ function Sidebar({ tema, onAlternarTema, abertaMobile, onFecharMobile }) {
             </NavLink>
           ))}
         </nav>
+
+        {estacao && (
+          <div className={styles.cardEstacao} title={`Estação conectada: ${estacao.identificador}`}>
+            <span className={styles.pontoOnline} />
+            <div className={styles.cardEstacaoTexto}>
+              <span className={styles.cardEstacaoTitulo}>Estação conectada</span>
+              <span className={styles.cardEstacaoId}>
+                <Radio size={12} />
+                {estacao.identificador}
+              </span>
+            </div>
+          </div>
+        )}
+
+        <button type="button" className={styles.contaChip} title={nome}>
+          <span className={styles.avatar}>{iniciais}</span>
+          <span className={styles.contaTexto}>
+            <span className={styles.contaNome}>{nome}</span>
+            <span className={styles.contaPlano}>Conta Standard</span>
+          </span>
+          <ChevronDown size={14} className={styles.contaChevron} />
+        </button>
 
         <div className={styles.rodape}>
           <button type="button" className={styles.link} title="Ajuda">

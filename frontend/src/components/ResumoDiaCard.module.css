@@ -1,0 +1,75 @@
+.container {
+  padding: 1.5rem;
+  border-radius: 12px;
+  background-color: var(--color-card-bg);
+  border: 1px solid var(--color-card-border);
+  box-shadow: var(--shadow-card);
+  transition: var(--transition-theme);
+}
+
+.titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.subtitulo {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  margin: 0.2rem 0 1.1rem;
+}
+
+.lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.linha {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+.rotulo {
+  color: var(--color-text-secondary);
+}
+
+.valores {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.valor {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.deltaAlta {
+  color: var(--color-maxima, #ef4444);
+}
+
+.deltaBaixa {
+  color: var(--color-status-online, #22c55e);
+}
+
+.deltaNeutro {
+  color: var(--color-text-secondary);
+}

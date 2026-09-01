@@ -163,6 +163,120 @@
   transition: var(--transition-theme);
 }
 
+.cardEstacao {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.65rem 0.75rem;
+  margin-top: 0.75rem;
+  border-radius: 10px;
+  background-color: rgba(255, 255, 255, 0.08);
+  transition: var(--transition-theme);
+}
+
+.pontoOnline {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--color-status-online, #22c55e);
+  flex-shrink: 0;
+}
+
+.cardEstacaoTexto {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.cardEstacaoTitulo {
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.cardEstacaoId {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contaChip {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+  padding: 0.55rem;
+  border-radius: 10px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  width: 100%;
+  text-align: left;
+}
+
+.contaChip:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: var(--color-card-bg);
+  color: var(--color-sidebar-text-ativo);
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.contaTexto {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.contaNome {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contaPlano {
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.contaChevron {
+  margin-left: auto;
+  color: rgba(255, 255, 255, 0.6);
+  flex-shrink: 0;
+}
+
+.sidebarRecolhida .cardEstacaoTexto,
+.sidebarRecolhida .contaTexto,
+.sidebarRecolhida .contaChevron {
+  display: none;
+}
+
+.sidebarRecolhida .cardEstacao,
+.sidebarRecolhida .contaChip {
+  justify-content: center;
+}
+
 .rodape {
   margin-top: auto;
   display: flex;

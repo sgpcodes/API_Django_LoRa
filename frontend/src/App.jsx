@@ -1,10 +1,18 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import AppLayout from './components/AppLayout'
 import RotaProtegida from './components/RotaProtegida'
+import PortaDeEntradaApp from './components/PortaDeEntradaApp'
 import Dashboard from './pages/Dashboard'
+import Notificacoes from './pages/Notificacoes'
+import Configuracoes from './pages/Configuracoes'
+import GerenciamentoPlano from './pages/GerenciamentoPlano'
+import Checkout from './pages/Checkout'
+import Perfil from './pages/Perfil'
+// Dashboard antigo (estação LoRa real) — fora do menu por enquanto, mas
+// as rotas continuam existindo (ver pages/DashboardLora.jsx).
+import DashboardLora from './pages/DashboardLora'
 import VisaoGeral from './pages/VisaoGeral'
 import DadosLora from './pages/DadosLora'
-import Perfil from './pages/Perfil'
 import Login from './pages/Login'
 import Cadastro from './pages/Cadastro'
 import ConfirmarEmail from './pages/ConfirmarEmail'
@@ -27,14 +35,27 @@ function App() {
             continua acessível diretamente. */}
         <Route path="planos" element={<Planos />} />
 
-        {/* Dashboard interno — hoje é, na prática, "o plano de
-            gerenciador": só quem loga (Gestor/Usuário) acessa. */}
+        {/* Área logada. PortaDeEntradaApp decide o que aparece: Gestor
+            (conta credenciada) vai pra uma área administrativa própria
+            (ainda em branco); Usuário (Standard/Pro/Plus) passa pela
+            decisão "primeiro acesso" (vincular estação) antes do menu. */}
         <Route path="app" element={<RotaProtegida />}>
-          <Route element={<AppLayout />}>
-            <Route index element={<Dashboard />} />
-            <Route path="visao-geral" element={<VisaoGeral />} />
-            <Route path="dados-lora" element={<DadosLora />} />
-            <Route path="perfil" element={<Perfil />} />
+          <Route element={<PortaDeEntradaApp />}>
+            <Route element={<AppLayout />}>
+              <Route index element={<Dashboard />} />
+              <Route path="notificacoes" element={<Notificacoes />} />
+              <Route path="perfil" element={<Perfil />} />
+              <Route path="configuracoes" element={<Configuracoes />} />
+              <Route path="plano" element={<GerenciamentoPlano />} />
+              <Route path="checkout" element={<Checkout />} />
+
+              {/* Fora do menu, mas acessíveis direto pela URL — dashboard
+                  da estação LoRa real, enquanto ela não substitui a API
+                  externa de teste. */}
+              <Route path="visao-geral" element={<VisaoGeral />} />
+              <Route path="dados-lora" element={<DadosLora />} />
+              <Route path="dashboard-lora" element={<DashboardLora />} />
+            </Route>
           </Route>
         </Route>
       </Routes>

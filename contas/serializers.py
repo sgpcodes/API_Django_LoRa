@@ -60,12 +60,15 @@ class UsuarioSerializer(serializers.ModelSerializer):
     de chamar o serializer quando quem está editando não é Gestor."""
 
     password = serializers.CharField(write_only=True, required=False, min_length=8)
+    # Só usado na troca de senha por autoedição (RN08: "alterar senha
+    # mediante confirmação da senha atual") — não é campo do model.
+    senha_atual = serializers.CharField(write_only=True, required=False)
 
     class Meta:
         model = Usuario
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name', 'cpf',
-            'telefone', 'role', 'is_active', 'email_verificado', 'date_joined', 'password',
+            'telefone', 'role', 'is_active', 'email_verificado', 'date_joined', 'password', 'senha_atual',
         ]
         # cpf/email_verificado só leitura aqui: são conferidos (CPF real,
         # e-mail clicado no link) só nos fluxos próprios — cadastro
@@ -73,6 +76,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'date_joined', 'cpf', 'email_verificado']
 
     def create(self, validated_data):
+        validated_data.pop('senha_atual', None)
         password = validated_data.pop('password', None)
         usuario = Usuario(**validated_data)
         if password:
@@ -81,7 +85,17 @@ class UsuarioSerializer(serializers.ModelSerializer):
         return usuario
 
     def update(self, instance, validated_data):
+        senha_atual = validated_data.pop('senha_atual', None)
         password = validated_data.pop('password', None)
+        request = self.context.get('request')
+
+        # A checagem de senha atual só vale pra autoedição (a própria
+        # pessoa trocando a própria senha) — um Gestor redefinindo a senha
+        # de outra conta não tem por que saber a senha atual dela.
+        if password and request and request.user == instance:
+            if not instance.check_password(senha_atual or ''):
+                raise serializers.ValidationError({'senha_atual': 'Senha atual incorreta.'})
+
         for campo, valor in validated_data.items():
             setattr(instance, campo, valor)
         if password:

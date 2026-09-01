@@ -182,6 +182,16 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated(), EhGestor()]
         return [IsAuthenticated()]
 
+    @action(detail=False, methods=['get'])
+    def me(self, request):
+        """GET /api/usuarios/me/ — a própria conta, pra qualquer usuário
+        autenticado (Gestor ou Usuário comum). Existe separado de `list`
+        porque `list` fica reservado ao Gestor (RN02); um Usuário comum
+        não pode chamar `list` pra ver a si mesmo, mesmo que o queryset já
+        devolvesse só o próprio registro."""
+        serializer = self.get_serializer(request.user)
+        return Response(serializer.data)
+
     def perform_update(self, serializer):
         # RN08: só o Gestor pode alterar o `role` de uma conta (promover a
         # Gestor, por exemplo) — se quem edita não é Gestor, o campo é
