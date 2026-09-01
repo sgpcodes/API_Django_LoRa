@@ -70,20 +70,16 @@ function Cadastro() {
         planoId: modoCredenciada ? null : planoSelecionadoId,
         tokenCredenciamento: modoCredenciada ? tokenCredenciamento : null,
       })
-      if (modoCredenciada) {
-        // Conta Gestor: exceção temporária (ver
-        // TokenObtainPairComRoleSerializer.validate no backend) — sem
-        // domínio verificado no Resend, o e-mail de confirmação não
-        // chegaria pra quem não é o dono da conta Resend. Loga direto.
-        await login(email, senha)
-        navigate('/app')
-        return
-      }
-      // Usuário comum: o cadastro só se completa de verdade com o
-      // e-mail confirmado (RN) — mostra a tela pedindo isso em vez de
-      // já cair no dashboard.
-      setEmailCadastrado(email)
-      setCadastroConcluido(true)
+      // TEMPORÁRIO (ver TokenObtainPairComRoleSerializer.validate no
+      // backend): confirmação de e-mail está desativada pra todos os
+      // papéis por enquanto — sem domínio verificado no Resend, o e-mail
+      // não chegaria pra ninguém além do dono da conta Resend. Por isso
+      // loga direto pros dois caminhos (Gestor e Usuário/plano), em vez
+      // de mostrar a tela "Confira seu e-mail". Reverter isso (voltar a
+      // exigir confirmação só pro Usuário) junto da reativação no
+      // backend.
+      await login(email, senha)
+      navigate('/app')
     } catch (erroRequisicao) {
       const dados = erroRequisicao.response?.data
       const primeiraMensagem = dados && Object.values(dados).flat()[0]

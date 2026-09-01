@@ -26,18 +26,20 @@ class TokenObtainPairComRoleSerializer(TokenObtainPairSerializer):
     não quebrar contas antigas/de teste que não usam e-mail como login) e
     testamos a senha em cada uma até achar a que bate.
 
-    RN: a pessoa só completa o cadastro (consegue entrar de verdade) com
-    o e-mail confirmado — usuário/senha corretos não bastam se
-    `email_verificado` ainda for `False`. Superusuário (`createsuperuser`,
-    acesso de shell no servidor) é uma exceção: é criado por um meio já
-    confiável, não pelo cadastro público, não faz sentido travar por e-mail.
+    RN (DESATIVADA POR ENQUANTO — ver aviso abaixo): a pessoa só completa
+    o cadastro (consegue entrar de verdade) com o e-mail confirmado —
+    usuário/senha corretos não bastam se `email_verificado` ainda for
+    `False`.
 
-    Exceção temporária: contas Gestor (entrada credenciada) também não são
-    travadas por e-mail. Motivo: sem domínio verificado no Resend, o envio
-    só chega na caixa do próprio dono da conta Resend — bloquear Gestor
-    deixaria qualquer outra pessoa credenciada incapaz de entrar. Reverter
-    assim que houver domínio próprio verificado (voltar a checar
-    `email_verificado` também para GESTOR).
+    *** TEMPORÁRIO: sem domínio verificado no Resend, e-mail de
+    confirmação não chega pra ninguém além do dono da conta Resend — a
+    trava ficaria inutilizável pra qualquer conta de teste/uso real antes
+    disso existir. Por isso o bloqueio abaixo está comentado pra TODOS os
+    papéis (antes só Gestor era isento). Reativar assim que houver domínio
+    próprio verificado no Resend: descomentar o bloco `if not
+    self.user.email_verificado...` e, no frontend, fazer o cadastro de
+    Usuário (Cadastro.jsx) voltar a mostrar a tela "Confira seu e-mail" em
+    vez de logar direto. ***
     """
 
     default_error_messages = {
@@ -62,11 +64,10 @@ class TokenObtainPairComRoleSerializer(TokenObtainPairSerializer):
                 self.error_messages['no_active_account'], 'no_active_account',
             )
 
-        isento = self.user.is_superuser or self.user.role == Usuario.Role.GESTOR
-        if not self.user.email_verificado and not isento:
-            raise serializers.ValidationError(
-                {'detail': self.error_messages['email_nao_confirmado'], 'codigo': 'email_nao_confirmado'},
-            )
+        # if not self.user.email_verificado and not self.user.is_superuser:
+        #     raise serializers.ValidationError(
+        #         {'detail': self.error_messages['email_nao_confirmado'], 'codigo': 'email_nao_confirmado'},
+        #     )
 
         refresh = self.get_token(self.user)
         return {'refresh': str(refresh), 'access': str(refresh.access_token)}

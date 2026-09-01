@@ -50,11 +50,16 @@ class LoginJwtTests(APITestCase):
         resposta = self.client.get('/api/usuarios/')
         self.assertEqual(resposta.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    def test_login_sem_email_confirmado_e_bloqueado(self):
+    def test_login_sem_email_confirmado_funciona_por_enquanto(self):
+        """Bloqueio por e-mail não confirmado está temporariamente
+        desativado pra todos os papéis (ver comentário em
+        TokenObtainPairComRoleSerializer) — sem domínio verificado no
+        Resend, ninguém conseguiria confirmar e-mail nenhum. Reativar
+        este teste (voltar a esperar 400/email_nao_confirmado) junto da
+        checagem comentada no serializer."""
         Usuario.objects.create_user(username='pendente1', password='x', email_verificado=False)
         resposta = self.client.post('/api/auth/token/', {'username': 'pendente1', 'password': 'x'})
-        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(resposta.data.get('codigo'), ['''email_nao_confirmado'''])
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
 
     def test_superusuario_loga_mesmo_sem_email_confirmado(self):
         """createsuperuser não passa pelo cadastro público — não faz
@@ -312,13 +317,14 @@ class CadastroPublicoTests(APITestCase):
         self.assertTrue(usuario.check_password('senha-forte-123'))
         self.assertTrue(Assinatura.objects.filter(usuario=usuario, plano=self.plano, encerrada_em__isnull=True).exists())
 
-    def test_cadastro_nao_permite_login_antes_de_confirmar(self):
+    def test_cadastro_permite_login_antes_de_confirmar_por_enquanto(self):
+        """Ver test_login_sem_email_confirmado_funciona_por_enquanto —
+        mesmo bloqueio, mesma desativação temporária."""
         self.client.post('/api/auth/cadastro/', self._payload(plano=self.plano.pk))
         resposta = self.client.post(
             '/api/auth/token/', {'username': 'nova@exemplo.com', 'password': 'senha-forte-123'},
         )
-        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(resposta.data.get('codigo'), ['''email_nao_confirmado'''])
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
 
     def test_cadastro_depois_confirmar_email_login_funciona(self):
         from django.utils.encoding import force_bytes
