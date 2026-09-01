@@ -15,14 +15,15 @@ import styles from './GraficoHistoricoCarrossel.module.css'
 // Gráfico histórico do Dashboard, com setinhas pra passar entre as
 // métricas (temperatura, umidade, pressão, vento) sem ocupar mais espaço
 // na tela — só um gráfico por vez, igual um carrossel. Controlado de fora
-// (índice vem do Dashboard) porque a tabela de histórico logo abaixo
-// (HistoricoDiarioTable) navega em conjunto, sincronizada com o mesmo
-// índice — trocar aqui troca a tabela também.
-function GraficoHistoricoCarrossel({ series, indice, onMudarIndice, diasHistorico, onMudarDiasHistorico }) {
+// (índice/período vêm do Dashboard) porque a tabela de histórico logo
+// abaixo (HistoricoDiarioTable) navega em conjunto, sincronizada com o
+// mesmo índice e período — trocar aqui troca a tabela também.
+function GraficoHistoricoCarrossel({ grafico, indice, onMudarIndice, periodo, onMudarPeriodo }) {
   const [seletorPeriodoAberto, setSeletorPeriodoAberto] = useState(false)
   const metrica = METRICAS_CLIMA[indice]
   const Icone = metrica.icone
-  const dados = series[metrica.chave] ?? []
+  const dados = grafico[metrica.chave] ?? []
+  const rotuloPeriodo = OPCOES_PERIODO.find((opcao) => opcao.valor === periodo)?.rotulo
 
   function irPara(delta) {
     onMudarIndice((METRICAS_CLIMA.length + indice + delta) % METRICAS_CLIMA.length)
@@ -43,18 +44,18 @@ function GraficoHistoricoCarrossel({ series, indice, onMudarIndice, diasHistoric
               className={styles.botaoPeriodo}
               onClick={() => setSeletorPeriodoAberto((atual) => !atual)}
             >
-              Últimos {diasHistorico} dias
+              {rotuloPeriodo}
               <ChevronDown size={13} />
             </button>
             {seletorPeriodoAberto && (
               <div className={styles.dropdownPeriodo}>
                 {OPCOES_PERIODO.map((opcao) => (
                   <button
-                    key={opcao.dias}
+                    key={opcao.valor}
                     type="button"
                     className={styles.itemDropdownPeriodo}
                     onClick={() => {
-                      onMudarDiasHistorico(opcao.dias)
+                      onMudarPeriodo(opcao.valor)
                       setSeletorPeriodoAberto(false)
                     }}
                   >

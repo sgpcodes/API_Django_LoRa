@@ -10,7 +10,13 @@ export const METRICAS_CLIMA = [
   { chave: 'vento', titulo: 'Vento', unidade: 'km/h', icone: Wind },
 ]
 
+// `valor` é o que os dois componentes passam pra `derivarVisaoPeriodo`
+// (services/climaExternoService.js) — 'hoje'/'ontem' viram hora a hora
+// (sem média); 7/30 viram um ponto por dia (com média, RN: só há média
+// quando mais de um dia está selecionado).
 export const OPCOES_PERIODO = [
-  { dias: 7, rotulo: 'Últimos 7 dias' },
-  { dias: 30, rotulo: 'Últimos 30 dias' },
+  { valor: 'hoje', rotulo: 'Hoje' },
+  { valor: 'ontem', rotulo: 'Ontem' },
+  { valor: 7, rotulo: 'Últimos 7 dias' },
+  { valor: 30, rotulo: 'Últimos 30 dias' },
 ]

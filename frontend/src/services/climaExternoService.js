@@ -8,11 +8,17 @@
 // (ver `normalizar` no fim do arquivo) é o contrato que o Dashboard espera,
 // então o resto do app não precisa saber qual provedor está por trás.
 //
+// Busca sempre os últimos 30 dias de uma vez (limite do plano Standard,
+// RN09/RN21) — trocar entre Hoje/Ontem/7 dias/30 dias no Dashboard não
+// busca de novo na API, só filtra/agrupa o que já foi buscado (ver
+// `derivarVisaoPeriodo`), então trocar de período é instantâneo.
+//
 // O código que fala com a estação real (services/leiturasService.js) NÃO
 // foi apagado, só não está sendo chamado pelo Dashboard por enquanto — ver
 // pages/DashboardLora.jsx.
 
 const BASE_URL = 'https://api.open-meteo.com/v1/forecast'
+const DIAS_HISTORICO_MAXIMO = 30 // RN09/RN21 — teto do plano Standard
 
 // Coordenadas padrão (Maricá-RJ, sede do LACOP/UFF) — usada até a tela de
 // vínculo de estação guardar uma localização própria da conta.
@@ -75,11 +81,18 @@ function mediaCircular(graus) {
   return Math.round((anguloMedio + 360) % 360)
 }
 
+function horaRotulo(dataHoraISO) {
+  return dataHoraISO.slice(11, 13) + 'h'
+}
+
+function diaRotulo(dataISO) {
+  return dataISO.slice(8, 10) + '/' + dataISO.slice(5, 7)
+}
+
 // Agrupa as leituras horárias de um campo em pontos diários (média, mínima
-// e máxima) — alimenta o gráfico histórico, a tabela diária e o resumo do
-// dia, respeitando os `dias` de histórico do plano contratado (RN09/RN21:
-// Standard = 30 dias).
-function agruparPorDia(horas, valores, dias) {
+// e máxima) — TODOS os dias buscados (até 30); quem exibe decide quantos
+// usar (ver `derivarVisaoPeriodo`).
+function agruparPorDia(horas, valores) {
   const porDia = new Map()
 
   horas.forEach((horaISO, indice) => {
@@ -89,23 +102,21 @@ function agruparPorDia(horas, valores, dias) {
     porDia.set(chave, lista)
   })
 
-  return Array.from(porDia.entries())
-    .slice(-dias)
-    .map(([dataISO, lista]) => {
-      const validos = lista.filter((valor) => valor != null)
-      return {
-        data: dataISO,
-        rotulo: dataISO.slice(8, 10) + '/' + dataISO.slice(5, 7),
-        media: media(lista),
-        minimo: validos.length ? Number(Math.min(...validos).toFixed(1)) : null,
-        maximo: validos.length ? Number(Math.max(...validos).toFixed(1)) : null,
-      }
-    })
+  return Array.from(porDia.entries()).map(([dataISO, lista]) => {
+    const validos = lista.filter((valor) => valor != null)
+    return {
+      data: dataISO,
+      rotulo: diaRotulo(dataISO),
+      media: media(lista),
+      minimo: validos.length ? Number(Math.min(...validos).toFixed(1)) : null,
+      maximo: validos.length ? Number(Math.max(...validos).toFixed(1)) : null,
+    }
+  })
 }
 
 // Igual a `agruparPorDia`, mas específico pra vento: velocidade média,
 // rajada máxima do dia e direção predominante (média circular).
-function agruparVentoPorDia(horas, velocidades, rajadas, direcoes, dias) {
+function agruparVentoPorDia(horas, velocidades, rajadas, direcoes) {
   const porDia = new Map()
 
   horas.forEach((horaISO, indice) => {
@@ -117,20 +128,18 @@ function agruparVentoPorDia(horas, velocidades, rajadas, direcoes, dias) {
     porDia.set(chave, grupo)
   })
 
-  return Array.from(porDia.entries())
-    .slice(-dias)
-    .map(([dataISO, grupo]) => {
-      const rajadasValidas = grupo.rajadas.filter((valor) => valor != null)
-      const direcaoMedia = mediaCircular(grupo.direcoes)
-      return {
-        data: dataISO,
-        rotulo: dataISO.slice(8, 10) + '/' + dataISO.slice(5, 7),
-        velocidadeMedia: media(grupo.velocidades),
-        rajadaMaxima: rajadasValidas.length ? Number(Math.max(...rajadasValidas).toFixed(1)) : null,
-        direcaoGraus: direcaoMedia,
-        direcaoTexto: direcaoTexto(direcaoMedia),
-      }
-    })
+  return Array.from(porDia.entries()).map(([dataISO, grupo]) => {
+    const rajadasValidas = grupo.rajadas.filter((valor) => valor != null)
+    const direcaoMedia = mediaCircular(grupo.direcoes)
+    return {
+      data: dataISO,
+      rotulo: diaRotulo(dataISO),
+      velocidadeMedia: media(grupo.velocidades),
+      rajadaMaxima: rajadasValidas.length ? Number(Math.max(...rajadasValidas).toFixed(1)) : null,
+      direcaoGraus: direcaoMedia,
+      direcaoTexto: direcaoTexto(direcaoMedia),
+    }
+  })
 }
 
 function delta(hoje, ontem) {
@@ -139,7 +148,8 @@ function delta(hoje, ontem) {
 }
 
 // Compara a média do último dia completo de histórico com a do dia
-// anterior a ele — alimenta o card "Resumo do dia".
+// anterior a ele — alimenta o card "Resumo do dia" (fixo: sempre hoje vs.
+// ontem, independente do período escolhido lá em cima no gráfico/tabela).
 function calcularResumoDia(diarioTemperatura, diarioUmidade, diarioPressao, diarioVento) {
   function ultimoEAnterior(serie) {
     const ultimo = serie.at(-1)?.media ?? null
@@ -164,48 +174,44 @@ function calcularResumoDia(diarioTemperatura, diarioUmidade, diarioPressao, diar
   }
 }
 
-// Formato que o Dashboard consome — ver pages/Dashboard.jsx.
-function normalizar(dados, diasHistorico) {
+// Formato que o Dashboard consome — ver pages/Dashboard.jsx. Guarda os
+// dados HORÁRIOS e DIÁRIOS completos (últimos 30 dias) sem cortar nada —
+// o corte por período (hoje/ontem/7/30) é feito depois, na hora de exibir
+// (ver `derivarVisaoPeriodo`), sem precisar buscar de novo na API.
+function normalizar(dados) {
   const atual = dados.current
   const horas = dados.hourly?.time ?? []
+  const agora = new Date()
 
-  const diarioTemperatura = agruparPorDia(horas, dados.hourly.temperature_2m, diasHistorico)
-  const diarioUmidade = agruparPorDia(horas, dados.hourly.relative_humidity_2m, diasHistorico)
-  const diarioPressao = agruparPorDia(horas, dados.hourly.surface_pressure, diasHistorico)
-  const diarioVento = agruparPorDia(horas, dados.hourly.wind_speed_10m, diasHistorico)
-  const diarioVentoCompleto = agruparVentoPorDia(
-    horas, dados.hourly.wind_speed_10m, dados.hourly.wind_gusts_10m, dados.hourly.wind_direction_10m, diasHistorico,
-  )
+  // A Open-Meteo devolve algumas horas "futuras" (previsão do resto do dia
+  // de hoje/amanhã, por causa de forecast_days=1) — descarta o que ainda
+  // não aconteceu, senão "Hoje" mostraria previsão como se fosse leitura.
+  const indiceLimite = horas.findIndex((horaISO) => new Date(horaISO) > agora)
+  const fimValido = indiceLimite === -1 ? horas.length : indiceLimite
+  const horasPassadas = horas.slice(0, fimValido)
+  const corte = (lista) => lista.slice(0, fimValido)
 
-  const historicoTemperaturaPorDia = diarioTemperatura.map((dia) => ({
-    data: dia.data,
-    rotulo: dia.rotulo,
-    temperaturaMedia: dia.media,
+  const horariaTemperatura = horasPassadas.map((h, i) => ({ dataHora: h, rotulo: horaRotulo(h), valor: corte(dados.hourly.temperature_2m)[i] }))
+  const horariaUmidade = horasPassadas.map((h, i) => ({ dataHora: h, rotulo: horaRotulo(h), valor: corte(dados.hourly.relative_humidity_2m)[i] }))
+  const horariaPressao = horasPassadas.map((h, i) => ({ dataHora: h, rotulo: horaRotulo(h), valor: corte(dados.hourly.surface_pressure)[i] }))
+  const horariaVento = horasPassadas.map((h, i) => ({
+    dataHora: h,
+    rotulo: horaRotulo(h),
+    velocidade: corte(dados.hourly.wind_speed_10m)[i],
+    rajada: corte(dados.hourly.wind_gusts_10m)[i],
+    direcaoGraus: corte(dados.hourly.wind_direction_10m)[i],
+    direcaoTexto: direcaoTexto(corte(dados.hourly.wind_direction_10m)[i]),
   }))
 
-  // Formato uniforme { rotulo, valor } pro carrossel de gráficos do
-  // Dashboard (ver components/GraficoHistoricoCarrossel.jsx) — uma série
-  // por métrica, todas com a mesma forma.
-  const paraSerie = (diario) => diario.map((dia) => ({ rotulo: dia.rotulo, valor: dia.media }))
-  const seriesHistoricoDiario = {
-    temperatura: paraSerie(diarioTemperatura),
-    umidade: paraSerie(diarioUmidade),
-    pressao: paraSerie(diarioPressao),
-    vento: paraSerie(diarioVento),
-  }
+  const diariaTemperatura = agruparPorDia(horasPassadas, corte(dados.hourly.temperature_2m))
+  const diariaUmidade = agruparPorDia(horasPassadas, corte(dados.hourly.relative_humidity_2m))
+  const diariaPressao = agruparPorDia(horasPassadas, corte(dados.hourly.surface_pressure))
+  const diariaVentoSimples = agruparPorDia(horasPassadas, corte(dados.hourly.wind_speed_10m))
+  const diariaVento = agruparVentoPorDia(
+    horasPassadas, corte(dados.hourly.wind_speed_10m), corte(dados.hourly.wind_gusts_10m), corte(dados.hourly.wind_direction_10m),
+  )
 
-  // Uma linha por dia (mais recente primeiro) pro carrossel de tabelas do
-  // Dashboard (ver components/HistoricoDiarioTable.jsx) — mais completa
-  // que a série do gráfico (mín/máx pras métricas simples; vento com
-  // direção/rajada, que não fazem sentido pras outras).
-  const tabelaHistoricoDiario = {
-    temperatura: [...diarioTemperatura].reverse(),
-    umidade: [...diarioUmidade].reverse(),
-    pressao: [...diarioPressao].reverse(),
-    vento: [...diarioVentoCompleto].reverse(),
-  }
-
-  const resumoDia = calcularResumoDia(diarioTemperatura, diarioUmidade, diarioPressao, diarioVento)
+  const resumoDia = calcularResumoDia(diariaTemperatura, diariaUmidade, diariaPressao, diariaVentoSimples)
 
   return {
     temperatura: atual.temperature_2m,
@@ -224,16 +230,13 @@ function normalizar(dados, diasHistorico) {
     visibilidadeKm: atual.visibility != null ? Number((atual.visibility / 1000).toFixed(1)) : null,
     condicaoTexto: descricaoTempo(atual.weather_code),
     atualizadoEm: atual.time,
-    historicoTemperaturaPorDia,
-    seriesHistoricoDiario,
-    tabelaHistoricoDiario,
     resumoDia,
+    horaria: { temperatura: horariaTemperatura, umidade: horariaUmidade, pressao: horariaPressao, vento: horariaVento },
+    diaria: { temperatura: diariaTemperatura, umidade: diariaUmidade, pressao: diariaPressao, vento: diariaVento },
   }
 }
 
-// `diasHistorico` respeita o limite do plano contratado (RN09/RN21) — 30
-// dias na conta Standard.
-export async function buscarClimaAtual(coordenadas = COORDENADAS_PADRAO, diasHistorico = 30) {
+export async function buscarClimaAtual(coordenadas = COORDENADAS_PADRAO) {
   const parametros = new URLSearchParams({
     latitude: coordenadas.latitude,
     longitude: coordenadas.longitude,
@@ -259,7 +262,7 @@ export async function buscarClimaAtual(coordenadas = COORDENADAS_PADRAO, diasHis
       'wind_direction_10m',
       'wind_gusts_10m',
     ].join(','),
-    past_days: String(diasHistorico),
+    past_days: String(DIAS_HISTORICO_MAXIMO),
     forecast_days: '1',
     timezone: 'America/Sao_Paulo',
   })
@@ -269,5 +272,96 @@ export async function buscarClimaAtual(coordenadas = COORDENADAS_PADRAO, diasHis
     throw new Error('Não foi possível buscar os dados de clima.')
   }
   const dados = await resposta.json()
-  return normalizar(dados, diasHistorico)
+  return normalizar(dados)
+}
+
+function dataISODeslocada(diasAtras) {
+  const data = new Date()
+  data.setDate(data.getDate() - diasAtras)
+  return data.toISOString().slice(0, 10)
+}
+
+// Deriva o que o gráfico/tabela do Dashboard devem mostrar pro período
+// escolhido — 'hoje'/'ontem' (granularidade hora, sem médias) ou 7/30
+// (granularidade dia, com médias — RN: só faz média quando mais de um dia
+// está selecionado). Tudo calculado em cima do que `buscarClimaAtual` já
+// buscou, sem nova chamada de API.
+export function derivarVisaoPeriodo(clima, periodo) {
+  const ehHoraAHora = periodo === 'hoje' || periodo === 'ontem'
+
+  if (ehHoraAHora) {
+    const dataAlvo = dataISODeslocada(periodo === 'hoje' ? 0 : 1)
+    const filtrarDia = (lista) => lista.filter((ponto) => ponto.dataHora.startsWith(dataAlvo))
+
+    const temperatura = filtrarDia(clima.horaria.temperatura)
+    const umidade = filtrarDia(clima.horaria.umidade)
+    const pressao = filtrarDia(clima.horaria.pressao)
+    const vento = filtrarDia(clima.horaria.vento)
+
+    return {
+      granularidade: 'hora',
+      grafico: {
+        temperatura: temperatura.map((p) => ({ rotulo: p.rotulo, valor: p.valor })),
+        umidade: umidade.map((p) => ({ rotulo: p.rotulo, valor: p.valor })),
+        pressao: pressao.map((p) => ({ rotulo: p.rotulo, valor: p.valor })),
+        vento: vento.map((p) => ({ rotulo: p.rotulo, valor: p.velocidade })),
+      },
+      tabela: {
+        temperatura: [...temperatura].reverse(),
+        umidade: [...umidade].reverse(),
+        pressao: [...pressao].reverse(),
+        vento: [...vento].reverse(),
+      },
+      resumoTopo:
+        periodo === 'hoje'
+          ? {
+              temperatura: clima.temperatura,
+              umidade: clima.umidade,
+              pressao: clima.pressao,
+              vento: clima.vento,
+            }
+          : {
+              temperatura: media(temperatura.map((p) => p.valor)),
+              umidade: media(umidade.map((p) => p.valor)),
+              pressao: media(pressao.map((p) => p.valor)),
+              vento: {
+                velocidade: media(vento.map((p) => p.velocidade)),
+                rajada: vento.length ? Math.max(...vento.map((p) => p.rajada).filter((v) => v != null)) : null,
+                direcaoTexto: direcaoTexto(mediaCircular(vento.map((p) => p.direcaoGraus))),
+              },
+            },
+    }
+  }
+
+  const dias = periodo // 7 ou 30
+  const temperatura = clima.diaria.temperatura.slice(-dias)
+  const umidade = clima.diaria.umidade.slice(-dias)
+  const pressao = clima.diaria.pressao.slice(-dias)
+  const vento = clima.diaria.vento.slice(-dias)
+
+  return {
+    granularidade: 'dia',
+    grafico: {
+      temperatura: temperatura.map((d) => ({ rotulo: d.rotulo, valor: d.media })),
+      umidade: umidade.map((d) => ({ rotulo: d.rotulo, valor: d.media })),
+      pressao: pressao.map((d) => ({ rotulo: d.rotulo, valor: d.media })),
+      vento: vento.map((d) => ({ rotulo: d.rotulo, valor: d.velocidadeMedia })),
+    },
+    tabela: {
+      temperatura: [...temperatura].reverse(),
+      umidade: [...umidade].reverse(),
+      pressao: [...pressao].reverse(),
+      vento: [...vento].reverse(),
+    },
+    resumoTopo: {
+      temperatura: media(temperatura.map((d) => d.media)),
+      umidade: media(umidade.map((d) => d.media)),
+      pressao: media(pressao.map((d) => d.media)),
+      vento: {
+        velocidade: media(vento.map((d) => d.velocidadeMedia)),
+        rajada: vento.length ? Math.max(...vento.map((d) => d.rajadaMaxima).filter((v) => v != null)) : null,
+        direcaoTexto: direcaoTexto(mediaCircular(vento.map((d) => d.direcaoGraus))),
+      },
+    },
+  }
 }

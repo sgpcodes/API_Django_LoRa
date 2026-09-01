@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Thermometer, Droplets, Gauge, Wind } from 'lucide-react'
 import CabecalhoStandard from '../components/CabecalhoStandard'
 import SummaryStatCard from '../components/SummaryStatCard'
@@ -8,7 +8,7 @@ import HistoricoDiarioTable from '../components/HistoricoDiarioTable'
 import ResumoDiaCard from '../components/ResumoDiaCard'
 import StatusEstacaoCard from '../components/StatusEstacaoCard'
 import StatusMessage from '../components/StatusMessage'
-import { buscarClimaAtual } from '../services/climaExternoService'
+import { buscarClimaAtual, derivarVisaoPeriodo } from '../services/climaExternoService'
 import { obterEstacaoVinculada } from '../services/estacaoService'
 import styles from './Dashboard.module.css'
 
@@ -19,21 +19,23 @@ import styles from './Dashboard.module.css'
 // verdade (services/leiturasService.js) continua existindo, só não está
 // ligado por enquanto — ver pages/DashboardLora.jsx.
 const INTERVALO_ATUALIZACAO_MS = 15 * 60_000
-const DIAS_HISTORICO_PADRAO = 7 // só vira 30 (limite do plano Standard, RN09/RN21) se a pessoa escolher
 
 function Dashboard() {
   const [clima, setClima] = useState(null)
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState(null)
   const [indiceMetrica, setIndiceMetrica] = useState(0)
-  const [diasHistorico, setDiasHistorico] = useState(DIAS_HISTORICO_PADRAO)
+  const [periodo, setPeriodo] = useState('hoje')
 
   const estacao = obterEstacaoVinculada()
 
+  // Busca só uma vez (e a cada 15min) — os últimos 30 dias inteiros já vêm
+  // de uma vez. Trocar o período (Hoje/Ontem/7/30 dias) não busca de novo,
+  // só filtra/agrupa o que já está em `clima` (ver derivarVisaoPeriodo).
   useEffect(() => {
     async function carregarClima() {
       try {
-        const dados = await buscarClimaAtual(undefined, diasHistorico)
+        const dados = await buscarClimaAtual()
         setClima(dados)
         setErro(null)
       } catch {
@@ -43,11 +45,12 @@ function Dashboard() {
       }
     }
 
-    setCarregando(true)
     carregarClima()
     const intervalo = setInterval(carregarClima, INTERVALO_ATUALIZACAO_MS)
     return () => clearInterval(intervalo)
-  }, [diasHistorico])
+  }, [])
+
+  const visao = useMemo(() => (clima ? derivarVisaoPeriodo(clima, periodo) : null), [clima, periodo])
 
   const cabecalho = <CabecalhoStandard identificadorEstacao={estacao?.identificador ?? '—'} />
 
@@ -69,6 +72,8 @@ function Dashboard() {
     )
   }
 
+  const { resumoTopo } = visao
+
   return (
     <div className={styles.pagina}>
       {cabecalho}
@@ -78,7 +83,7 @@ function Dashboard() {
           icone={Thermometer}
           cor="var(--color-accent)"
           rotulo="Temperatura"
-          valor={`${clima.temperatura}°C`}
+          valor={resumoTopo.temperatura != null ? `${resumoTopo.temperatura}°C` : '—'}
           legenda={
             clima.resumoDia.deltaTemperatura == null
               ? undefined
@@ -96,7 +101,7 @@ function Dashboard() {
           icone={Droplets}
           cor="var(--color-accent)"
           rotulo="Umidade"
-          valor={`${clima.umidade}%`}
+          valor={resumoTopo.umidade != null ? `${resumoTopo.umidade}%` : '—'}
           legenda={
             clima.resumoDia.deltaUmidade == null
               ? undefined
@@ -110,7 +115,7 @@ function Dashboard() {
           icone={Gauge}
           cor="var(--color-accent)"
           rotulo="Pressão"
-          valor={`${clima.pressao} hPa`}
+          valor={resumoTopo.pressao != null ? `${resumoTopo.pressao} hPa` : '—'}
           legenda={
             clima.resumoDia.deltaPressao == null
               ? undefined
@@ -124,24 +129,29 @@ function Dashboard() {
           icone={Wind}
           cor="var(--color-accent)"
           rotulo="Vento"
-          valor={`${clima.vento.velocidade} km/h`}
-          legenda={`${clima.vento.direcaoTexto} · Rajadas ${clima.vento.rajada} km/h`}
+          valor={resumoTopo.vento.velocidade != null ? `${resumoTopo.vento.velocidade} km/h` : '—'}
+          legenda={`${resumoTopo.vento.direcaoTexto} · Rajadas ${resumoTopo.vento.rajada ?? '—'} km/h`}
         />
       </div>
 
       <section className={styles.grid2Colunas}>
         <GraficoHistoricoCarrossel
-          series={clima.seriesHistoricoDiario}
+          grafico={visao.grafico}
           indice={indiceMetrica}
           onMudarIndice={setIndiceMetrica}
-          diasHistorico={diasHistorico}
-          onMudarDiasHistorico={setDiasHistorico}
+          periodo={periodo}
+          onMudarPeriodo={setPeriodo}
         />
         <CondicoesAtuaisCard clima={clima} />
       </section>
 
       <section className={styles.grid2Colunas}>
-        <HistoricoDiarioTable tabela={clima.tabelaHistoricoDiario} indice={indiceMetrica} diasHistorico={diasHistorico} />
+        <HistoricoDiarioTable
+          tabela={visao.tabela}
+          indice={indiceMetrica}
+          periodo={periodo}
+          granularidade={visao.granularidade}
+        />
         <div className={styles.colunaLateral}>
           <ResumoDiaCard resumo={clima.resumoDia} />
           <StatusEstacaoCard operacional />

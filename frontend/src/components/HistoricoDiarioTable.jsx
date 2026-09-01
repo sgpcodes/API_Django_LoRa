@@ -1,26 +1,32 @@
 import { Download, FileText, ChevronDown } from 'lucide-react'
 import { useState } from 'react'
-import { METRICAS_CLIMA } from '../services/metricasClima'
+import { METRICAS_CLIMA, OPCOES_PERIODO } from '../services/metricasClima'
 import styles from './HistoricoDiarioTable.module.css'
 
-// Tabela de histórico diário do Dashboard — sincronizada com o gráfico
-// logo acima (mesmo índice de métrica, ver GraficoHistoricoCarrossel):
-// trocar a métrica no gráfico troca as colunas e os dados aqui também.
-// Uma linha por dia, com rolagem vertical (não paginação) — são só ~30
-// linhas no máximo (limite de histórico do plano Standard).
-function HistoricoDiarioTable({ tabela, indice, diasHistorico }) {
+// Tabela de histórico do Dashboard — sincronizada com o gráfico logo
+// acima (mesmo índice de métrica e mesmo período, ver
+// GraficoHistoricoCarrossel): trocar a métrica ou o período no gráfico
+// troca as colunas e os dados aqui também.
+//
+// "Hoje"/"Ontem": uma linha por HORA, valor bruto (sem média — RN: só há
+// média com mais de um dia selecionado). "7/30 dias": uma linha por DIA,
+// com média/mínima/máxima. Rolagem vertical (não paginação) — são no
+// máximo 24 linhas (hora) ou 30 linhas (dia).
+function HistoricoDiarioTable({ tabela, indice, periodo, granularidade }) {
   const [menuExportarAberto, setMenuExportarAberto] = useState(false)
   const metrica = METRICAS_CLIMA[indice]
   const Icone = metrica.icone
   const linhas = tabela[metrica.chave] ?? []
   const ehVento = metrica.chave === 'vento'
+  const ehPorHora = granularidade === 'hora'
+  const rotuloPeriodo = OPCOES_PERIODO.find((opcao) => opcao.valor === periodo)?.rotulo
 
   return (
     <div className={styles.container}>
       <div className={styles.cabecalho}>
         <h2 className={styles.titulo}>
           <Icone size={18} />
-          Histórico diário · {metrica.titulo} · Últimos {diasHistorico} dias
+          Histórico {ehPorHora ? 'por hora' : 'diário'} · {metrica.titulo} · {rotuloPeriodo}
         </h2>
         <div className={styles.acoes}>
           <button type="button" className={styles.botaoSecundario}>
@@ -58,13 +64,15 @@ function HistoricoDiarioTable({ tabela, indice, diasHistorico }) {
         <table className={styles.tabela}>
           <thead>
             <tr>
-              <th>Data</th>
+              <th>{ehPorHora ? 'Hora' : 'Data'}</th>
               {ehVento ? (
                 <>
-                  <th>Direção predominante</th>
-                  <th>Velocidade média</th>
-                  <th>Rajada máxima</th>
+                  <th>Direção</th>
+                  <th>{ehPorHora ? 'Velocidade' : 'Velocidade média'}</th>
+                  <th>{ehPorHora ? 'Rajada' : 'Rajada máxima'}</th>
                 </>
+              ) : ehPorHora ? (
+                <th>Valor</th>
               ) : (
                 <>
                   <th>Média</th>
@@ -76,37 +84,55 @@ function HistoricoDiarioTable({ tabela, indice, diasHistorico }) {
             </tr>
           </thead>
           <tbody>
-            {linhas.map((linha) =>
-              ehVento ? (
-                <tr key={linha.data}>
-                  <td>{linha.rotulo}</td>
-                  <td>
-                    <span className={styles.direcao}>
-                      <span className={styles.setaDirecao} style={{ transform: `rotate(${linha.direcaoGraus}deg)` }}>
-                        ↑
+            {linhas.map((linha) => {
+              const chave = linha.data ?? linha.dataHora
+              if (ehVento) {
+                return (
+                  <tr key={chave}>
+                    <td>{linha.rotulo}</td>
+                    <td>
+                      <span className={styles.direcao}>
+                        <span
+                          className={styles.setaDirecao}
+                          style={{ transform: `rotate(${linha.direcaoGraus}deg)` }}
+                        >
+                          ↑
+                        </span>
+                        {linha.direcaoTexto} ({linha.direcaoGraus}°)
                       </span>
-                      {linha.direcaoTexto} ({linha.direcaoGraus}°)
-                    </span>
-                  </td>
-                  <td>{linha.velocidadeMedia?.toFixed(1)}</td>
-                  <td>{linha.rajadaMaxima?.toFixed(1)}</td>
-                  <td>km/h</td>
-                </tr>
-              ) : (
-                <tr key={linha.data}>
+                    </td>
+                    <td>{(ehPorHora ? linha.velocidade : linha.velocidadeMedia)?.toFixed(1)}</td>
+                    <td>{(ehPorHora ? linha.rajada : linha.rajadaMaxima)?.toFixed(1)}</td>
+                    <td>km/h</td>
+                  </tr>
+                )
+              }
+              if (ehPorHora) {
+                return (
+                  <tr key={chave}>
+                    <td>{linha.rotulo}</td>
+                    <td>{linha.valor?.toFixed(1)}</td>
+                    <td>{metrica.unidade}</td>
+                  </tr>
+                )
+              }
+              return (
+                <tr key={chave}>
                   <td>{linha.rotulo}</td>
                   <td>{linha.media?.toFixed(1)}</td>
                   <td>{linha.minimo?.toFixed(1)}</td>
                   <td>{linha.maximo?.toFixed(1)}</td>
                   <td>{metrica.unidade}</td>
                 </tr>
-              ),
-            )}
+              )
+            })}
           </tbody>
         </table>
       </div>
 
-      <p className={styles.legenda}>{linhas.length} dias no histórico — role pra ver mais.</p>
+      <p className={styles.legenda}>
+        {linhas.length} {ehPorHora ? 'horas' : 'dias'} no histórico — role pra ver mais.
+      </p>
     </div>
   )
 }
