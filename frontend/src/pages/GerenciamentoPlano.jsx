@@ -171,14 +171,19 @@ function GerenciamentoPlano() {
             <div className={styles.tabelaComparativa}>
               {planos.map((plano) => {
                 const ehAtual = plano.nome === nomePlanoAtual
-                const ehDestaque = plano.id === planoMaisEscolhidoId
+                // O selo "Mais escolhido" é fixo no plano do meio — não
+                // muda. O contorno azul, não: segue o plano selecionado
+                // (começa no mesmo do meio, mas troca ao clicar "Fazer
+                // upgrade" em outro).
+                const ehMaisEscolhido = plano.id === planoMaisEscolhidoId
+                const ehSelecionado = plano.id === planoSelecionadoId
                 const IconePlano = ICONE_POR_PLANO[plano.nome] ?? Crown
                 return (
                   <div
                     key={plano.id}
-                    className={`${styles.coluna} ${ehDestaque ? styles.colunaDestaque : ''} ${ehAtual ? styles.colunaAtual : ''}`}
+                    className={`${styles.coluna} ${ehSelecionado ? styles.colunaDestaque : ''} ${ehAtual ? styles.colunaAtual : ''}`}
                   >
-                    {ehDestaque && <span className={styles.seloDestaque}>Mais escolhido</span>}
+                    {ehMaisEscolhido && <span className={styles.seloDestaque}>Mais escolhido</span>}
 
                     <span className={styles.nomePlano}>{plano.nome}</span>
                     <span className={styles.precoPlano}>
