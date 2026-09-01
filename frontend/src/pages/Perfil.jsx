@@ -147,6 +147,7 @@ function Perfil() {
       identificadorEstacao={estacao?.identificador ?? '—'}
       subtitulo="Gerencie suas informações pessoais, segurança da conta e preferências de privacidade."
       mostrarExportar={false}
+      mostrarChips={false}
     />
   )
 
@@ -428,9 +429,7 @@ function Perfil() {
               </ul>
             </div>
 
-            <div className={styles.molduraIlustracao}>
-              <img src={imagemApoioPerfil} alt="" className={styles.ilustracao} />
-            </div>
+            <img src={imagemApoioPerfil} alt="" className={styles.ilustracao} />
           </div>
         </section>
       </div>

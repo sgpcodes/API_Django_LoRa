@@ -32,6 +32,7 @@ function CabecalhoStandard({
   identificadorEstacao,
   subtitulo = 'Acompanhe em tempo real os dados da sua estação.',
   mostrarExportar = true,
+  mostrarChips = true,
 }) {
   const [agora, setAgora] = useState(new Date())
   const [menuAberto, setMenuAberto] = useState(false)
@@ -52,21 +53,25 @@ function CabecalhoStandard({
       </div>
 
       <div className={styles.chips}>
-        <div className={styles.chip}>
-          <Clock size={16} />
-          <div className={styles.chipTexto}>
-            <span className={styles.chipHora}>{hora}</span>
-            <span className={styles.chipData}>{dataCapitalizada}</span>
-          </div>
-        </div>
+        {mostrarChips && (
+          <>
+            <div className={styles.chip}>
+              <Clock size={16} />
+              <div className={styles.chipTexto}>
+                <span className={styles.chipHora}>{hora}</span>
+                <span className={styles.chipData}>{dataCapitalizada}</span>
+              </div>
+            </div>
 
-        <div className={styles.chip}>
-          <span className={styles.pontoAtivo} />
-          <div className={styles.chipTexto}>
-            <span className={styles.chipHora}>{identificadorEstacao}</span>
-            <span className={styles.chipData}>Estação ativa</span>
-          </div>
-        </div>
+            <div className={styles.chip}>
+              <span className={styles.pontoAtivo} />
+              <div className={styles.chipTexto}>
+                <span className={styles.chipHora}>{identificadorEstacao}</span>
+                <span className={styles.chipData}>Estação ativa</span>
+              </div>
+            </div>
+          </>
+        )}
 
         {mostrarExportar && (
           <div className={styles.menuExportar}>

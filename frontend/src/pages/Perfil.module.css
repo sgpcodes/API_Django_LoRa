@@ -446,24 +446,16 @@
   margin-top: 0.15rem;
 }
 
-.molduraIlustracao {
-  justify-self: center;
-  padding: 0.6rem;
-  border-radius: 14px;
-  background-color: #ffffff;
-  box-shadow: var(--shadow-card);
-}
-
 .ilustracao {
   display: block;
   width: 100%;
-  max-width: 220px;
+  max-width: 340px;
   height: auto;
-  border-radius: 8px;
+  justify-self: center;
 }
 
 @media (max-width: 1023px) {
   .ilustracao {
-    max-width: 180px;
+    max-width: 260px;
   }
 }
