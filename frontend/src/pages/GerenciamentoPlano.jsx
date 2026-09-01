@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   CreditCard,
-  ShieldCheck,
   Zap,
   Radar,
   Rocket,
@@ -17,7 +16,6 @@ import {
   Sparkles,
   FileText,
   Headset,
-  HelpCircle,
   ArrowRight,
 } from 'lucide-react'
 import { buscarPlanos } from '../services/planosService'
@@ -26,22 +24,15 @@ import imagemApoioPlanos from '../assets/apoio-planos.png'
 import styles from './GerenciamentoPlano.module.css'
 
 const ICONE_POR_PLANO = { Standard: Crown, Pro: TrendingUp, Plus: Rocket }
-const BANDEIRAS_CARTAO = ['VISA', 'MASTER', 'AMEX', 'ELO']
 
-// Tela de Gerenciamento de Plano (2.2.2.5 do PDF): plano vigente, tabela
-// comparativa entre Standard/Pro/Plus e um checkout embutido (não navega
-// pra outra página — o resumo/pagamento na lateral já reage ao plano
-// escolhido). Pagamento é simulado (sem gateway real integrado ainda).
+// Tela de Gerenciamento de Plano (2.2.2.5 do PDF): plano vigente e tabela
+// comparativa entre Standard/Pro/Plus. "Fazer upgrade" só destaca o plano
+// na comparação — não há checkout embutido (sem gateway de pagamento
+// integrado ainda).
 function GerenciamentoPlano() {
   const [planos, setPlanos] = useState([])
   const [carregando, setCarregando] = useState(true)
   const [planoSelecionadoId, setPlanoSelecionadoId] = useState(null)
-
-  const [numeroCartao, setNumeroCartao] = useState('')
-  const [nomeCartao, setNomeCartao] = useState('')
-  const [validade, setValidade] = useState('')
-  const [cvv, setCvv] = useState('')
-  const [estadoPagamento, setEstadoPagamento] = useState('formulario') // formulario | processando | aprovado | recusado
 
   const refComparativo = useRef(null)
   const nomePlanoAtual = obterClaimsDoToken()?.plano ?? 'Standard'
@@ -60,15 +51,7 @@ function GerenciamentoPlano() {
   }, [])
 
   const planoAtual = planos.find((plano) => plano.nome === nomePlanoAtual)
-  const planoSelecionado = planos.find((plano) => plano.id === planoSelecionadoId)
   const planoMaisEscolhidoId = planos[1]?.id
-
-  async function aoAssinar(evento) {
-    evento.preventDefault()
-    setEstadoPagamento('processando')
-    await new Promise((resolver) => setTimeout(resolver, 1500))
-    setEstadoPagamento('aprovado')
-  }
 
   function listaRecursos(plano) {
     return [
@@ -95,13 +78,6 @@ function GerenciamentoPlano() {
             Gerenciamento de Plano
           </h1>
           <p className={styles.subtitulo}>Escolha o plano ideal para potencializar o monitoramento da sua estação.</p>
-        </div>
-        <div className={styles.chipSeguro}>
-          <ShieldCheck size={16} />
-          <div>
-            <strong>Ambiente seguro</strong>
-            <span>Seus dados estão protegidos</span>
-          </div>
         </div>
       </div>
 
@@ -219,10 +195,7 @@ function GerenciamentoPlano() {
                       <button
                         type="button"
                         className={styles.botaoUpgrade}
-                        onClick={() => {
-                          setPlanoSelecionadoId(plano.id)
-                          setEstadoPagamento('formulario')
-                        }}
+                        onClick={() => setPlanoSelecionadoId(plano.id)}
                       >
                         Fazer upgrade
                         <TrendingUp size={15} />
@@ -293,115 +266,6 @@ function GerenciamentoPlano() {
             </div>
           </section>
         </div>
-
-        {/* Checkout embutido */}
-        <aside className={styles.colunaLateral}>
-          <section className={styles.cartaoPagamento}>
-            <h2 className={styles.tituloPagamento}>
-              <Lock size={16} />
-              Pagamento seguro
-            </h2>
-            <p className={styles.subtituloPagamento}>Ambiente criptografado e confiável</p>
-
-            {!planoSelecionado ? (
-              <p className={styles.semSelecao}>Escolha um plano ao lado pra ver o resumo aqui.</p>
-            ) : estadoPagamento === 'aprovado' ? (
-              <div className={styles.estadoPagamentoBloco}>
-                <Check size={28} className={styles.iconeAprovado} />
-                <strong>Pagamento aprovado</strong>
-                <p>Seu plano foi atualizado para {planoSelecionado.nome}. O recibo foi enviado por e-mail.</p>
-              </div>
-            ) : (
-              <>
-                <div className={styles.resumoPlano}>
-                  <span className={styles.tituloResumo}>Resumo do plano</span>
-                  <div className={styles.linhaResumo}>
-                    <span>Plano selecionado</span>
-                    <strong>{planoSelecionado.nome}</strong>
-                  </div>
-                  <div className={styles.linhaResumo}>
-                    <span>Valor mensal</span>
-                    <strong>R$ {Number(planoSelecionado.preco_mensal).toFixed(2)}</strong>
-                  </div>
-                  <div className={styles.linhaResumo}>
-                    <span>Próxima cobrança</span>
-                    <strong>Todo dia 01</strong>
-                  </div>
-                </div>
-
-                <form className={styles.formPagamento} onSubmit={aoAssinar}>
-                  <div className={styles.blocoCartao}>
-                    <span className={styles.tituloResumo}>Dados do cartão</span>
-                    <div className={styles.bandeiras}>
-                      {BANDEIRAS_CARTAO.map((bandeira) => (
-                        <span key={bandeira} className={styles.bandeira}>
-                          {bandeira}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <label className={styles.rotuloCampo}>Número do cartão</label>
-                  <input
-                    className={styles.campo}
-                    placeholder="0000 0000 0000 0000"
-                    value={numeroCartao}
-                    onChange={(e) => setNumeroCartao(e.target.value)}
-                    required
-                  />
-
-                  <label className={styles.rotuloCampo}>Nome no cartão</label>
-                  <input
-                    className={styles.campo}
-                    placeholder="Seu nome completo"
-                    value={nomeCartao}
-                    onChange={(e) => setNomeCartao(e.target.value)}
-                    required
-                  />
-
-                  <div className={styles.linha2Colunas}>
-                    <div>
-                      <label className={styles.rotuloCampo}>Validade</label>
-                      <input
-                        className={styles.campo}
-                        placeholder="MM/AA"
-                        value={validade}
-                        onChange={(e) => setValidade(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className={styles.rotuloCampo}>CVV</label>
-                      <input
-                        className={styles.campo}
-                        placeholder="123"
-                        value={cvv}
-                        onChange={(e) => setCvv(e.target.value)}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <button type="submit" className={styles.botaoAssinar} disabled={estadoPagamento === 'processando'}>
-                    {estadoPagamento === 'processando' ? 'Processando...' : 'Assinar plano'}
-                  </button>
-                  <p className={styles.termos}>
-                    Ao assinar, você concorda com nossos <a href="#termos">Termos de Uso</a> e{' '}
-                    <a href="#privacidade">Política de Privacidade</a>.
-                  </p>
-                </form>
-              </>
-            )}
-          </section>
-
-          <section className={styles.cartaoDuvidas}>
-            <HelpCircle size={18} />
-            <div>
-              <strong>Dúvidas?</strong>
-              <span>Fale com nosso suporte</span>
-            </div>
-          </section>
-        </aside>
       </div>
     </div>
   )
