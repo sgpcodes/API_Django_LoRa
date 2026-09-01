@@ -133,7 +133,12 @@ function Sidebar({ tema, onAlternarTema, abertaMobile, onFecharMobile }) {
         </nav>
 
         {estacao && (
-          <div className={styles.cardEstacao} title={`Estação conectada: ${estacao.identificador}`}>
+          <NavLink
+            to="/app/estacao"
+            title={`Estação conectada: ${estacao.identificador}`}
+            onClick={aoClicarAba}
+            className={({ isActive }) => `${styles.cardEstacao} ${isActive ? styles.cardEstacaoAtiva : ''}`}
+          >
             <span className={styles.pontoOnline} />
             <div className={styles.cardEstacaoTexto}>
               <span className={styles.cardEstacaoTitulo}>Estação conectada</span>
@@ -142,7 +147,7 @@ function Sidebar({ tema, onAlternarTema, abertaMobile, onFecharMobile }) {
                 {estacao.identificador}
               </span>
             </div>
-          </div>
+          </NavLink>
         )}
 
         <NavLink

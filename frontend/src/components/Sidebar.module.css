@@ -171,7 +171,22 @@
   margin-top: 0.75rem;
   border-radius: 10px;
   background-color: rgba(255, 255, 255, 0.08);
-  transition: var(--transition-theme);
+  transition: var(--transition-theme), background-color 0.15s ease;
+  text-decoration: none;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+.cardEstacao:hover {
+  background-color: rgba(255, 255, 255, 0.14);
+}
+
+.cardEstacaoAtiva {
+  background-color: var(--color-sidebar-selecionado-bg);
+}
+
+.cardEstacaoAtiva .cardEstacaoTitulo {
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .pontoOnline {
