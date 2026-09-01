@@ -25,9 +25,14 @@ function formatarDataHora(data) {
   return { hora, dataCapitalizada }
 }
 
-// Cabeçalho de saudação do Dashboard (Tela 4): nome do usuário, relógio,
-// selo de estação ativa e atalho de exportação.
-function CabecalhoStandard({ identificadorEstacao }) {
+// Cabeçalho de saudação, reutilizado pelo Dashboard e pelo Perfil: nome do
+// usuário, relógio, selo de estação ativa e (opcional) atalho de
+// exportação.
+function CabecalhoStandard({
+  identificadorEstacao,
+  subtitulo = 'Acompanhe em tempo real os dados da sua estação.',
+  mostrarExportar = true,
+}) {
   const [agora, setAgora] = useState(new Date())
   const [menuAberto, setMenuAberto] = useState(false)
   const username = obterClaimsDoToken()?.username
@@ -43,7 +48,7 @@ function CabecalhoStandard({ identificadorEstacao }) {
     <header className={styles.cabecalho}>
       <div className={styles.saudacao}>
         <h1 className={styles.titulo}>Olá, {primeiroNome(username)}! 👋</h1>
-        <p className={styles.subtitulo}>Acompanhe em tempo real os dados da sua estação.</p>
+        <p className={styles.subtitulo}>{subtitulo}</p>
       </div>
 
       <div className={styles.chips}>
@@ -63,30 +68,32 @@ function CabecalhoStandard({ identificadorEstacao }) {
           </div>
         </div>
 
-        <div className={styles.menuExportar}>
-          <button
-            type="button"
-            className={styles.botaoExportar}
-            onClick={() => setMenuAberto((atual) => !atual)}
-          >
-            <Download size={16} />
-            Exportar relatório
-            <ChevronDown size={14} />
-          </button>
-          {menuAberto && (
-            <div className={styles.dropdown}>
-              <button type="button" className={styles.itemDropdown}>
-                Relatório completo (PDF)
-              </button>
-              <button type="button" className={styles.itemDropdown}>
-                Dados brutos (TXT)
-              </button>
-              <button type="button" className={styles.itemDropdown}>
-                Planilha (CSV)
-              </button>
-            </div>
-          )}
-        </div>
+        {mostrarExportar && (
+          <div className={styles.menuExportar}>
+            <button
+              type="button"
+              className={styles.botaoExportar}
+              onClick={() => setMenuAberto((atual) => !atual)}
+            >
+              <Download size={16} />
+              Exportar relatório
+              <ChevronDown size={14} />
+            </button>
+            {menuAberto && (
+              <div className={styles.dropdown}>
+                <button type="button" className={styles.itemDropdown}>
+                  Relatório completo (PDF)
+                </button>
+                <button type="button" className={styles.itemDropdown}>
+                  Dados brutos (TXT)
+                </button>
+                <button type="button" className={styles.itemDropdown}>
+                  Planilha (CSV)
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </header>
   )
