@@ -47,7 +47,7 @@ class LoginJwtTests(APITestCase):
         self.assertEqual(resposta.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_endpoint_protegido_sem_token_e_rejeitado(self):
-        resposta = self.client.get('/api/usuarios/')
+        resposta = self.client.get('/api/contas/')
         self.assertEqual(resposta.status_code, status.HTTP_401_UNAUTHORIZED)
 
     def test_login_sem_email_confirmado_funciona_por_enquanto(self):
@@ -87,37 +87,37 @@ class UsuarioViewSetTests(APITestCase):
 
     def test_usuario_comum_nao_pode_listar_contas(self):
         self.client.force_authenticate(self.usuario1)
-        resposta = self.client.get('/api/usuarios/')
+        resposta = self.client.get('/api/contas/')
         self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_gestor_pode_listar_todas_as_contas(self):
         self.client.force_authenticate(self.gestor)
-        resposta = self.client.get('/api/usuarios/')
+        resposta = self.client.get('/api/contas/')
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         usernames = {u['username'] for u in resposta.data}
         self.assertEqual(usernames, {'gestor1', 'usuario1', 'usuario2'})
 
     def test_usuario_comum_nao_ve_dados_de_outro_usuario(self):
         self.client.force_authenticate(self.usuario1)
-        resposta = self.client.get(f'/api/usuarios/{self.usuario2.pk}/')
+        resposta = self.client.get(f'/api/contas/{self.usuario2.pk}/')
         # Fora do queryset dele -> 404, não 403 (não revela nem que a conta existe)
         self.assertEqual(resposta.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_usuario_comum_ve_a_propria_conta_pelo_endpoint_me(self):
         self.client.force_authenticate(self.usuario1)
-        resposta = self.client.get('/api/usuarios/me/')
+        resposta = self.client.get('/api/contas/me/')
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.assertEqual(resposta.data['username'], 'usuario1')
 
     def test_gestor_tambem_ve_a_propria_conta_pelo_endpoint_me(self):
         self.client.force_authenticate(self.gestor)
-        resposta = self.client.get('/api/usuarios/me/')
+        resposta = self.client.get('/api/contas/me/')
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.assertEqual(resposta.data['username'], 'gestor1')
 
     def test_usuario_comum_edita_a_propria_conta(self):
         self.client.force_authenticate(self.usuario1)
-        resposta = self.client.patch(f'/api/usuarios/{self.usuario1.pk}/', {'telefone': '21999999999'})
+        resposta = self.client.patch(f'/api/contas/{self.usuario1.pk}/', {'telefone': '21999999999'})
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.usuario1.refresh_from_db()
         self.assertEqual(self.usuario1.telefone, '21999999999')
@@ -125,7 +125,7 @@ class UsuarioViewSetTests(APITestCase):
     def test_usuario_comum_troca_a_propria_senha_informando_a_atual(self):
         self.client.force_authenticate(self.usuario1)
         resposta = self.client.patch(
-            f'/api/usuarios/{self.usuario1.pk}/', {'senha_atual': 'x', 'password': 'senha-nova-123'},
+            f'/api/contas/{self.usuario1.pk}/', {'senha_atual': 'x', 'password': 'senha-nova-123'},
         )
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.usuario1.refresh_from_db()
@@ -134,7 +134,7 @@ class UsuarioViewSetTests(APITestCase):
     def test_usuario_comum_nao_troca_senha_com_senha_atual_errada(self):
         self.client.force_authenticate(self.usuario1)
         resposta = self.client.patch(
-            f'/api/usuarios/{self.usuario1.pk}/', {'senha_atual': 'errada', 'password': 'senha-nova-123'},
+            f'/api/contas/{self.usuario1.pk}/', {'senha_atual': 'errada', 'password': 'senha-nova-123'},
         )
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
         self.usuario1.refresh_from_db()
@@ -142,7 +142,7 @@ class UsuarioViewSetTests(APITestCase):
 
     def test_gestor_redefine_senha_de_outra_conta_sem_precisar_da_senha_atual_dela(self):
         self.client.force_authenticate(self.gestor)
-        resposta = self.client.patch(f'/api/usuarios/{self.usuario1.pk}/', {'password': 'senha-nova-123'})
+        resposta = self.client.patch(f'/api/contas/{self.usuario1.pk}/', {'password': 'senha-nova-123'})
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.usuario1.refresh_from_db()
         self.assertTrue(self.usuario1.check_password('senha-nova-123'))
@@ -151,25 +151,25 @@ class UsuarioViewSetTests(APITestCase):
         """RN19 (menor privilégio): tentar se autopromover via payload é
         ignorado — o campo `role` só é aceito se quem edita for Gestor."""
         self.client.force_authenticate(self.usuario1)
-        self.client.patch(f'/api/usuarios/{self.usuario1.pk}/', {'role': Usuario.Role.GESTOR})
+        self.client.patch(f'/api/contas/{self.usuario1.pk}/', {'role': Usuario.Role.GESTOR})
         self.usuario1.refresh_from_db()
         self.assertEqual(self.usuario1.role, Usuario.Role.USUARIO)
 
     def test_usuario_comum_nao_pode_criar_conta(self):
         self.client.force_authenticate(self.usuario1)
-        resposta = self.client.post('/api/usuarios/', {'username': 'novo', 'password': 'senha12345'})
+        resposta = self.client.post('/api/contas/', {'username': 'novo', 'password': 'senha12345'})
         self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_gestor_pode_criar_conta(self):
         self.client.force_authenticate(self.gestor)
-        resposta = self.client.post('/api/usuarios/', {'username': 'novo', 'password': 'senha12345'})
+        resposta = self.client.post('/api/contas/', {'username': 'novo', 'password': 'senha12345'})
         self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
         self.assertTrue(Usuario.objects.filter(username='novo').exists())
 
     def test_gestor_pode_suspender_conta_e_isso_vai_para_auditoria(self):
         """RN02 + RN05."""
         self.client.force_authenticate(self.gestor)
-        resposta = self.client.post(f'/api/usuarios/{self.usuario1.pk}/suspender/')
+        resposta = self.client.post(f'/api/contas/{self.usuario1.pk}/suspender/')
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.usuario1.refresh_from_db()
         self.assertFalse(self.usuario1.is_active)
@@ -177,7 +177,7 @@ class UsuarioViewSetTests(APITestCase):
 
     def test_usuario_comum_nao_pode_suspender_outra_conta(self):
         self.client.force_authenticate(self.usuario1)
-        resposta = self.client.post(f'/api/usuarios/{self.usuario2.pk}/suspender/')
+        resposta = self.client.post(f'/api/contas/{self.usuario2.pk}/suspender/')
         self.assertIn(resposta.status_code, (status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND))
         self.usuario2.refresh_from_db()
         self.assertTrue(self.usuario2.is_active)

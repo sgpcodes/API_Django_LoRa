@@ -17,7 +17,7 @@ from .views import (
 )
 
 router = DefaultRouter()
-router.register('usuarios', UsuarioViewSet, basename='usuario')
+router.register('contas', UsuarioViewSet, basename='conta')
 router.register('funcionalidades', FuncionalidadeViewSet, basename='funcionalidade')
 router.register('planos', PlanoViewSet, basename='plano')
 router.register('assinaturas', AssinaturaViewSet, basename='assinatura')

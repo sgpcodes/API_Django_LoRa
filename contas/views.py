@@ -184,7 +184,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def me(self, request):
-        """GET /api/usuarios/me/ — a própria conta, pra qualquer usuário
+        """GET /api/contas/me/ — a própria conta, pra qualquer usuário
         autenticado (Gestor ou Usuário comum). Existe separado de `list`
         porque `list` fica reservado ao Gestor (RN02); um Usuário comum
         não pode chamar `list` pra ver a si mesmo, mesmo que o queryset já
