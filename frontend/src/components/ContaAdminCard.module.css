@@ -1,0 +1,234 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+  border-radius: 12px;
+  background-color: var(--color-card-bg);
+  border: 1px solid var(--color-card-border);
+  box-shadow: var(--shadow-card);
+}
+
+.topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.identificacao {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  background-color: var(--color-accent);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.nomeLinha {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.nome {
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.planoPill {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background-color: var(--color-pill-bg);
+  color: var(--color-accent);
+}
+
+.statusPill {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+}
+
+.statusAtiva {
+  background-color: rgba(34, 197, 94, 0.14);
+  color: #16a34a;
+}
+
+.statusSuspensa {
+  background-color: rgba(239, 68, 68, 0.14);
+  color: #dc2626;
+}
+
+.subtexto {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+}
+
+.botaoDetalhes {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: 10px;
+  border: 1px solid var(--color-card-border);
+  background: none;
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.botaoDetalhes:hover {
+  background-color: var(--color-pill-bg);
+  color: var(--color-text);
+}
+
+.detalhes {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-card-border);
+}
+
+.infoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
+.infoCampo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.infoRotulo {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.infoValor {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.secaoEstacoes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-card-border);
+}
+
+.secaoTitulo {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.semEstacoes {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+}
+
+.listaEstacoes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.itemEstacao {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.7rem;
+  border-radius: 8px;
+  background-color: var(--color-pill-bg);
+  font-size: 0.85rem;
+  color: var(--color-text);
+}
+
+.formAtribuir {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-card-border);
+}
+
+.linhaAtribuir {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.seletor {
+  flex: 1;
+  min-width: 180px;
+  padding: 0.55rem 0.7rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-card-border);
+  background-color: var(--color-input-bg);
+  color: var(--color-text);
+  font-size: 0.85rem;
+}
+
+.botaoAtribuir {
+  padding: 0.55rem 1rem;
+  border-radius: 8px;
+  border: none;
+  background-color: var(--color-accent);
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.botaoAtribuir:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.aviso {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #b45309;
+}

@@ -26,7 +26,7 @@ import StatusMessage from '../components/StatusMessage'
 import imagemApoioPerfil from '../assets/apoio-perfil.jpeg'
 import { buscarMeuPerfil, atualizarMeuPerfil, trocarMinhaSenha } from '../services/perfilService'
 import { buscarPlanos } from '../services/planosService'
-import { obterEstacaoVinculada } from '../services/estacaoService'
+import { useMinhaEstacao } from '../hooks/useMinhaEstacao'
 import { obterClaimsDoToken } from '../services/authService'
 import styles from './Perfil.module.css'
 
@@ -67,7 +67,7 @@ function Perfil() {
   const [perfil, setPerfil] = useState(null)
   const [plano, setPlano] = useState(null)
   const [carregando, setCarregando] = useState(true)
-  const estacao = obterEstacaoVinculada()
+  const { estacao } = useMinhaEstacao()
   const nomePlanoAtual = obterClaimsDoToken()?.plano
 
   const [editando, setEditando] = useState(false)
@@ -162,7 +162,7 @@ function Perfil() {
 
   const nomeCompletoAtual = [perfil.first_name, perfil.last_name].filter(Boolean).join(' ') || perfil.username
   const iniciais = iniciaisDoNome(nomeCompletoAtual, perfil.username)
-  const estacoesUsadas = estacao ? 1 : 0
+  const estacoesUsadas = perfil.estacoes_vinculadas ?? 0
 
   return (
     <div className={styles.pagina}>

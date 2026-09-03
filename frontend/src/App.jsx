@@ -1,7 +1,10 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import AppLayout from './components/AppLayout'
 import RotaProtegida from './components/RotaProtegida'
 import PortaDeEntradaApp from './components/PortaDeEntradaApp'
+import PainelAdministrativo from './components/PainelAdministrativo'
+import EstacoesAdmin from './pages/EstacoesAdmin'
+import ContasAdmin from './pages/ContasAdmin'
 import Dashboard from './pages/Dashboard'
 import Notificacoes from './pages/Notificacoes'
 import Configuracoes from './pages/Configuracoes'
@@ -37,11 +40,16 @@ function App() {
         <Route path="planos" element={<Planos />} />
 
         {/* Área logada. PortaDeEntradaApp decide o que aparece: Gestor
-            (conta credenciada) vai pra uma área administrativa própria
-            (ainda em branco); Usuário (Standard/Pro/Plus) passa pela
-            decisão "primeiro acesso" (vincular estação) antes do menu. */}
+            (conta credenciada) vai pro Painel Administrativo (/app/adm);
+            Usuário (Standard/Pro/Plus) passa pela decisão "já tem estação
+            atribuída pelo admin?" antes do menu. */}
         <Route path="app" element={<RotaProtegida />}>
           <Route element={<PortaDeEntradaApp />}>
+            <Route path="adm" element={<PainelAdministrativo />}>
+              <Route index element={<Navigate to="estacoes" replace />} />
+              <Route path="estacoes" element={<EstacoesAdmin />} />
+              <Route path="contas" element={<ContasAdmin />} />
+            </Route>
             <Route element={<AppLayout />}>
               <Route index element={<Dashboard />} />
               <Route path="notificacoes" element={<Notificacoes />} />

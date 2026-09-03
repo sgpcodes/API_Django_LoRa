@@ -1,47 +1,50 @@
-// Vínculo de estação meteorológica (Tela 3 da especificação de fluxo —
-// conta Standard). Enquanto a estação LoRa própria não está pronta com
-// todos os sensores, este vínculo é só simbólico: guarda o identificador
-// digitado e localmente marca a conta como "já tem estação", pra decidir
-// se o login cai direto no Dashboard ou passa por esta tela primeiro.
-// Os dados climáticos exibidos vêm da API externa (climaExternoService)
-// independentemente do identificador — trocar isso por um vínculo de
-// verdade contra o backend (modelo Estacao já existe em api_rest) é o
-// próximo passo, quando a estação própria estiver pronta.
-import { obterClaimsDoToken } from './authService'
+// Estações — lido direto do backend (modelo Estacao em api_rest). O
+// backend já filtra sozinho por papel (RN15): um Usuário comum só vê as
+// suas; o Gestor vê todas (usado pela tela de Estações do admin).
+// Vincular/desvincular deixou de ser algo que o Usuário faz sozinho: só o
+// admin atribui uma estação a uma conta (ver ContasAdmin.jsx) — cadastro
+// de Estacao é feito ali, chamando este mesmo endpoint via `atribuirEstacao`.
+import api from './api'
 
-const CHAVE_BASE = 'agroclimatico_estacao_vinculada'
-
-function chaveDoUsuario() {
-  const username = obterClaimsDoToken()?.username ?? 'anonimo'
-  return `${CHAVE_BASE}:${username}`
+export async function buscarEstacoes() {
+  const resposta = await api.get('/api/estacoes/')
+  return resposta.data
 }
 
-export function obterEstacaoVinculada() {
-  const bruto = localStorage.getItem(chaveDoUsuario())
-  if (!bruto) return null
-  try {
-    return JSON.parse(bruto)
-  } catch {
-    return null
-  }
+// A conta pode ter mais de uma estação (planos Pro/Plus), mas o Dashboard
+// mostra só uma — a atribuída mais recentemente (maior id), até existir
+// um seletor de estação na interface.
+export async function buscarMinhaEstacaoPrincipal() {
+  const estacoes = await buscarEstacoes()
+  if (estacoes.length === 0) return null
+  return estacoes.reduce((mais_recente, atual) => (atual.id > mais_recente.id ? atual : mais_recente))
 }
 
-// Simula a validação descrita no PDF (Tela 3): identificador precisa ter
-// pelo menos 4 caracteres. Sem backend real de estações por trás ainda,
-// não há checagem de "já vinculada a outro usuário" — só o formato.
-export async function vincularEstacao(identificador) {
-  const limpo = identificador.trim()
-  if (limpo.length < 4) {
-    throw new Error('Estação não encontrada. Confira o identificador e tente de novo.')
-  }
-
-  const registro = { identificador: limpo, vinculadaEm: new Date().toISOString() }
-  localStorage.setItem(chaveDoUsuario(), JSON.stringify(registro))
-  return registro
+// GET /api/estacoes/orfas/ — sensor_id que já mandaram leitura mas ainda
+// não têm Estacao cadastrada (Gestor only).
+export async function buscarSensoresOrfaos() {
+  const resposta = await api.get('/api/estacoes/orfas/')
+  return resposta.data
 }
 
-// Usada pela tela de Configurações ("Estação e dados") — desfaz o vínculo
-// simbólico. Na próxima vez que entrar, a conta passa pela Tela 3 de novo.
-export function desvincularEstacao() {
-  localStorage.removeItem(chaveDoUsuario())
+// Cadastra uma nova Estacao a partir de um sensor órfão, já atribuída a
+// um dono — é o "vincular estação" do admin (RN15: toda Estacao nasce com
+// um dono, nunca fica solta).
+export async function atribuirEstacao({ identificador, donoId, nome }) {
+  const resposta = await api.post('/api/estacoes/', { identificador, dono: donoId, nome: nome ?? '' })
+  return resposta.data
+}
+
+// Troca o dono de uma estação já cadastrada — admin só, em qualquer
+// plano (RN15). O limite de estações do plano do novo dono é validado no
+// backend do mesmo jeito que na atribuição inicial.
+export async function trocarDonoEstacao(estacaoId, novoDonoId) {
+  const resposta = await api.patch(`/api/estacoes/${estacaoId}/`, { dono: novoDonoId })
+  return resposta.data
+}
+
+// Remove uma estação cadastrada — admin only. O histórico de leituras
+// dela não é apagado (fica com `estacao=null`), só o vínculo/cadastro.
+export async function removerEstacao(estacaoId) {
+  await api.delete(`/api/estacoes/${estacaoId}/`)
 }

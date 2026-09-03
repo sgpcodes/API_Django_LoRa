@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 import logoLacop from '../assets/lacop.png'
 import { logout, obterClaimsDoToken } from '../services/authService'
-import { obterEstacaoVinculada } from '../services/estacaoService'
+import { useMinhaEstacao } from '../hooks/useMinhaEstacao'
 import styles from './Sidebar.module.css'
 
 // Menu da conta Standard/Pro/Plus (Seção 2.2 da especificação de fluxo).
@@ -61,7 +61,7 @@ function nomeEIniciais(username) {
 function Sidebar({ tema, onAlternarTema, abertaMobile, onFecharMobile }) {
   const [recolhida, setRecolhida] = useState(false)
   const navigate = useNavigate()
-  const estacao = obterEstacaoVinculada()
+  const { estacao } = useMinhaEstacao()
   const { nome, iniciais } = nomeEIniciais(obterClaimsDoToken()?.username)
 
   function aoClicarSair() {

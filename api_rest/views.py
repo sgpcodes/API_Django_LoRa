@@ -1,13 +1,20 @@
 from django.db import DatabaseError
+from django.utils import timezone
 from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Estacao, Leitura, SolicitacaoRssi
 from .permissions import EhGestor, EhGestorOuDonoDaEstacao
-from .serializers import EstacaoSerializer, LeituraSerializer
+from .serializers import EstacaoSerializer, LeituraSerializer, _leitura_resumo
 from .validacao import detectar_inconsistencia
+
+# Sensor que mandou leitura há mais tempo que isso, sem nunca ter virado
+# uma Estacao cadastrada, provavelmente não está mais em uso — some da
+# lista de "órfãos" do admin em vez de acumular pra sempre.
+JANELA_SENSORES_ORFAOS = timezone.timedelta(days=7)
 
 
 def _leitura_para_dict(leitura):
@@ -202,14 +209,36 @@ class EstacaoViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         from contas.models import LogAuditoria
 
-        # RN15: quem cadastra escolhe o dono (padrão: ele mesmo, se for
-        # dono válido) — no cadastro pelo Gestor, `dono` vem no payload.
-        dono_id = self.request.data.get('dono') or self.request.user.id
-        estacao = serializer.save(dono_id=dono_id)
+        # RN15: quem cadastra escolhe o dono (o serializer já resolve o
+        # default pra quem está autenticado, se `dono` não vier no payload).
+        estacao = serializer.save()
         LogAuditoria.objects.create(
             ator=self.request.user, acao='estacao.criada', alvo=estacao,
-            detalhes={'identificador': estacao.identificador},
+            detalhes={'identificador': estacao.identificador, 'dono_id': estacao.dono_id},
         )
+
+    def perform_update(self, serializer):
+        from contas.models import LogAuditoria
+
+        # Só o Gestor pode trocar o dono (RN15) — se quem edita é o
+        # próprio dono da estação, o campo é descartado silenciosamente do
+        # payload antes de salvar (ele continua podendo editar o resto:
+        # nome, intervalo de envio etc.).
+        if not self.request.user.eh_gestor:
+            serializer.validated_data.pop('dono', None)
+
+        dono_anterior_id = serializer.instance.dono_id
+        estacao = serializer.save()
+
+        if estacao.dono_id != dono_anterior_id:
+            LogAuditoria.objects.create(
+                ator=self.request.user, acao='estacao.dono_alterado', alvo=estacao,
+                detalhes={
+                    'identificador': estacao.identificador,
+                    'dono_anterior_id': dono_anterior_id,
+                    'dono_novo_id': estacao.dono_id,
+                },
+            )
 
     def perform_destroy(self, instance):
         from contas.models import LogAuditoria
@@ -219,3 +248,27 @@ class EstacaoViewSet(viewsets.ModelViewSet):
             detalhes={'identificador': instance.identificador, 'id': instance.id},
         )
         instance.delete()
+
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated, EhGestor])
+    def orfas(self, request):
+        """GET /api/estacoes/orfas/ — sensor_id que já mandaram leitura mas
+        ainda não viraram uma Estacao cadastrada (RN15: toda Estacao tem
+        dono, então "órfão" aqui é sempre a leitura crua, nunca a Estacao
+        em si). É esta lista que alimenta o "atribuir a um usuário" na
+        tela de Contas do admin."""
+        identificadores_cadastrados = set(Estacao.objects.values_list('identificador', flat=True))
+        desde = timezone.now() - JANELA_SENSORES_ORFAOS
+
+        leituras_recentes = Leitura.objects.filter(
+            estacao__isnull=True, data_hora__gte=desde,
+        ).order_by('-data_hora')
+
+        vistos = set()
+        orfaos = []
+        for leitura in leituras_recentes:
+            if leitura.sensor_id in identificadores_cadastrados or leitura.sensor_id in vistos:
+                continue
+            vistos.add(leitura.sensor_id)
+            orfaos.append({'sensor_id': leitura.sensor_id, 'ultima_leitura': _leitura_resumo(leitura)})
+
+        return Response(orfaos)

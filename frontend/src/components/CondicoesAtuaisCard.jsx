@@ -57,7 +57,7 @@ function CondicoesAtuaisCard({ clima }) {
             <CloudRain size={14} />
             Precipitação (24h)
           </span>
-          <span className={styles.valor}>{clima?.precipitacao ?? 0} mm</span>
+          <span className={styles.valor}>{clima?.precipitacao != null ? `${clima.precipitacao} mm` : '—'}</span>
         </li>
         <li className={styles.linha}>
           <span className={styles.rotulo}>

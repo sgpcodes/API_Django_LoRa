@@ -1,0 +1,73 @@
+.donoPill {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background-color: var(--color-pill-bg);
+  color: var(--color-text-secondary);
+}
+
+.semDonoPill {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background-color: rgba(245, 158, 11, 0.16);
+  color: #b45309;
+}
+
+.gerenciar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-card-border);
+}
+
+.linhaTrocarDono {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.seletor {
+  flex: 1;
+  min-width: 200px;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-card-border);
+  background-color: var(--color-input-bg);
+  color: var(--color-text);
+  font-size: 0.82rem;
+}
+
+.botaoTrocar {
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-card-border);
+  background: none;
+  color: var(--color-text);
+  font-weight: 600;
+  font-size: 0.82rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.botaoTrocar:hover:not(:disabled) {
+  background-color: var(--color-pill-bg);
+}
+
+.botaoTrocar:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.aviso {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #b45309;
+}

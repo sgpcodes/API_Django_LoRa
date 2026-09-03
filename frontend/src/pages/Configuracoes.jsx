@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate, useOutletContext } from 'react-router-dom'
+import { useOutletContext } from 'react-router-dom'
 import {
   Settings,
   SlidersHorizontal,
@@ -21,7 +21,7 @@ import {
   RotateCcw,
   ChevronRight,
 } from 'lucide-react'
-import { obterEstacaoVinculada, desvincularEstacao } from '../services/estacaoService'
+import { useMinhaEstacao } from '../hooks/useMinhaEstacao'
 import { buscarMeuPerfil, trocarMinhaSenha } from '../services/perfilService'
 import { CORES_PRINCIPAIS } from '../services/aparenciaService'
 import styles from './Configuracoes.module.css'
@@ -40,9 +40,8 @@ function Toggle({ ativo, onClick }) {
 // backend ainda — não existe endpoint de preferências); exceções reais:
 // tema (compartilhado com o resto do app) e troca de senha.
 function Configuracoes() {
-  const navigate = useNavigate()
   const { tema, onAlternarTema, corPrincipal, onMudarCorPrincipal } = useOutletContext()
-  const estacao = obterEstacaoVinculada()
+  const { estacao } = useMinhaEstacao()
   const [perfil, setPerfil] = useState(null)
 
   const refsSecao = useRef({})
@@ -586,24 +585,21 @@ function Configuracoes() {
                     <Radio size={15} />
                     <span>
                       <strong>{estacao.identificador}</strong>
-                      <small>Vinculada em {new Date(estacao.vinculadaEm).toLocaleDateString('pt-BR')}</small>
+                      <small>
+                        {estacao.esta_offline ? 'Offline' : 'Online'} · Vinculada em{' '}
+                        {new Date(estacao.criado_em).toLocaleDateString('pt-BR')}
+                      </small>
                     </span>
                   </span>
-                  <button
-                    type="button"
-                    className={styles.botaoPerigo}
-                    onClick={() => {
-                      desvincularEstacao()
-                      navigate(0)
-                    }}
-                  >
-                    Desvincular
-                  </button>
                 </li>
               </ul>
             ) : (
               <p className={styles.descricaoCampo}>Nenhuma estação vinculada.</p>
             )}
+            <p className={styles.descricaoCampo}>
+              O vínculo entre sua conta e uma estação é feito pelo administrador. Fale com o suporte se precisar
+              desvincular ou trocar de estação.
+            </p>
           </section>
 
           {/* Exportação de dados */}

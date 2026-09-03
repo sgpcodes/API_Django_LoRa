@@ -1,0 +1,56 @@
+.pagina {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.cabecalho {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.subtitulo {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.resumoItem {
+  padding: 0.5rem 0.9rem;
+  border-radius: 10px;
+  background-color: var(--color-card-bg);
+  border: 1px solid var(--color-card-border);
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+  height: fit-content;
+}
+
+.resumoItem strong {
+  color: var(--color-text);
+  margin-right: 0.3rem;
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.semDados {
+  color: var(--color-text-secondary);
+  padding: 2rem 0;
+  text-align: center;
+}

@@ -101,17 +101,42 @@ class UsuarioSerializer(serializers.ModelSerializer):
     # `required=False` no campo) — `default=''` faz o DRF preencher
     # sozinho quando o Gestor cria uma conta sem e-mail.
     email = serializers.EmailField(required=False, allow_blank=True, default='')
+    # Usados pela tela de Gerenciamento de Contas do admin (mostrar plano
+    # atual e quantas estações a conta já tem vinculadas, contra o limite
+    # do plano — RN10). Sempre calculados, mesmo fora dessa tela, porque
+    # são baratos (uma query cada, e `estacoes` só existe de verdade
+    # depois que o app api_rest está carregado, então não pode ser
+    # importado no topo do arquivo — usado só via o related_name, na
+    # instância, sem import cruzado entre os apps).
+    plano_atual = serializers.SerializerMethodField()
+    plano_max_estacoes = serializers.SerializerMethodField()
+    estacoes_vinculadas = serializers.SerializerMethodField()
 
     class Meta:
         model = Usuario
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name', 'cpf',
             'telefone', 'role', 'is_active', 'email_verificado', 'date_joined', 'password', 'senha_atual',
+            'plano_atual', 'plano_max_estacoes', 'estacoes_vinculadas',
         ]
         # cpf/email_verificado só leitura aqui: são conferidos (CPF real,
         # e-mail clicado no link) só nos fluxos próprios — cadastro
         # público e confirmação de e-mail — não por uma edição qualquer.
         read_only_fields = ['id', 'date_joined', 'cpf', 'email_verificado']
+
+    def _assinatura_ativa(self, obj):
+        return obj.assinaturas.filter(encerrada_em__isnull=True).select_related('plano').first()
+
+    def get_plano_atual(self, obj):
+        assinatura = self._assinatura_ativa(obj)
+        return assinatura.plano.nome if assinatura else None
+
+    def get_plano_max_estacoes(self, obj):
+        assinatura = self._assinatura_ativa(obj)
+        return assinatura.plano.max_estacoes if assinatura else None
+
+    def get_estacoes_vinculadas(self, obj):
+        return obj.estacoes.count()
 
     def create(self, validated_data):
         validated_data.pop('senha_atual', None)

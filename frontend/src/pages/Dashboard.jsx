@@ -8,45 +8,47 @@ import HistoricoDiarioTable from '../components/HistoricoDiarioTable'
 import ResumoDiaCard from '../components/ResumoDiaCard'
 import StatusEstacaoCard from '../components/StatusEstacaoCard'
 import StatusMessage from '../components/StatusMessage'
-import { buscarClimaAtual, derivarVisaoPeriodo } from '../services/climaExternoService'
-import { obterEstacaoVinculada } from '../services/estacaoService'
+import { derivarVisaoPeriodo } from '../services/climaExternoService'
+import { buscarClimaDaEstacao } from '../services/climaEstacaoService'
+import { buscarMinhaEstacaoPrincipal } from '../services/estacaoService'
 import styles from './Dashboard.module.css'
 
 // Dashboard da conta Standard (Tela 4 da especificação de fluxo). Os dados
-// exibidos vêm de uma API externa de meteorologia enquanto a estação LoRa
-// própria não está pronta com todos os sensores — ver
-// services/climaExternoService.js. O dashboard que lê a estação de
-// verdade (services/leiturasService.js) continua existindo, só não está
-// ligado por enquanto — ver pages/DashboardLora.jsx.
-const INTERVALO_ATUALIZACAO_MS = 15 * 60_000
+// exibidos vêm da estação (ESP32) atribuída à conta pelo admin — ver
+// services/climaEstacaoService.js. Enquanto a estação não manda nenhuma
+// leitura ainda (acabou de ser atribuída), mostra um aviso em vez de
+// dado vazio/quebrado.
+const INTERVALO_ATUALIZACAO_MS = 60_000
 
 function Dashboard() {
+  const [estacao, setEstacao] = useState(null)
   const [clima, setClima] = useState(null)
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState(null)
   const [indiceMetrica, setIndiceMetrica] = useState(0)
   const [periodo, setPeriodo] = useState('hoje')
 
-  const estacao = obterEstacaoVinculada()
-
-  // Busca só uma vez (e a cada 15min) — os últimos 30 dias inteiros já vêm
-  // de uma vez. Trocar o período (Hoje/Ontem/7/30 dias) não busca de novo,
-  // só filtra/agrupa o que já está em `clima` (ver derivarVisaoPeriodo).
+  // Busca a cada 1 min — a estação atribuída (se mudar, o dashboard troca
+  // sozinho de fonte) e o histórico completo dela. Trocar o período
+  // (Hoje/Ontem/7/30 dias) não busca de novo, só filtra/agrupa o que já
+  // está em `clima` (ver derivarVisaoPeriodo).
   useEffect(() => {
-    async function carregarClima() {
+    async function carregar() {
       try {
-        const dados = await buscarClimaAtual()
+        const minhaEstacao = await buscarMinhaEstacaoPrincipal()
+        setEstacao(minhaEstacao)
+        const dados = minhaEstacao ? await buscarClimaDaEstacao(minhaEstacao.identificador) : null
         setClima(dados)
         setErro(null)
       } catch {
-        setErro('Não foi possível buscar os dados de clima agora. Tentando de novo em instantes.')
+        setErro('Não foi possível buscar os dados da estação agora. Tentando de novo em instantes.')
       } finally {
         setCarregando(false)
       }
     }
 
-    carregarClima()
-    const intervalo = setInterval(carregarClima, INTERVALO_ATUALIZACAO_MS)
+    carregar()
+    const intervalo = setInterval(carregar, INTERVALO_ATUALIZACAO_MS)
     return () => clearInterval(intervalo)
   }, [])
 
@@ -58,16 +60,25 @@ function Dashboard() {
     return (
       <div className={styles.pagina}>
         {cabecalho}
-        <StatusMessage texto="Carregando dados do clima..." />
+        <StatusMessage texto="Carregando dados da estação..." />
       </div>
     )
   }
 
-  if (erro || !clima) {
+  if (erro) {
     return (
       <div className={styles.pagina}>
         {cabecalho}
-        <StatusMessage texto={erro ?? 'Nenhum dado disponível.'} />
+        <StatusMessage texto={erro} />
+      </div>
+    )
+  }
+
+  if (!clima) {
+    return (
+      <div className={styles.pagina}>
+        {cabecalho}
+        <StatusMessage texto="Sua estação ainda não enviou nenhuma leitura. Assim que os dados chegarem, eles aparecem aqui automaticamente." />
       </div>
     )
   }
@@ -154,7 +165,7 @@ function Dashboard() {
         />
         <div className={styles.colunaLateral}>
           <ResumoDiaCard resumo={clima.resumoDia} />
-          <StatusEstacaoCard operacional />
+          <StatusEstacaoCard operacional={!estacao?.esta_offline} />
         </div>
       </section>
     </div>
