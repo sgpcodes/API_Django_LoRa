@@ -19,6 +19,7 @@ import {
   TrendingUp,
   Check,
   Radio,
+  MapPin,
   Check as CheckSalvo,
 } from 'lucide-react'
 import CabecalhoStandard from '../components/CabecalhoStandard'
@@ -43,6 +44,16 @@ function iniciaisDoNome(nomeCompleto, username) {
 function formatarData(dataISO) {
   if (!dataISO) return '—'
   return new Date(dataISO).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
+// Junta rua/número, cidade/UF e CEP num texto só, omitindo as partes que
+// a pessoa ainda não preencheu — em vez de mostrar "—" pra cada campo
+// separado (endereço é sempre opcional).
+function formatarEndereco({ rua, numero, cidade, estado, cep }) {
+  const linha1 = [rua, numero].filter(Boolean).join(', ')
+  const linha2 = [cidade, estado].filter(Boolean).join('/')
+  const partes = [linha1, linha2, cep].filter(Boolean)
+  return partes.length ? partes.join(' — ') : '—'
 }
 
 // Itens de segurança/privacidade sem recurso real por trás ainda (2FA,
@@ -75,6 +86,11 @@ function Perfil() {
   const [sobrenome, setSobrenome] = useState('')
   const [email, setEmail] = useState('')
   const [telefone, setTelefone] = useState('')
+  const [cep, setCep] = useState('')
+  const [rua, setRua] = useState('')
+  const [numero, setNumero] = useState('')
+  const [cidade, setCidade] = useState('')
+  const [estadoUf, setEstadoUf] = useState('')
   const [salvandoDados, setSalvandoDados] = useState(false)
   const [dadosSalvos, setDadosSalvos] = useState(false)
   const [erroDados, setErroDados] = useState('')
@@ -94,6 +110,11 @@ function Perfil() {
         setSobrenome(dadosPerfil.last_name)
         setEmail(dadosPerfil.email)
         setTelefone(dadosPerfil.telefone ?? '')
+        setCep(dadosPerfil.cep ?? '')
+        setRua(dadosPerfil.rua ?? '')
+        setNumero(dadosPerfil.numero ?? '')
+        setCidade(dadosPerfil.cidade ?? '')
+        setEstadoUf(dadosPerfil.estado ?? '')
         setPlano(planos.find((p) => p.nome === nomePlanoAtual) ?? null)
       })
       .finally(() => setCarregando(false))
@@ -110,6 +131,11 @@ function Perfil() {
         last_name: sobrenome,
         email,
         telefone,
+        cep,
+        rua,
+        numero,
+        cidade,
+        estado: estadoUf,
       })
       setPerfil(atualizado)
       setDadosSalvos(true)
@@ -217,6 +243,35 @@ function Perfil() {
               <label className={styles.rotuloCampo}>Telefone</label>
               <input className={styles.campo} value={telefone} onChange={(e) => setTelefone(e.target.value)} />
 
+              <div className={styles.linha2Colunas}>
+                <div>
+                  <label className={styles.rotuloCampo}>CEP</label>
+                  <input className={styles.campo} placeholder="00000-000" value={cep} onChange={(e) => setCep(e.target.value)} />
+                </div>
+                <div>
+                  <label className={styles.rotuloCampo}>Cidade</label>
+                  <input className={styles.campo} value={cidade} onChange={(e) => setCidade(e.target.value)} />
+                </div>
+              </div>
+              <div className={styles.linha2Colunas}>
+                <div>
+                  <label className={styles.rotuloCampo}>Rua</label>
+                  <input className={styles.campo} value={rua} onChange={(e) => setRua(e.target.value)} />
+                </div>
+                <div>
+                  <label className={styles.rotuloCampo}>Número</label>
+                  <input className={styles.campo} value={numero} onChange={(e) => setNumero(e.target.value)} />
+                </div>
+              </div>
+              <label className={styles.rotuloCampo}>Estado (UF)</label>
+              <input
+                className={styles.campo}
+                placeholder="RJ"
+                maxLength={2}
+                value={estadoUf}
+                onChange={(e) => setEstadoUf(e.target.value.toUpperCase())}
+              />
+
               {erroDados && <p className={styles.erro}>{erroDados}</p>}
 
               <button type="submit" className={styles.botaoPrimario} disabled={salvandoDados}>
@@ -244,6 +299,13 @@ function Perfil() {
                 <span>
                   <span className={styles.rotuloDado}>Telefone</span>
                   <span className={styles.valorDado}>{perfil.telefone || '—'}</span>
+                </span>
+              </li>
+              <li>
+                <MapPin size={15} />
+                <span>
+                  <span className={styles.rotuloDado}>Endereço</span>
+                  <span className={styles.valorDado}>{formatarEndereco(perfil)}</span>
                 </span>
               </li>
               <li>

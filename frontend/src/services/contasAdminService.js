@@ -32,13 +32,18 @@ export async function excluirConta(id) {
 // passos: cadastro da conta (username = e-mail, mesma convenção do
 // cadastro público) e a assinatura do plano escolhido, já marcada como
 // `origem=gestor` (RN03) pelo próprio backend (AssinaturaViewSet.trocar_plano).
-export async function criarConta({ nome, sobrenome, email, telefone, senha, planoId }) {
+export async function criarConta({ nome, sobrenome, email, telefone, cep, rua, numero, cidade, estado, senha, planoId }) {
   const conta = await api.post('/api/contas/', {
     username: email,
     email,
     first_name: nome,
     last_name: sobrenome ?? '',
     telefone: telefone ?? '',
+    cep: cep ?? '',
+    rua: rua ?? '',
+    numero: numero ?? '',
+    cidade: cidade ?? '',
+    estado: estado ?? '',
     password: senha,
   })
   await api.post('/api/assinaturas/trocar_plano/', { usuario: conta.data.id, plano: planoId })

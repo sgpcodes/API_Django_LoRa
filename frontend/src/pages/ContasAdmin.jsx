@@ -159,14 +159,7 @@ function ContasAdmin() {
   const aoRemoverEstacaoDaLista = (contaId, estacaoId) => executarAcao(contaId, () => removerEstacao(estacaoId))
 
   async function aoCriarConta(campos) {
-    await criarConta({
-      nome: campos.nome,
-      sobrenome: campos.sobrenome,
-      email: campos.email,
-      telefone: campos.telefone,
-      senha: campos.senha,
-      planoId: campos.planoId,
-    })
+    await criarConta(campos)
     await carregar()
     setMostrarNovaConta(false)
   }

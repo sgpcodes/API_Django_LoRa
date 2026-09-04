@@ -6,6 +6,7 @@ import {
   CreditCard,
   Link2,
   Mail,
+  MapPin,
   MoreVertical,
   Pencil,
   Phone,
@@ -21,6 +22,13 @@ import styles from './ContaAdminCard.module.css'
 
 function formatarData(iso) {
   return new Date(iso).toLocaleDateString('pt-BR')
+}
+
+function formatarEndereco({ rua, numero, cidade, estado, cep }) {
+  const linha1 = [rua, numero].filter(Boolean).join(', ')
+  const linha2 = [cidade, estado].filter(Boolean).join('/')
+  const partes = [linha1, linha2, cep].filter(Boolean)
+  return partes.length ? partes.join(' — ') : '—'
 }
 
 function iniciais(nome) {
@@ -57,7 +65,17 @@ function ContaAdminCard({
   const menuRef = useRef(null)
 
   function camposIniciais(c) {
-    return { first_name: c.first_name ?? '', last_name: c.last_name ?? '', telefone: c.telefone ?? '', email: c.email ?? '' }
+    return {
+      first_name: c.first_name ?? '',
+      last_name: c.last_name ?? '',
+      telefone: c.telefone ?? '',
+      email: c.email ?? '',
+      cep: c.cep ?? '',
+      rua: c.rua ?? '',
+      numero: c.numero ?? '',
+      cidade: c.cidade ?? '',
+      estado: c.estado ?? '',
+    }
   }
 
   useEffect(() => {
@@ -205,6 +223,49 @@ function ContaAdminCard({
                     onChange={(e) => setCampos((c) => ({ ...c, telefone: e.target.value }))}
                   />
                 </label>
+                <label className={styles.campoEdicao}>
+                  <span className={styles.infoRotulo}>CEP</span>
+                  <input
+                    className={styles.input}
+                    placeholder="00000-000"
+                    value={campos.cep}
+                    onChange={(e) => setCampos((c) => ({ ...c, cep: e.target.value }))}
+                  />
+                </label>
+                <label className={styles.campoEdicao}>
+                  <span className={styles.infoRotulo}>Rua</span>
+                  <input
+                    className={styles.input}
+                    value={campos.rua}
+                    onChange={(e) => setCampos((c) => ({ ...c, rua: e.target.value }))}
+                  />
+                </label>
+                <label className={styles.campoEdicao}>
+                  <span className={styles.infoRotulo}>Número</span>
+                  <input
+                    className={styles.input}
+                    value={campos.numero}
+                    onChange={(e) => setCampos((c) => ({ ...c, numero: e.target.value }))}
+                  />
+                </label>
+                <label className={styles.campoEdicao}>
+                  <span className={styles.infoRotulo}>Cidade</span>
+                  <input
+                    className={styles.input}
+                    value={campos.cidade}
+                    onChange={(e) => setCampos((c) => ({ ...c, cidade: e.target.value }))}
+                  />
+                </label>
+                <label className={styles.campoEdicao}>
+                  <span className={styles.infoRotulo}>Estado (UF)</span>
+                  <input
+                    className={styles.input}
+                    placeholder="RJ"
+                    maxLength={2}
+                    value={campos.estado}
+                    onChange={(e) => setCampos((c) => ({ ...c, estado: e.target.value.toUpperCase() }))}
+                  />
+                </label>
               </div>
               <div className={styles.linhaBotoes}>
                 <button type="submit" className={styles.botaoSalvar} disabled={processando}>
@@ -235,6 +296,12 @@ function ContaAdminCard({
                   <UserRound size={12} /> Usuário
                 </span>
                 <span className={styles.infoValor}>{conta.username}</span>
+              </div>
+              <div className={styles.infoCampo}>
+                <span className={styles.infoRotulo}>
+                  <MapPin size={12} /> Endereço
+                </span>
+                <span className={styles.infoValor}>{formatarEndereco(conta)}</span>
               </div>
               <div className={styles.infoCampo}>
                 <span className={styles.infoRotulo}>

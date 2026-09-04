@@ -116,7 +116,8 @@ class UsuarioSerializer(serializers.ModelSerializer):
         model = Usuario
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name', 'cpf',
-            'telefone', 'role', 'is_active', 'email_verificado', 'date_joined', 'password', 'senha_atual',
+            'telefone', 'cep', 'rua', 'numero', 'cidade', 'estado',
+            'role', 'is_active', 'email_verificado', 'date_joined', 'password', 'senha_atual',
             'plano_atual', 'plano_max_estacoes', 'estacoes_vinculadas',
         ]
         # cpf/email_verificado só leitura aqui: são conferidos (CPF real,

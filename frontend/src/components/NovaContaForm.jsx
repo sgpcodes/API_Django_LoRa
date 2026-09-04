@@ -3,7 +3,19 @@ import { X } from 'lucide-react'
 import { buscarPlanos } from '../services/planosService'
 import styles from './NovaContaForm.module.css'
 
-const CAMPOS_INICIAIS = { nome: '', sobrenome: '', email: '', telefone: '', senha: '', planoId: '' }
+const CAMPOS_INICIAIS = {
+  nome: '',
+  sobrenome: '',
+  email: '',
+  telefone: '',
+  cep: '',
+  rua: '',
+  numero: '',
+  cidade: '',
+  estado: '',
+  senha: '',
+  planoId: '',
+}
 
 // Painel inline (sem modal — mesmo padrão do resto do app) pra o admin
 // criar uma conta Standard/Pro/Plus na mão, sem passar pelo cadastro
@@ -84,6 +96,49 @@ function NovaContaForm({ onCriar, onFechar }) {
             className={styles.input}
             value={campos.telefone}
             onChange={(e) => setCampos((c) => ({ ...c, telefone: e.target.value }))}
+          />
+        </label>
+        <label className={styles.campo}>
+          <span className={styles.rotulo}>CEP</span>
+          <input
+            className={styles.input}
+            placeholder="00000-000"
+            value={campos.cep}
+            onChange={(e) => setCampos((c) => ({ ...c, cep: e.target.value }))}
+          />
+        </label>
+        <label className={styles.campo}>
+          <span className={styles.rotulo}>Rua</span>
+          <input
+            className={styles.input}
+            value={campos.rua}
+            onChange={(e) => setCampos((c) => ({ ...c, rua: e.target.value }))}
+          />
+        </label>
+        <label className={styles.campo}>
+          <span className={styles.rotulo}>Número</span>
+          <input
+            className={styles.input}
+            value={campos.numero}
+            onChange={(e) => setCampos((c) => ({ ...c, numero: e.target.value }))}
+          />
+        </label>
+        <label className={styles.campo}>
+          <span className={styles.rotulo}>Cidade</span>
+          <input
+            className={styles.input}
+            value={campos.cidade}
+            onChange={(e) => setCampos((c) => ({ ...c, cidade: e.target.value }))}
+          />
+        </label>
+        <label className={styles.campo}>
+          <span className={styles.rotulo}>Estado (UF)</span>
+          <input
+            className={styles.input}
+            placeholder="RJ"
+            maxLength={2}
+            value={campos.estado}
+            onChange={(e) => setCampos((c) => ({ ...c, estado: e.target.value.toUpperCase() }))}
           />
         </label>
         <label className={styles.campo}>
