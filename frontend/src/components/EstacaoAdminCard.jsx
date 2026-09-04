@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Activity, ChevronDown, ChevronUp, Cpu, Radio, SignalHigh, Trash2, UserRound } from 'lucide-react'
+import { Activity, ChevronDown, ChevronUp, Cpu, Pencil, Radio, SignalHigh, Trash2, UserRound, X } from 'lucide-react'
 import { estaOnline } from '../services/leiturasService'
 import styles from './DispositivoLoraCard.module.css'
 import adminStyles from './EstacaoAdminCard.module.css'
@@ -19,9 +19,11 @@ function formatarDataHora(iso) {
 // abre RSSI/SNR/configuração do rádio — só que somando quem é o dono da
 // estação (ou "Sem dono", pros sensores que já mandam leitura mas ainda
 // não foram cadastrados/atribuídos a ninguém).
-function EstacaoAdminCard({ dispositivo, contas = [], processando, erro, onTrocarDono, onRemover }) {
+function EstacaoAdminCard({ dispositivo, contas = [], processando, erro, onTrocarDono, onRemover, onSalvarEdicao }) {
   const [detalhesAbertos, setDetalhesAbertos] = useState(false)
   const [novoDono, setNovoDono] = useState('')
+  const [editando, setEditando] = useState(false)
+  const [campos, setCampos] = useState(null)
 
   const {
     sensor_id: sensorId,
@@ -30,6 +32,9 @@ function EstacaoAdminCard({ dispositivo, contas = [], processando, erro, onTroca
     donoId,
     donoNome,
     nome,
+    intervaloEnvioMinutos,
+    limiteOfflineMinutos,
+    ativa,
     ultimaAnaliseRssi,
     ultimaConfiguracao,
   } = dispositivo
@@ -50,6 +55,23 @@ function EstacaoAdminCard({ dispositivo, contas = [], processando, erro, onTroca
   const codingRate = configRF?.coding_rate
   const versaoFw = configRF?.versao_fw
 
+  function abrirEdicao() {
+    setCampos({
+      nome: nome ?? '',
+      intervalo_envio_minutos: intervaloEnvioMinutos ?? 10,
+      limite_offline_minutos: limiteOfflineMinutos ?? 30,
+      ativa: ativa ?? true,
+    })
+    setEditando(true)
+    setDetalhesAbertos(true)
+  }
+
+  async function salvarEdicao(evento) {
+    evento.preventDefault()
+    const sucesso = await onSalvarEdicao(campos)
+    if (sucesso) setEditando(false)
+  }
+
   return (
     <div className={styles.card}>
       <div className={styles.topo}>
@@ -63,6 +85,7 @@ function EstacaoAdminCard({ dispositivo, contas = [], processando, erro, onTroca
               <span className={`${styles.statusPill} ${online ? styles.statusOnline : styles.statusOffline}`}>
                 {online ? 'Online' : 'Offline'}
               </span>
+              {ativa === false && <span className={adminStyles.semDonoPill}>Inativa</span>}
               {donoNome ? (
                 <span className={adminStyles.donoPill}>
                   <UserRound size={11} />
@@ -79,6 +102,18 @@ function EstacaoAdminCard({ dispositivo, contas = [], processando, erro, onTroca
         </div>
 
         <div className={styles.acoesTopo}>
+          {estacaoId != null && (
+            <button
+              type="button"
+              className={styles.botaoDetalhes}
+              onClick={abrirEdicao}
+              disabled={processando}
+              title="Editar estação"
+            >
+              <Pencil size={14} />
+            </button>
+          )}
+
           {estacaoId != null && (
             <button
               type="button"
@@ -109,6 +144,63 @@ function EstacaoAdminCard({ dispositivo, contas = [], processando, erro, onTroca
 
       {detalhesAbertos && (
         <div className={styles.detalhes}>
+          {editando && campos && (
+            <form className={adminStyles.formEdicao} onSubmit={salvarEdicao}>
+              <div className={adminStyles.gradeEdicao}>
+                <label className={adminStyles.campoEdicao}>
+                  <span className={styles.configuracaoRotulo}>Nome</span>
+                  <input
+                    className={adminStyles.input}
+                    value={campos.nome}
+                    placeholder={sensorId}
+                    onChange={(e) => setCampos((c) => ({ ...c, nome: e.target.value }))}
+                  />
+                </label>
+                <label className={adminStyles.campoEdicao}>
+                  <span className={styles.configuracaoRotulo}>Intervalo de envio</span>
+                  <select
+                    className={adminStyles.input}
+                    value={campos.intervalo_envio_minutos}
+                    onChange={(e) => setCampos((c) => ({ ...c, intervalo_envio_minutos: Number(e.target.value) }))}
+                  >
+                    <option value={5}>5 minutos</option>
+                    <option value={10}>10 minutos</option>
+                    <option value={15}>15 minutos</option>
+                  </select>
+                </label>
+                <label className={adminStyles.campoEdicao}>
+                  <span className={styles.configuracaoRotulo}>Limite offline (min)</span>
+                  <input
+                    className={adminStyles.input}
+                    type="number"
+                    min={1}
+                    value={campos.limite_offline_minutos}
+                    onChange={(e) => setCampos((c) => ({ ...c, limite_offline_minutos: Number(e.target.value) }))}
+                  />
+                </label>
+                <label className={adminStyles.campoEdicaoCheckbox}>
+                  <input
+                    type="checkbox"
+                    checked={campos.ativa}
+                    onChange={(e) => setCampos((c) => ({ ...c, ativa: e.target.checked }))}
+                  />
+                  <span className={styles.configuracaoRotulo}>Estação ativa</span>
+                </label>
+              </div>
+              <div className={adminStyles.linhaTrocarDono}>
+                <button type="submit" className={adminStyles.botaoTrocar} disabled={processando}>
+                  {processando ? 'Salvando...' : 'Salvar'}
+                </button>
+                <button type="button" className={styles.botaoDetalhes} onClick={() => setEditando(false)}>
+                  <X size={14} /> Cancelar
+                </button>
+              </div>
+              {erro && <p className={adminStyles.aviso}>{erro}</p>}
+            </form>
+          )}
+
+          {!editando && (
+            <>
           <div className={styles.secaoTitulo}>
             <SignalHigh size={14} />
             <span>Qualidade do enlace</span>
@@ -242,6 +334,8 @@ function EstacaoAdminCard({ dispositivo, contas = [], processando, erro, onTroca
               </div>
               {erro && <p className={adminStyles.aviso}>{erro}</p>}
             </div>
+          )}
+            </>
           )}
         </div>
       )}

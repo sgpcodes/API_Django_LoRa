@@ -28,6 +28,151 @@
   color: var(--color-text-secondary);
 }
 
+.botaoNovaConta {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.65rem 1.15rem;
+  border-radius: 10px;
+  border: none;
+  background-color: var(--color-accent);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  height: fit-content;
+}
+
+.botaoNovaConta:hover {
+  opacity: 0.92;
+}
+
+.barraFiltros {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  padding: 0.6rem;
+  border-radius: 12px;
+  background-color: var(--color-card-bg);
+  border: 1px solid var(--color-card-border);
+  box-shadow: var(--shadow-card);
+}
+
+.abas {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.aba {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.8rem;
+  border-radius: 8px;
+  border: none;
+  background: none;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  font-size: 0.82rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.aba:hover {
+  background-color: var(--color-pill-bg);
+}
+
+.abaAtiva {
+  background-color: var(--color-pill-ativo-bg);
+  color: var(--color-pill-ativo-texto);
+}
+
+.abaContador {
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.25);
+  font-size: 0.7rem;
+}
+
+.aba:not(.abaAtiva) .abaContador {
+  background-color: var(--color-pill-bg);
+  color: var(--color-text-secondary);
+}
+
+.controles {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.seletorOrdenacao {
+  padding: 0.5rem 0.7rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-card-border);
+  background-color: var(--color-input-bg);
+  color: var(--color-text);
+  font-size: 0.82rem;
+}
+
+.campoBusca {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0 0.7rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-card-border);
+  background-color: var(--color-input-bg);
+  color: var(--color-text-secondary);
+  min-width: 240px;
+}
+
+.inputBusca {
+  flex: 1;
+  border: none;
+  background: none;
+  padding: 0.5rem 0;
+  color: var(--color-text);
+  font-size: 0.82rem;
+}
+
+.inputBusca:focus {
+  outline: none;
+}
+
+.toggleVisualizacao {
+  display: flex;
+  border-radius: 8px;
+  border: 1px solid var(--color-card-border);
+  overflow: hidden;
+}
+
+.toggleVisualizacao button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  background: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.toggleAtivo {
+  background-color: var(--color-pill-bg);
+  color: var(--color-accent) !important;
+}
+
+.resultados {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+
 .resumoItem {
   padding: 0.5rem 0.9rem;
   border-radius: 10px;
@@ -49,8 +194,44 @@
   gap: 0.9rem;
 }
 
+.grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+  gap: 0.9rem;
+  align-items: start;
+}
+
 .semDados {
   color: var(--color-text-secondary);
   padding: 2rem 0;
   text-align: center;
+}
+
+.paginacao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding-top: 0.5rem;
+}
+
+.botaoPagina {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-card-border);
+  background-color: var(--color-card-bg);
+  color: var(--color-text);
+  font-weight: 600;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.botaoPagina:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.paginaAtual {
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
 }

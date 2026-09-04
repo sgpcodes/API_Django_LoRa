@@ -71,3 +71,43 @@
   font-size: 0.78rem;
   color: #b45309;
 }
+
+.formEdicao {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.gradeEdicao {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
+.campoEdicao {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.campoEdicaoCheckbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  align-self: end;
+  padding-bottom: 0.4rem;
+}
+
+.input {
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-card-border);
+  background-color: var(--color-input-bg);
+  color: var(--color-text);
+  font-size: 0.85rem;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}

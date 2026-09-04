@@ -48,3 +48,11 @@ export async function trocarDonoEstacao(estacaoId, novoDonoId) {
 export async function removerEstacao(estacaoId) {
   await api.delete(`/api/estacoes/${estacaoId}/`)
 }
+
+// Edita nome/intervalo de envio/limite offline/ativa de uma estação já
+// cadastrada — admin ou o próprio dono podem (troca de dono continua
+// exclusiva do admin, ver trocarDonoEstacao).
+export async function atualizarEstacao(estacaoId, dados) {
+  const resposta = await api.patch(`/api/estacoes/${estacaoId}/`, dados)
+  return resposta.data
+}

@@ -202,6 +202,18 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         serializer.save()
 
     def perform_destroy(self, instance):
+        from rest_framework.exceptions import ValidationError
+
+        # A FK Estacao.dono é PROTECT (RN15: toda estação tem dono, nunca
+        # fica órfã) — sem essa checagem, tentar excluir uma conta que
+        # ainda tem estação vinculada estouraria um ProtectedError cru
+        # (erro 500 sem explicação). Melhor travar aqui com uma mensagem
+        # clara: primeiro reatribui/remove as estações, depois exclui.
+        if instance.estacoes.exists():
+            raise ValidationError(
+                {'detail': 'Esta conta ainda tem estação(ões) vinculada(s). Transfira ou remova antes de excluir.'}
+            )
+
         LogAuditoria.objects.create(
             ator=self.request.user, acao='usuario.excluido', alvo=instance,
             detalhes={'username': instance.username},

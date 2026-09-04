@@ -3,7 +3,7 @@ import { Radio } from 'lucide-react'
 import EstacaoAdminCard from '../components/EstacaoAdminCard'
 import StatusMessage from '../components/StatusMessage'
 import { buscarLeituras, estaOnline, obterUltimaLeituraPorSensor } from '../services/leiturasService'
-import { buscarEstacoes, removerEstacao, trocarDonoEstacao } from '../services/estacaoService'
+import { atualizarEstacao, buscarEstacoes, removerEstacao, trocarDonoEstacao } from '../services/estacaoService'
 import { buscarContas } from '../services/contasAdminService'
 import styles from './EstacoesAdmin.module.css'
 
@@ -13,9 +13,9 @@ const INTERVALO_ATUALIZACAO_MS = 60_000
 // já mandaram leitura, num só lugar — dados atuais, dono (ou "Sem dono",
 // pros sensores ainda não cadastrados) e, ao abrir "Detalhes", RSSI/SNR e
 // configuração do rádio — tudo reduzido, sem precisar trocar de tela.
-// Atribuir um sensor sem dono a uma conta é feito na aba Contas; trocar o
-// dono de uma já cadastrada ou remover é feito direto aqui (RN15: em
-// qualquer plano).
+// Atribuir um sensor sem dono a uma conta é feito na aba Contas; editar,
+// trocar o dono de uma já cadastrada ou remover é feito direto aqui
+// (RN15: em qualquer plano).
 function EstacoesAdmin() {
   const [leituras, setLeituras] = useState([])
   const [estacoes, setEstacoes] = useState([])
@@ -60,6 +60,9 @@ function EstacoesAdmin() {
         donoId: estacao?.dono ?? null,
         nome: estacao?.nome ?? null,
         donoNome: estacao?.dono_nome ?? null,
+        intervaloEnvioMinutos: estacao?.intervalo_envio_minutos ?? null,
+        limiteOfflineMinutos: estacao?.limite_offline_minutos ?? null,
+        ativa: estacao?.ativa ?? null,
       }
     })
   }, [leituras, estacoes])
@@ -67,31 +70,26 @@ function EstacoesAdmin() {
   const totalOnline = dispositivos.filter((d) => estaOnline(d.data_hora)).length
   const totalSemDono = dispositivos.filter((d) => !d.donoNome).length
 
-  async function aoTrocarDono(estacaoId, novoDonoId) {
+  async function executarAcao(estacaoId, acao) {
     setProcessandoId(estacaoId)
     setErroPorId((atual) => ({ ...atual, [estacaoId]: null }))
     try {
-      await trocarDonoEstacao(estacaoId, novoDonoId)
+      await acao()
       await carregar()
+      return true
     } catch (erroRequisicao) {
-      const mensagem = erroRequisicao.response?.data?.dono?.[0] ?? 'Não foi possível trocar o dono. Tente de novo.'
+      const dados = erroRequisicao.response?.data
+      const mensagem = dados?.dono?.[0] ?? dados?.detail ?? dados?.non_field_errors?.[0] ?? 'Não foi possível concluir. Tente de novo.'
       setErroPorId((atual) => ({ ...atual, [estacaoId]: mensagem }))
+      return false
     } finally {
       setProcessandoId(null)
     }
   }
 
-  async function aoRemover(estacaoId) {
-    setProcessandoId(estacaoId)
-    setErroPorId((atual) => ({ ...atual, [estacaoId]: null }))
-    try {
-      await removerEstacao(estacaoId)
-      await carregar()
-    } catch {
-      setErroPorId((atual) => ({ ...atual, [estacaoId]: 'Não foi possível remover a estação. Tente de novo.' }))
-      setProcessandoId(null)
-    }
-  }
+  const aoTrocarDono = (estacaoId, novoDonoId) => executarAcao(estacaoId, () => trocarDonoEstacao(estacaoId, novoDonoId))
+  const aoRemover = (estacaoId) => executarAcao(estacaoId, () => removerEstacao(estacaoId))
+  const aoSalvarEdicao = (estacaoId, dados) => executarAcao(estacaoId, () => atualizarEstacao(estacaoId, dados))
 
   if (carregando) {
     return (
@@ -147,6 +145,7 @@ function EstacoesAdmin() {
               erro={dispositivo.estacaoId != null ? erroPorId[dispositivo.estacaoId] : null}
               onTrocarDono={(novoDonoId) => aoTrocarDono(dispositivo.estacaoId, novoDonoId)}
               onRemover={() => aoRemover(dispositivo.estacaoId)}
+              onSalvarEdicao={(dados) => aoSalvarEdicao(dispositivo.estacaoId, dados)}
             />
           ))}
         </div>

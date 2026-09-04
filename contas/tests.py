@@ -182,6 +182,21 @@ class UsuarioViewSetTests(APITestCase):
         self.usuario2.refresh_from_db()
         self.assertTrue(self.usuario2.is_active)
 
+    def test_gestor_pode_excluir_conta_sem_estacao(self):
+        self.client.force_authenticate(self.gestor)
+        resposta = self.client.delete(f'/api/contas/{self.usuario1.pk}/')
+        self.assertEqual(resposta.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Usuario.objects.filter(pk=self.usuario1.pk).exists())
+
+    def test_gestor_nao_consegue_excluir_conta_com_estacao_vinculada(self):
+        from api_rest.models import Estacao
+
+        Estacao.objects.create(identificador='ESP32_TESTE_EXCLUSAO', dono=self.usuario1)
+        self.client.force_authenticate(self.gestor)
+        resposta = self.client.delete(f'/api/contas/{self.usuario1.pk}/')
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue(Usuario.objects.filter(pk=self.usuario1.pk).exists())
+
 
 class AssinaturaTrocaPlanoTests(APITestCase):
     """RN25 (histórico de troca de plano) e RN26 (não permitir assinar de

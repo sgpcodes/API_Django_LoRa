@@ -83,6 +83,12 @@
   color: var(--color-text-secondary);
 }
 
+.acoesTopo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .botaoDetalhes {
   display: flex;
   align-items: center;
@@ -101,6 +107,75 @@
 .botaoDetalhes:hover {
   background-color: var(--color-pill-bg);
   color: var(--color-text);
+}
+
+.menuWrapper {
+  position: relative;
+}
+
+.botaoMenu {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--color-card-border);
+  background: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.botaoMenu:hover:not(:disabled) {
+  background-color: var(--color-pill-bg);
+  color: var(--color-text);
+}
+
+.botaoMenu:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.menuDropdown {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 190px;
+  padding: 0.35rem;
+  border-radius: 10px;
+  background-color: var(--color-card-bg);
+  border: 1px solid var(--color-card-border);
+  box-shadow: 0 8px 24px rgba(15, 28, 66, 0.14);
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 8px;
+  border: none;
+  background: none;
+  color: var(--color-text);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menuItem:hover {
+  background-color: var(--color-pill-bg);
+}
+
+.menuItemPerigo {
+  color: #dc2626;
+}
+
+.menuItemPerigo:hover {
+  background-color: rgba(239, 68, 68, 0.1);
 }
 
 .detalhes {
@@ -165,6 +240,41 @@
   color: var(--color-text-secondary);
 }
 
+.estacaoVazia {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 1.1rem 1.25rem;
+  border-radius: 10px;
+  border: 1px dashed var(--color-card-border);
+  background-color: var(--color-pill-bg);
+}
+
+.estacaoVaziaIcone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  background-color: var(--color-card-bg);
+  color: var(--color-accent);
+}
+
+.estacaoVaziaTitulo {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.estacaoVaziaTexto {
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+}
+
 .listaEstacoes {
   list-style: none;
   margin: 0;
@@ -185,6 +295,30 @@
   color: var(--color-text);
 }
 
+.itemEstacaoAcoes {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.botaoRemoverEstacao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: none;
+  background: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.botaoRemoverEstacao:hover {
+  background-color: rgba(239, 68, 68, 0.14);
+  color: #dc2626;
+}
+
 .formAtribuir {
   display: flex;
   flex-direction: column;
@@ -199,18 +333,36 @@
   flex-wrap: wrap;
 }
 
-.seletor {
+.seletorComIcone {
   flex: 1;
   min-width: 180px;
-  padding: 0.55rem 0.7rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 0.7rem;
   border-radius: 8px;
   border: 1px solid var(--color-card-border);
   background-color: var(--color-input-bg);
+  color: var(--color-text-secondary);
+}
+
+.seletor {
+  flex: 1;
+  border: none;
+  background: none;
+  padding: 0.55rem 0;
   color: var(--color-text);
   font-size: 0.85rem;
 }
 
+.seletor:focus {
+  outline: none;
+}
+
 .botaoAtribuir {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   padding: 0.55rem 1rem;
   border-radius: 8px;
   border: none;
@@ -231,4 +383,75 @@
   margin: 0;
   font-size: 0.78rem;
   color: #b45309;
+}
+
+.formEdicao {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.gradeEdicao {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.campoEdicao {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.input {
+  padding: 0.55rem 0.7rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-card-border);
+  background-color: var(--color-input-bg);
+  color: var(--color-text);
+  font-size: 0.85rem;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.linhaBotoes {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.botaoSalvar {
+  padding: 0.55rem 1.1rem;
+  border-radius: 8px;
+  border: none;
+  background-color: var(--color-accent);
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.botaoSalvar:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.botaoCancelar {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.55rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-card-border);
+  background: none;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.botaoCancelar:hover {
+  background-color: var(--color-pill-bg);
 }
