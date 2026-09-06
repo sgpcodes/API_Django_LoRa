@@ -5,6 +5,7 @@ comum sobre contas, e o fluxo de troca de plano (Assinatura).
 
 from rest_framework import status
 from rest_framework.test import APITestCase
+from rest_framework_simplejwt.tokens import AccessToken
 
 from .models import Assinatura, Funcionalidade, LogAuditoria, Plano, TokenCredenciamento, Usuario
 
@@ -68,6 +69,54 @@ class LoginJwtTests(APITestCase):
         Usuario.objects.create_superuser(username='root1', password='x', email_verificado=False)
         resposta = self.client.post('/api/auth/token/', {'username': 'root1', 'password': 'x'})
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+
+    def test_senha_igual_em_duas_contas_do_mesmo_email_pede_para_escolher(self):
+        """Caso raro: a pessoa tem conta Gestor e conta Usuário com o
+        mesmo e-mail e, por coincidência, escolheu a MESMA senha nas
+        duas — nada impede isso (cada conta guarda a própria senha).
+        Em vez de entrar arbitrariamente numa delas, a API devolve as
+        opções para o frontend perguntar qual."""
+        Usuario.objects.create_user(
+            username='duplo@exemplo.com', email='duplo@exemplo.com', password='senha-comum-123',
+            role=Usuario.Role.USUARIO, email_verificado=True,
+        )
+        Usuario.objects.create_user(
+            username='duplo@exemplo.com#gestor', email='duplo@exemplo.com', password='senha-comum-123',
+            role=Usuario.Role.GESTOR, email_verificado=True,
+        )
+        resposta = self.client.post('/api/auth/token/', {
+            'username': 'duplo@exemplo.com', 'password': 'senha-comum-123',
+        })
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(resposta.data['codigo'][0], 'multiplas_contas')
+        papeis = {opcao['role'] for opcao in resposta.data['opcoes']}
+        self.assertEqual(papeis, {Usuario.Role.USUARIO, Usuario.Role.GESTOR})
+        # Regressão: `plano` de quem não tem assinatura tem que vir vazio
+        # ('') — não a string literal "None" (o mecanismo de ErrorDetail
+        # do DRF converte qualquer valor não-string pra string quando o
+        # dado vai dentro de um ValidationError, então None viraria
+        # "None" por engano se não fosse tratado).
+        opcao_usuario = next(o for o in resposta.data['opcoes'] if o['role'] == Usuario.Role.USUARIO)
+        self.assertEqual(opcao_usuario['plano'], '')
+
+    def test_senha_igual_em_duas_contas_resolve_informando_o_role_escolhido(self):
+        usuario_comum = Usuario.objects.create_user(
+            username='duplo2@exemplo.com', email='duplo2@exemplo.com', password='senha-comum-123',
+            role=Usuario.Role.USUARIO, email_verificado=True,
+        )
+        Usuario.objects.create_user(
+            username='duplo2@exemplo.com#gestor', email='duplo2@exemplo.com', password='senha-comum-123',
+            role=Usuario.Role.GESTOR, email_verificado=True,
+        )
+        resposta = self.client.post('/api/auth/token/', {
+            'username': 'duplo2@exemplo.com', 'password': 'senha-comum-123', 'role': Usuario.Role.USUARIO,
+        })
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertIn('access', resposta.data)
+
+        access = AccessToken(resposta.data['access'])
+        self.assertEqual(access['role'], Usuario.Role.USUARIO)
+        self.assertEqual(access['username'], usuario_comum.username)
 
 
 class UsuarioViewSetTests(APITestCase):
@@ -181,6 +230,17 @@ class UsuarioViewSetTests(APITestCase):
         self.assertIn(resposta.status_code, (status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND))
         self.usuario2.refresh_from_db()
         self.assertTrue(self.usuario2.is_active)
+
+    def test_usuario_comum_nao_pode_se_autosuspender(self):
+        """RN02: suspender é ato do Gestor — um Usuário comum não pode
+        usar essa ação nem na própria conta (get_object() deixaria
+        passar, já que ele só enxerga a si mesmo; a permissão é quem
+        trava)."""
+        self.client.force_authenticate(self.usuario1)
+        resposta = self.client.post(f'/api/contas/{self.usuario1.pk}/suspender/')
+        self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
+        self.usuario1.refresh_from_db()
+        self.assertTrue(self.usuario1.is_active)
 
     def test_gestor_pode_excluir_conta_sem_estacao(self):
         self.client.force_authenticate(self.gestor)
@@ -311,6 +371,12 @@ class CadastroPublicoTests(APITestCase):
             'email': 'nova@exemplo.com',
             'nome_completo': 'Nova Produtora',
             'cpf': '111.444.777-35',  # CPF válido (dígitos verificadores corretos), usado só em teste
+            'telefone': '21999999999',
+            'cep': '24900-000',
+            'rua': 'Rua das Flores',
+            'numero': '123',
+            'cidade': 'Maricá',
+            'estado': 'RJ',
             'password': 'senha-forte-123',
             'confirmar_senha': 'senha-forte-123',
         }

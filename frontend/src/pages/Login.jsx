@@ -75,11 +75,19 @@ function Login() {
   const [reenviando, setReenviando] = useState(false)
   const [reenviado, setReenviado] = useState(false)
 
-  async function autenticar(nomeDeUsuario, senhaDigitada) {
+  // Caso raro: a mesma senha vale pra mais de uma conta desse e-mail
+  // (Gestor e Usuário, cada uma com sua senha, mas coincidiram) — guarda
+  // usuário/senha pra reenviar já com o `role` escolhido (ver
+  // TokenObtainPairComRoleSerializer.validate no backend).
+  const [opcoesConta, setOpcoesConta] = useState(null)
+  const [identificadorPendente, setIdentificadorPendente] = useState('')
+  const [senhaPendente, setSenhaPendente] = useState('')
+
+  async function autenticar(nomeDeUsuario, senhaDigitada, roleEscolhido) {
     setErro('')
     setCarregando(true)
     try {
-      await login(nomeDeUsuario, senhaDigitada)
+      await login(nomeDeUsuario, senhaDigitada, roleEscolhido)
       const claims = obterClaimsDoToken()
       if (claims?.precisaRecredenciar) {
         setPrecisaRecredenciar(true)
@@ -87,17 +95,27 @@ function Login() {
         navigate('/app', { replace: true })
       }
     } catch (erroRequisicao) {
-      const codigoBruto = erroRequisicao.response?.data?.codigo
+      const dados = erroRequisicao.response?.data
+      const codigoBruto = dados?.codigo
       const codigo = Array.isArray(codigoBruto) ? codigoBruto[0] : codigoBruto
       if (codigo === 'email_nao_confirmado') {
         setContaPendente(nomeDeUsuario)
         setEmailNaoConfirmado(true)
+      } else if (codigo === 'multiplas_contas') {
+        setIdentificadorPendente(nomeDeUsuario)
+        setSenhaPendente(senhaDigitada)
+        setOpcoesConta(dados.opcoes)
       } else {
         setErro('Usuário ou senha incorretos.')
       }
     } finally {
       setCarregando(false)
     }
+  }
+
+  function aoEscolherConta(opcao) {
+    setOpcoesConta(null)
+    autenticar(identificadorPendente, senhaPendente, opcao.role)
   }
 
   async function aoReenviarConfirmacao() {
@@ -190,6 +208,50 @@ function Login() {
             onClick={() => {
               setEmailNaoConfirmado(false)
               setReenviado(false)
+              setSenha('')
+            }}
+          >
+            Voltar
+          </button>
+        </div>
+      </MolduraAuth>
+    )
+  }
+
+  // ---- Senha vale para mais de uma conta desse e-mail: escolher qual ----
+  if (opcoesConta) {
+    return (
+      <MolduraAuth>
+        <div className={styles.cartao}>
+          <img src={logoLacop} alt="LACOP UFF" className={styles.logo} />
+          <h1 className={styles.titulo}>Qual conta é essa?</h1>
+          <p className={styles.subtitulo}>
+            Essa senha serve para mais de uma conta sua com o e-mail <strong>{identificadorPendente}</strong>. Escolha
+            qual quer acessar.
+          </p>
+
+          <div className={styles.listaContas}>
+            {opcoesConta.map((opcao) => (
+              <button
+                key={opcao.role}
+                type="button"
+                className={styles.itemConta}
+                onClick={() => aoEscolherConta(opcao)}
+                disabled={carregando}
+              >
+                <UserCircle2 size={22} />
+                <span className={styles.itemContaTexto}>
+                  <span>{rotuloConta(opcao)}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            className={styles.linkSecundario}
+            onClick={() => {
+              setOpcoesConta(null)
               setSenha('')
             }}
           >

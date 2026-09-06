@@ -40,25 +40,47 @@ class TokenObtainPairComRoleSerializer(TokenObtainPairSerializer):
     self.user.email_verificado...` e, no frontend, fazer o cadastro de
     Usuário (Cadastro.jsx) voltar a mostrar a tela "Confira seu e-mail" em
     vez de logar direto. ***
+
+    `role` (opcional): usado só para desempatar quando a mesma senha bate
+    em mais de uma conta do e-mail (a pessoa escolheu a mesma senha nas
+    duas, por coincidência — nada no sistema impede isso, já que cada
+    conta guarda a própria senha). Nesse caso `validate()` não escolhe
+    nenhuma arbitrariamente: devolve `codigo=multiplas_contas` com as
+    opções, e o frontend reenvia a mesma chamada incluindo o `role`
+    escolhido, que junto com o e-mail já resolve pra uma única conta
+    (email+role é único, ver `Usuario.Meta.constraints`).
     """
+
+    role = serializers.ChoiceField(choices=Usuario.Role.choices, required=False)
 
     default_error_messages = {
         **TokenObtainPairSerializer.default_error_messages,
         'email_nao_confirmado': 'Confirme seu e-mail antes de entrar. Reenviamos o link se precisar.',
+        'multiplas_contas': 'Essa senha vale para mais de uma conta sua. Escolha qual quer acessar.',
     }
 
     def validate(self, attrs):
         identificador = attrs[self.username_field]
         senha = attrs['password']
+        role_escolhido = attrs.get('role')
 
         candidatos = Usuario.objects.filter(
             Q(email__iexact=identificador) | Q(username__iexact=identificador),
             is_active=True,
         ).distinct()
+        if role_escolhido:
+            candidatos = candidatos.filter(role=role_escolhido)
 
-        self.user = next(
-            (candidato for candidato in candidatos if candidato.check_password(senha)), None,
-        )
+        corresponderam = [candidato for candidato in candidatos if candidato.check_password(senha)]
+
+        if len(corresponderam) > 1:
+            raise serializers.ValidationError({
+                'detail': self.error_messages['multiplas_contas'],
+                'codigo': 'multiplas_contas',
+                'opcoes': [self._descrever_conta(candidato) for candidato in corresponderam],
+            })
+
+        self.user = corresponderam[0] if corresponderam else None
         if self.user is None:
             raise exceptions.AuthenticationFailed(
                 self.error_messages['no_active_account'], 'no_active_account',
@@ -71,6 +93,19 @@ class TokenObtainPairComRoleSerializer(TokenObtainPairSerializer):
 
         refresh = self.get_token(self.user)
         return {'refresh': str(refresh), 'access': str(refresh.access_token)}
+
+    @staticmethod
+    def _descrever_conta(usuario):
+        assinatura_ativa = usuario.assinaturas.filter(encerrada_em__isnull=True).select_related('plano').first()
+        return {
+            'role': usuario.role,
+            # '' (não None): isso vai dentro de um serializers.ValidationError,
+            # cujo mecanismo de ErrorDetail converte qualquer folha pra
+            # string — None viraria o texto literal "None" na resposta,
+            # em vez de ficar ausente/vazio (rotuloConta no frontend já
+            # trata string vazia como "sem plano", igual a null).
+            'plano': assinatura_ativa.plano.nome if assinatura_ativa else '',
+        }
 
     @classmethod
     def get_token(cls, user):
@@ -213,6 +248,12 @@ class CadastroSerializer(serializers.Serializer):
     email = serializers.EmailField()
     nome_completo = serializers.CharField(max_length=150)
     cpf = serializers.CharField(max_length=14)
+    telefone = serializers.CharField(max_length=20)
+    cep = serializers.CharField(max_length=9)
+    rua = serializers.CharField(max_length=200)
+    numero = serializers.CharField(max_length=20)
+    cidade = serializers.CharField(max_length=100)
+    estado = serializers.CharField(max_length=2)
     password = serializers.CharField(write_only=True, min_length=8)
     confirmar_senha = serializers.CharField(write_only=True, min_length=8)
     plano = serializers.PrimaryKeyRelatedField(queryset=Plano.objects.filter(ativo=True), required=False)
@@ -292,6 +333,12 @@ class CadastroSerializer(serializers.Serializer):
             email=email,
             first_name=validated_data['nome_completo'],
             cpf=validated_data['cpf'],
+            telefone=validated_data['telefone'],
+            cep=validated_data['cep'],
+            rua=validated_data['rua'],
+            numero=validated_data['numero'],
+            cidade=validated_data['cidade'],
+            estado=validated_data['estado'],
         )
         if credenciamento_versao is not None:
             usuario.role = Usuario.Role.GESTOR

@@ -200,7 +200,11 @@ class EstacaoViewSet(viewsets.ModelViewSet):
         return Estacao.objects.filter(dono=user)
 
     def get_permissions(self):
-        if self.action in ('create', 'destroy'):
+        # 'orfas' também é Gestor-only (RN01) — precisa estar aqui: este
+        # método é uma sobrescrita completa de get_permissions, então o
+        # `permission_classes=[...]` passado pro @action abaixo (em
+        # `orfas`) seria ignorado se não fosse checado explicitamente.
+        if self.action in ('create', 'destroy', 'orfas'):
             return [IsAuthenticated(), EhGestor()]
         if self.action in ('retrieve', 'update', 'partial_update'):
             return [IsAuthenticated(), EhGestorOuDonoDaEstacao()]
@@ -249,7 +253,7 @@ class EstacaoViewSet(viewsets.ModelViewSet):
         )
         instance.delete()
 
-    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated, EhGestor])
+    @action(detail=False, methods=['get'])
     def orfas(self, request):
         """GET /api/estacoes/orfas/ — sensor_id que já mandaram leitura mas
         ainda não viraram uma Estacao cadastrada (RN15: toda Estacao tem

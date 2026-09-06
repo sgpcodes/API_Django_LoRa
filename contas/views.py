@@ -178,7 +178,14 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         return Usuario.objects.filter(pk=user.pk)
 
     def get_permissions(self):
-        if self.action in ('list', 'create', 'destroy'):
+        # 'suspender'/'reativar' também são Gestor-only (RN02) — precisam
+        # estar aqui: este método sobrescreve get_permissions por
+        # completo, então o `permission_classes=[...]` passado pro
+        # @action (abaixo, em suspender/reativar) seria ignorado se não
+        # fosse checado explicitamente. Sem isso, um Usuário comum
+        # conseguia chamar a própria ação em si mesmo (get_object() já
+        # restringe pra "si mesmo" quando não é Gestor).
+        if self.action in ('list', 'create', 'destroy', 'suspender', 'reativar'):
             return [IsAuthenticated(), EhGestor()]
         return [IsAuthenticated()]
 
@@ -220,7 +227,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         )
         instance.delete()
 
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, EhGestor])
+    @action(detail=True, methods=['post'])
     def suspender(self, request, pk=None):
         """RN02: Gestor pode suspender uma conta (sem excluí-la)."""
         usuario = self.get_object()
@@ -231,7 +238,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         )
         return Response({'status': 'success', 'is_active': usuario.is_active})
 
-    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, EhGestor])
+    @action(detail=True, methods=['post'])
     def reativar(self, request, pk=None):
         usuario = self.get_object()
         usuario.is_active = True

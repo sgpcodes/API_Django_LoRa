@@ -205,6 +205,24 @@ class EstacaoViewSetTests(APITestCase):
         identificadores = {e['identificador'] for e in resposta.data}
         self.assertEqual(identificadores, {'MINHA'})
 
+    def test_usuario_comum_nao_pode_ver_sensores_orfaos(self):
+        """RN01: só o Gestor vê a lista de sensores sem dono (é dali que
+        ele atribui uma estação a alguém) — um Usuário comum não tem
+        por que enxergar sensores de outras contas."""
+        Leitura.objects.create(sensor_id='SEM_DONO', temperatura=20, umidade=50, data_hora=timezone.now())
+
+        self.client.force_authenticate(self.usuario1)
+        resposta = self.client.get('/api/estacoes/orfas/')
+        self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_gestor_ve_sensores_orfaos(self):
+        Leitura.objects.create(sensor_id='SEM_DONO', temperatura=20, umidade=50, data_hora=timezone.now())
+
+        self.client.force_authenticate(self.gestor)
+        resposta = self.client.get('/api/estacoes/orfas/')
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual([o['sensor_id'] for o in resposta.data], ['SEM_DONO'])
+
 
 class _ViewFalsa:
     """Stub mínimo só para exercitar RecursoDoPlano.has_permission, que só

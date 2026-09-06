@@ -1,6 +1,21 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, IdCard, KeyRound, Lock, Mail, MailCheck, User } from 'lucide-react'
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Eye,
+  EyeOff,
+  Hash,
+  IdCard,
+  KeyRound,
+  Lock,
+  Mail,
+  MailCheck,
+  MapPin,
+  Phone,
+  User,
+} from 'lucide-react'
 import fundoAutenticacao from '../assets/fundo-autenticacao.png'
 import { cadastrar, login, reenviarConfirmacaoPublico } from '../services/authService'
 import { buscarPlanos } from '../services/planosService'
@@ -26,6 +41,12 @@ function Cadastro() {
   const [email, setEmail] = useState('')
   const [nomeCompleto, setNomeCompleto] = useState('')
   const [cpf, setCpf] = useState('')
+  const [telefone, setTelefone] = useState('')
+  const [cep, setCep] = useState('')
+  const [rua, setRua] = useState('')
+  const [numero, setNumero] = useState('')
+  const [cidade, setCidade] = useState('')
+  const [estado, setEstado] = useState('')
   const [senha, setSenha] = useState('')
   const [confirmarSenha, setConfirmarSenha] = useState('')
   const [mostrarSenha, setMostrarSenha] = useState(false)
@@ -65,6 +86,12 @@ function Cadastro() {
         email,
         nomeCompleto,
         cpf,
+        telefone,
+        cep,
+        rua,
+        numero,
+        cidade,
+        estado,
         password: senha,
         confirmarSenha,
         planoId: modoCredenciada ? null : planoSelecionadoId,
@@ -213,6 +240,100 @@ function Cadastro() {
                 </span>
               </label>
             </div>
+
+            <label className={styles.campo}>
+              <span className={styles.rotulo}>Telefone</span>
+              <span className={styles.inputComIcone}>
+                <Phone size={16} />
+                <input
+                  type="tel"
+                  value={telefone}
+                  onChange={(evento) => setTelefone(evento.target.value)}
+                  placeholder="(00) 00000-0000"
+                  autoComplete="tel"
+                  required
+                />
+              </span>
+            </label>
+
+            <div className={styles.linha2Colunas}>
+              <label className={styles.campo}>
+                <span className={styles.rotulo}>CEP</span>
+                <span className={styles.inputComIcone}>
+                  <MapPin size={16} />
+                  <input
+                    type="text"
+                    value={cep}
+                    onChange={(evento) => setCep(evento.target.value)}
+                    placeholder="00000-000"
+                    autoComplete="postal-code"
+                    required
+                  />
+                </span>
+              </label>
+
+              <label className={styles.campo}>
+                <span className={styles.rotulo}>Cidade</span>
+                <span className={styles.inputComIcone}>
+                  <MapPin size={16} />
+                  <input
+                    type="text"
+                    value={cidade}
+                    onChange={(evento) => setCidade(evento.target.value)}
+                    placeholder="Sua cidade"
+                    autoComplete="address-level2"
+                    required
+                  />
+                </span>
+              </label>
+            </div>
+
+            <div className={styles.linha2Colunas}>
+              <label className={styles.campo}>
+                <span className={styles.rotulo}>Rua</span>
+                <span className={styles.inputComIcone}>
+                  <MapPin size={16} />
+                  <input
+                    type="text"
+                    value={rua}
+                    onChange={(evento) => setRua(evento.target.value)}
+                    placeholder="Nome da rua"
+                    autoComplete="address-line1"
+                    required
+                  />
+                </span>
+              </label>
+
+              <label className={styles.campo}>
+                <span className={styles.rotulo}>Número</span>
+                <span className={styles.inputComIcone}>
+                  <Hash size={16} />
+                  <input
+                    type="text"
+                    value={numero}
+                    onChange={(evento) => setNumero(evento.target.value)}
+                    placeholder="123"
+                    required
+                  />
+                </span>
+              </label>
+            </div>
+
+            <label className={styles.campo}>
+              <span className={styles.rotulo}>Estado (UF)</span>
+              <span className={styles.inputComIcone}>
+                <MapPin size={16} />
+                <input
+                  type="text"
+                  value={estado}
+                  onChange={(evento) => setEstado(evento.target.value.toUpperCase())}
+                  placeholder="RJ"
+                  maxLength={2}
+                  autoComplete="address-level1"
+                  required
+                />
+              </span>
+            </label>
 
             <div className={styles.linha2Colunas}>
               <label className={styles.campo}>

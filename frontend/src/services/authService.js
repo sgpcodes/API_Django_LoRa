@@ -100,8 +100,15 @@ export function esquecerConta(conta) {
   localStorage.setItem(CHAVE_CONTAS_SALVAS, JSON.stringify(restantes))
 }
 
-export async function login(username, password) {
-  const resposta = await axios.post(`${apiBaseUrl}/api/auth/token/`, { username, password })
+// `role` só é passado na segunda tentativa, quando a primeira devolveu
+// `codigo=multiplas_contas` (mesma senha vale pra mais de uma conta desse
+// e-mail) — ver Login.jsx. Sem ambiguidade, login normal nem usa isso.
+export async function login(username, password, role) {
+  const resposta = await axios.post(`${apiBaseUrl}/api/auth/token/`, {
+    username,
+    password,
+    ...(role ? { role } : {}),
+  })
   salvarTokens(resposta.data)
   const claims = obterClaimsDoToken()
   lembrarConta({ username, role: claims?.role ?? null, plano: claims?.plano ?? null })
@@ -114,11 +121,31 @@ export async function login(username, password) {
 // vira Gestor. NÃO loga automaticamente: o cadastro só se completa de
 // verdade com o e-mail confirmado (link que chega por e-mail) — o login
 // (função `login` acima) só funciona depois disso.
-export async function cadastrar({ email, nomeCompleto, cpf, password, confirmarSenha, planoId, tokenCredenciamento }) {
+export async function cadastrar({
+  email,
+  nomeCompleto,
+  cpf,
+  telefone,
+  cep,
+  rua,
+  numero,
+  cidade,
+  estado,
+  password,
+  confirmarSenha,
+  planoId,
+  tokenCredenciamento,
+}) {
   const resposta = await axios.post(`${apiBaseUrl}/api/auth/cadastro/`, {
     email,
     nome_completo: nomeCompleto,
     cpf,
+    telefone,
+    cep,
+    rua,
+    numero,
+    cidade,
+    estado,
     password,
     confirmar_senha: confirmarSenha,
     ...(planoId ? { plano: planoId } : {}),
