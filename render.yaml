@@ -14,3 +14,8 @@ services:
         sync: false
       - key: DATABASE_URL
         sync: false
+      # Só defina isso (ex.: 60) DEPOIS de trocar a connection string do
+      # Supabase pro Transaction pooler (porta 6543) — ver settings.py.
+      # Sem essa variável, o Django usa 0 (seguro com o Session pooler).
+      - key: DB_CONN_MAX_AGE
+        sync: false

@@ -112,12 +112,28 @@ WSGI_APPLICATION = 'api_root.wsgi.application'
 # usamos parse() em vez de config().
 _database_url = os.environ.get('DATABASE_URL') or 'postgresql://teste:teste@localhost:5433/monitoramento_meteorologico'
 
-# conn_max_age=0: fecha a conexão a cada request em vez de mantê-la aberta.
-# O Supabase free tier limita o Session pooler a 15 conexões simultâneas no
-# total — com conexões persistentes, cada processo (servidor local, Render,
-# testes) prende uma vaga por minutos e esgota esse limite rapidinho.
+# conn_max_age=0 (padrão): fecha a conexão a cada request em vez de
+# mantê-la aberta. Necessário enquanto DATABASE_URL apontar para o
+# "Session pooler" do Supabase (free tier, limite de 15 conexões
+# simultâneas) — conexões persistentes prendiam uma vaga por minutos e
+# esgotavam esse limite rapidinho.
+#
+# Efeito colateral medido em produção: abrir uma conexão nova a cada
+# request custa ~1-1.5s (handshake com o Postgres do Supabase), e
+# /api/rssi/status/ é chamado pelo ESP32 de forma síncrona/bloqueante a
+# cada leitura — esse custo trava a recepção LoRa.
+#
+# Correção: trocar a connection string do Supabase pro "Transaction
+# pooler" (porta 6543, pgbouncer) — ele multiplexa muitas conexões da
+# aplicação sobre poucas conexões reais, então dá pra manter a conexão
+# viva sem esgotar o limite. Depois de trocar o DATABASE_URL no Render,
+# defina DB_CONN_MAX_AGE=60 (variável de ambiente, não vai pro código) —
+# só então esse valor passa a ser usado; sem a variável, continua 0
+# (comportamento atual, seguro com o Session pooler).
+_conn_max_age = int(os.environ.get('DB_CONN_MAX_AGE', '0'))
+
 DATABASES = {
-    'default': dj_database_url.parse(_database_url, conn_max_age=0)
+    'default': dj_database_url.parse(_database_url, conn_max_age=_conn_max_age)
 }
 
 
