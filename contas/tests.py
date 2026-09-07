@@ -793,3 +793,82 @@ class RecredenciamentoTests(APITestCase):
 
         resposta = self.client.post('/api/auth/recredenciar/', {'token': TOKEN_SEMEADO})  # token v1, já superado
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class LimparDadosOperacionaisTests(APITestCase):
+    """python manage.py limpar_dados_operacionais — apaga contas (exceto
+    superusuário) e dados de clima já recebidos, sem tocar em Planos/
+    Funcionalidades/TokenCredenciamento nem em tabela/migration nenhuma."""
+
+    def setUp(self):
+        from api_rest.models import Estacao, Leitura
+
+        self.superusuario = Usuario.objects.create_superuser(username='root', password='x')
+        self.gestor_comum = Usuario.objects.create_user(username='gestor1', password='x', role=Usuario.Role.GESTOR)
+        self.usuario1 = Usuario.objects.create_user(username='usuario1', password='x')
+        plano = criar_plano('Standard-limpeza')
+        Assinatura.objects.create(usuario=self.usuario1, plano=plano)
+        self.estacao = Estacao.objects.create(identificador='ESP32_LIMPEZA', dono=self.usuario1)
+        Leitura.objects.create(
+            sensor_id='ESP32_LIMPEZA', estacao=self.estacao, temperatura=20, umidade=50,
+            data_hora='2026-01-01T12:00:00Z',
+        )
+
+    def test_sem_flag_confirmar_e_dry_run_nao_apaga_nada(self):
+        from django.core.management import call_command
+
+        from api_rest.models import Estacao, Leitura
+
+        call_command('limpar_dados_operacionais')
+
+        self.assertEqual(Usuario.objects.count(), 3)
+        self.assertEqual(Estacao.objects.count(), 1)
+        self.assertEqual(Leitura.objects.count(), 1)
+
+    def test_com_confirmar_apaga_contas_e_dados_mas_preserva_superusuario_e_catalogo(self):
+        from django.core.management import call_command
+
+        from api_rest.models import Estacao, Leitura
+
+        versao_token_antes = TokenCredenciamento.versao_atual()
+
+        call_command('limpar_dados_operacionais', '--confirmar')
+
+        # Só o superusuário sobrevive — inclusive outro Gestor "comum"
+        # (sem is_superuser) é apagado junto, é "zerar pra receber contas
+        # novas", não só usuário final.
+        self.assertEqual(list(Usuario.objects.values_list('username', flat=True)), ['root'])
+        self.assertEqual(Estacao.objects.count(), 0)
+        self.assertEqual(Leitura.objects.count(), 0)
+        self.assertEqual(Assinatura.objects.count(), 0)
+
+        # Catálogo/configuração intactos.
+        self.assertTrue(Plano.objects.filter(nome='Standard-limpeza').exists())
+        self.assertEqual(TokenCredenciamento.versao_atual(), versao_token_antes)
+
+    def test_endpoint_get_e_so_previa_gestor_only(self):
+        self.client.force_authenticate(self.superusuario)
+        resposta = self.client.get('/api/manutencao/limpar-dados/')
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(resposta.data['contas'], 2)  # gestor1 + usuario1 (não conta o superuser)
+        self.assertEqual(resposta.data['estacoes'], 1)
+        # GET nunca apaga nada, mesmo sendo Gestor.
+        self.assertEqual(Usuario.objects.count(), 3)
+
+    def test_endpoint_usuario_comum_nao_acessa(self):
+        self.client.force_authenticate(self.usuario1)
+        resposta = self.client.get('/api/manutencao/limpar-dados/')
+        self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_endpoint_post_sem_confirmar_nao_apaga(self):
+        self.client.force_authenticate(self.superusuario)
+        resposta = self.client.post('/api/manutencao/limpar-dados/', {}, format='json')
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Usuario.objects.count(), 3)
+
+    def test_endpoint_post_com_confirmar_apaga_e_registra_auditoria(self):
+        self.client.force_authenticate(self.superusuario)
+        resposta = self.client.post('/api/manutencao/limpar-dados/', {'confirmar': True}, format='json')
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(list(Usuario.objects.values_list('username', flat=True)), ['root'])
+        self.assertTrue(LogAuditoria.objects.filter(acao='manutencao.limpeza_operacional').exists())

@@ -5,6 +5,7 @@ import PortaDeEntradaApp from './components/PortaDeEntradaApp'
 import PainelAdministrativo from './components/PainelAdministrativo'
 import EstacoesAdmin from './pages/EstacoesAdmin'
 import ContasAdmin from './pages/ContasAdmin'
+import ManutencaoAdmin from './pages/ManutencaoAdmin'
 import Dashboard from './pages/Dashboard'
 import Notificacoes from './pages/Notificacoes'
 import Configuracoes from './pages/Configuracoes'
@@ -49,6 +50,7 @@ function App() {
               <Route index element={<Navigate to="estacoes" replace />} />
               <Route path="estacoes" element={<EstacoesAdmin />} />
               <Route path="contas" element={<ContasAdmin />} />
+              <Route path="manutencao" element={<ManutencaoAdmin />} />
             </Route>
             <Route element={<AppLayout />}>
               <Route index element={<Dashboard />} />

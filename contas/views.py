@@ -12,6 +12,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from api_rest.permissions import EhGestor
 
 from .emails import enviar_email_confirmacao
+from .manutencao import executar_limpeza_operacional, resumir_limpeza_operacional
 from .models import Assinatura, Funcionalidade, LogAuditoria, Plano, Usuario
 from .serializers import (
     AssinaturaSerializer,
@@ -161,6 +162,38 @@ class RecredenciarView(APIView):
         serializer.is_valid(raise_exception=True)
         usuario = serializer.save()
         return Response(_tokens_para(usuario), status=status.HTTP_200_OK)
+
+
+class LimparDadosOperacionaisView(APIView):
+    """Zona de risco do painel admin: apaga contas (exceto superusuário)
+    e dados de clima já recebidos, sem tocar em Planos/Funcionalidades/
+    TokenCredenciamento. Mesma lógica do comando de terminal
+    `limpar_dados_operacionais` (ver contas/manutencao.py) — esta é a
+    via pra quem não tem acesso ao Shell do servidor.
+
+    GET: só a prévia (dry-run), nunca apaga nada — é o que a tela mostra
+    antes da pessoa confirmar.
+    POST: apaga de verdade, mas só se o corpo vier com
+    `{"confirmar": true}` — sem isso, nem que seja um POST vazio por
+    engano, não faz nada."""
+
+    permission_classes = [IsAuthenticated, EhGestor]
+
+    def get(self, request):
+        return Response(resumir_limpeza_operacional())
+
+    def post(self, request):
+        if request.data.get('confirmar') is not True:
+            return Response(
+                {'status': 'error', 'message': 'Envie {"confirmar": true} no corpo pra executar de verdade.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        resumo = executar_limpeza_operacional()
+        LogAuditoria.objects.create(
+            ator=request.user, acao='manutencao.limpeza_operacional', detalhes=resumo,
+        )
+        return Response({'status': 'success', **resumo})
 
 
 class UsuarioViewSet(viewsets.ModelViewSet):

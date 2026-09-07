@@ -1,11 +1,12 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LogOut, Radio, ShieldCheck, Users } from 'lucide-react'
+import { Database, LogOut, Radio, ShieldCheck, Users } from 'lucide-react'
 import { logout } from '../services/authService'
 import styles from './PainelAdministrativo.module.css'
 
 const ABAS = [
   { to: '/app/adm/estacoes', rotulo: 'Estações', icone: Radio },
   { to: '/app/adm/contas', rotulo: 'Contas', icone: Users },
+  { to: '/app/adm/manutencao', rotulo: 'Manutenção', icone: Database },
 ]
 
 // Casca do Painel Administrativo (destino de quem loga como Gestor):

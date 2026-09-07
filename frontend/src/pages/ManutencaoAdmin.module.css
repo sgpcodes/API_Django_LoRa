@@ -1,0 +1,188 @@
+.pagina {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 720px;
+}
+
+.cabecalho {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.subtitulo {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.erroCarga {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+  font-size: 0.85rem;
+}
+
+.cartaoPerigo {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding: 1.5rem;
+  border-radius: 14px;
+  background-color: var(--color-card-bg);
+  border: 2px solid rgba(239, 68, 68, 0.35);
+  box-shadow: var(--shadow-card);
+}
+
+.cabecalhoPerigo {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  color: #dc2626;
+}
+
+.tituloPerigo {
+  margin: 0 0 0.35rem;
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.textoPerigo {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+
+.textoPerigo strong {
+  color: var(--color-text);
+}
+
+.grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.85rem;
+  border-radius: 10px;
+  background-color: var(--color-pill-bg);
+  text-align: center;
+}
+
+.itemValor {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.itemRotulo {
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+}
+
+.preservados {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-card-border);
+}
+
+.avisoVazio {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  background-color: var(--color-pill-bg);
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+}
+
+.blocoConfirmacao {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-card-border);
+}
+
+.rotuloConfirmacao {
+  font-size: 0.82rem;
+  color: var(--color-text);
+}
+
+.rotuloConfirmacao strong {
+  letter-spacing: 0.03em;
+  color: #dc2626;
+}
+
+.inputConfirmacao {
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-card-border);
+  background-color: var(--color-input-bg);
+  color: var(--color-text);
+  font-size: 0.9rem;
+}
+
+.inputConfirmacao:focus {
+  outline: none;
+  border-color: #dc2626;
+}
+
+.botaoApagar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.1rem;
+  border-radius: 10px;
+  border: none;
+  background-color: #dc2626;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.botaoApagar:hover:not(:disabled) {
+  background-color: #b91c1c;
+}
+
+.botaoApagar:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.cartaoResultado {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.9rem 1.1rem;
+  border-radius: 10px;
+  background-color: rgba(34, 197, 94, 0.12);
+  color: #16a34a;
+  font-size: 0.85rem;
+  font-weight: 600;
+}

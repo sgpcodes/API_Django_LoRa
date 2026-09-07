@@ -8,6 +8,7 @@ from .views import (
     CadastroView,
     ConfirmarEmailView,
     FuncionalidadeViewSet,
+    LimparDadosOperacionaisView,
     PlanoViewSet,
     RecredenciarView,
     ReenviarConfirmacaoPublicoView,
@@ -40,6 +41,13 @@ urlpatterns = [
         'auth/reenviar-confirmacao-publico/',
         ReenviarConfirmacaoPublicoView.as_view(),
         name='reenviar-confirmacao-publico',
+    ),
+    # GET  -> prévia (dry-run) de quantos registros seriam apagados
+    # POST {"confirmar": true} -> apaga de verdade. Gestor only.
+    path(
+        'manutencao/limpar-dados/',
+        LimparDadosOperacionaisView.as_view(),
+        name='limpar-dados-operacionais',
     ),
     path('', include(router.urls)),
 ]
