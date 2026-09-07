@@ -1,5 +1,6 @@
 import logging
 
+from django.db.models import Count, Prefetch
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -172,10 +173,25 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
+        # Sem isso, UsuarioSerializer.plano_atual/plano_max_estacoes/
+        # estacoes_vinculadas disparavam 3 queries A MAIS por linha (N+1)
+        # — imperceptível no sqlite local, mas pesado de verdade contra o
+        # Supabase em produção (cada query é uma viagem de rede). O
+        # annotate resolve a contagem de estações numa query só; o
+        # prefetch_related busca a assinatura ativa de todo mundo de uma
+        # vez (`to_attr` guarda o resultado já filtrado/pronto na
+        # instância, sem custo extra pra ler de novo depois).
+        assinatura_ativa_qs = Assinatura.objects.filter(encerrada_em__isnull=True).select_related('plano')
+        base = Usuario.objects.annotate(
+            estacoes_vinculadas_count=Count('estacoes', distinct=True),
+        ).prefetch_related(
+            Prefetch('assinaturas', queryset=assinatura_ativa_qs, to_attr='assinatura_ativa_prefetch'),
+        )
+
         user = self.request.user
         if user.eh_gestor:
-            return Usuario.objects.all().order_by('username')
-        return Usuario.objects.filter(pk=user.pk)
+            return base.order_by('username')
+        return base.filter(pk=user.pk)
 
     def get_permissions(self):
         # 'suspender'/'reativar' também são Gestor-only (RN02) — precisam

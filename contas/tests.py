@@ -146,6 +146,22 @@ class UsuarioViewSetTests(APITestCase):
         usernames = {u['username'] for u in resposta.data}
         self.assertEqual(usernames, {'gestor1', 'usuario1', 'usuario2'})
 
+    def test_listar_contas_nao_faz_uma_query_por_conta(self):
+        """Regressão de performance: UsuarioSerializer.plano_atual/
+        plano_max_estacoes/estacoes_vinculadas já causaram um N+1 real
+        (37 queries pra listar 12 contas, medido contra produção) —
+        UsuarioViewSet.get_queryset() faz annotate + prefetch_related
+        pra manter isso em poucas queries fixas, não uma por conta.
+        Aqui só confere que continua fixo mesmo com bem mais contas."""
+        for i in range(20):
+            Usuario.objects.create_user(username=f'volume{i}', password='x', role=Usuario.Role.USUARIO)
+
+        self.client.force_authenticate(self.gestor)
+        with self.assertNumQueries(2):
+            resposta = self.client.get('/api/contas/')
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(resposta.data), 23)  # gestor1 + usuario1 + usuario2 + 20 novos
+
     def test_usuario_comum_nao_ve_dados_de_outro_usuario(self):
         self.client.force_authenticate(self.usuario1)
         resposta = self.client.get(f'/api/contas/{self.usuario2.pk}/')

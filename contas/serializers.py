@@ -161,6 +161,15 @@ class UsuarioSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'date_joined', 'cpf', 'email_verificado']
 
     def _assinatura_ativa(self, obj):
+        # `assinatura_ativa_prefetch` só existe quando o objeto veio da
+        # queryset otimizada de UsuarioViewSet.get_queryset() (prefetch
+        # feito pra todo mundo de uma vez, sem query extra por linha —
+        # ver comentário lá). Fora dali (ex.: instância avulsa logo após
+        # um create()/update()), cai pro caminho de sempre — uma query
+        # só, sem problema, porque é um único objeto.
+        if hasattr(obj, 'assinatura_ativa_prefetch'):
+            lista = obj.assinatura_ativa_prefetch
+            return lista[0] if lista else None
         return obj.assinaturas.filter(encerrada_em__isnull=True).select_related('plano').first()
 
     def get_plano_atual(self, obj):
@@ -172,6 +181,10 @@ class UsuarioSerializer(serializers.ModelSerializer):
         return assinatura.plano.max_estacoes if assinatura else None
 
     def get_estacoes_vinculadas(self, obj):
+        # Mesma ideia: usa a contagem já anotada na query (ver
+        # get_queryset), sem disparar mais uma query por linha.
+        if hasattr(obj, 'estacoes_vinculadas_count'):
+            return obj.estacoes_vinculadas_count
         return obj.estacoes.count()
 
     def create(self, validated_data):

@@ -194,10 +194,15 @@ class EstacaoViewSet(viewsets.ModelViewSet):
     serializer_class = EstacaoSerializer
 
     def get_queryset(self):
+        # select_related('dono'): sem isso, EstacaoSerializer.dono_nome/
+        # dono_username disparavam 1 query extra por estação (N+1) pra
+        # buscar o dono — com select_related, o dono já vem junto na
+        # mesma query (JOIN), sem custo extra por linha.
+        queryset = Estacao.objects.select_related('dono')
         user = self.request.user
         if user.eh_gestor:
-            return Estacao.objects.all()
-        return Estacao.objects.filter(dono=user)
+            return queryset
+        return queryset.filter(dono=user)
 
     def get_permissions(self):
         # 'orfas' também é Gestor-only (RN01) — precisa estar aqui: este
