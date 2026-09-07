@@ -1,0 +1,137 @@
+.pagina {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.cabecalho {
+  display: flex;
+  flex-direction: column;
+}
+
+.titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.subtitulo {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 0.9rem;
+}
+
+.cartao {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1.1rem 1.25rem;
+  border-radius: 12px;
+  background-color: var(--color-card-bg);
+  border: 1px solid var(--color-card-border);
+  box-shadow: var(--shadow-card);
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.cartao:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(15, 28, 66, 0.1);
+}
+
+.cartaoIcone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+}
+
+.corAzul {
+  background-color: rgba(74, 111, 165, 0.14);
+  color: #4a6fa5;
+}
+
+.corVerde {
+  background-color: rgba(34, 197, 94, 0.14);
+  color: #16a34a;
+}
+
+.corVermelha {
+  background-color: rgba(239, 68, 68, 0.14);
+  color: #dc2626;
+}
+
+.corAmarela {
+  background-color: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+}
+
+.corRoxa {
+  background-color: rgba(139, 92, 246, 0.14);
+  color: #7c3aed;
+}
+
+.cartaoValor {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.cartaoRotulo {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+
+.blocoPlanos {
+  padding: 1.1rem 1.25rem;
+  border-radius: 12px;
+  background-color: var(--color-card-bg);
+  border: 1px solid var(--color-card-border);
+  box-shadow: var(--shadow-card);
+}
+
+.blocoTitulo {
+  margin: 0 0 0.85rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.linhaPlanos {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.itemPlano {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  border-radius: 10px;
+  background-color: var(--color-pill-bg);
+}
+
+.itemPlanoNome {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.itemPlanoValor {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-text);
+}

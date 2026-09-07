@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Grid2x2, List, Plus, Radio, Search, UserCog, UserRound, Users } from 'lucide-react'
+import { Activity, Gem, Grid2x2, LayoutGrid, Leaf, List, Plus, Radio, Search } from 'lucide-react'
 import EstacaoAdminCard from '../components/EstacaoAdminCard'
 import NovaEstacaoForm from '../components/NovaEstacaoForm'
 import StatusMessage from '../components/StatusMessage'
-import { buscarLeituras, estaOnline, obterUltimaLeituraPorSensor, solicitarAnaliseRssi } from '../services/leiturasService'
+import { buscarLeituras, obterUltimaLeituraPorSensor, solicitarAnaliseRssi } from '../services/leiturasService'
 import { atribuirEstacao, atualizarEstacao, buscarEstacoes, removerEstacao, trocarDonoEstacao } from '../services/estacaoService'
 import { buscarContas } from '../services/contasAdminService'
 import styles from './EstacoesAdmin.module.css'
@@ -21,10 +21,10 @@ const TIMEOUT_ANALISE_MS = 30_000
 const DURACAO_ERRO_MS = 3_000
 
 const ABAS_PLANO = [
-  { valor: 'todas', rotulo: 'Todas', icone: Users },
-  { valor: 'Standard', rotulo: 'Standard', icone: UserRound },
-  { valor: 'Pro', rotulo: 'Pro', icone: UserCog },
-  { valor: 'Plus', rotulo: 'Plus', icone: UserCog },
+  { valor: 'todas', rotulo: 'Todas as estações', icone: LayoutGrid, cor: 'abaCorNeutra' },
+  { valor: 'Standard', rotulo: 'Standard', icone: Activity, cor: 'abaCorAzul' },
+  { valor: 'Pro', rotulo: 'Pro', icone: Leaf, cor: 'abaCorVerde' },
+  { valor: 'Plus', rotulo: 'Plus', icone: Gem, cor: 'abaCorRoxa' },
 ]
 
 function arredondar(valor) {
@@ -296,9 +296,6 @@ function EstacoesAdmin() {
     setPagina(1)
   }
 
-  const totalOnline = dispositivos.filter((d) => d.data_hora && estaOnline(d.data_hora)).length
-  const totalSemDono = dispositivos.filter((d) => !d.donoNome).length
-
   async function executarAcao(estacaoId, acao) {
     setProcessandoId(estacaoId)
     setErroPorId((atual) => ({ ...atual, [estacaoId]: null }))
@@ -355,42 +352,17 @@ function EstacoesAdmin() {
   return (
     <div className={styles.pagina}>
       <div className={styles.banner}>
-        <div className={styles.bannerIcone}>
-          <Radio size={26} />
-        </div>
-        <div>
-          <h1 className={styles.bannerTitulo}>Estações</h1>
-          <p className={styles.bannerSubtitulo}>
-            Todos os sensores LoRa cadastrados — status, leituras atuais, qualidade do enlace e configuração do
-            rádio, num só lugar.
-          </p>
-        </div>
-        <div className={styles.resumo}>
-          <span className={styles.resumoItem}>
-            <strong>{dispositivos.length}</strong> no total
-          </span>
-          <span className={styles.resumoItem}>
-            <strong>{totalOnline}</strong> online
-          </span>
-          {totalSemDono > 0 && (
-            <span className={`${styles.resumoItem} ${styles.resumoAlerta}`}>
-              <strong>{totalSemDono}</strong> sem dono
-            </span>
-          )}
+        <div className={styles.bannerFoto} aria-hidden="true" />
+        <div className={styles.bannerConteudo}>
+          <div className={styles.bannerIcone}>
+            <Radio size={26} />
+          </div>
+          <div>
+            <h1 className={styles.bannerTitulo}>Estações</h1>
+            <p className={styles.bannerSubtitulo}>Gerencie todas as estações de monitoramento e configure os dispositivos.</p>
+          </div>
         </div>
       </div>
-
-      <div className={styles.cabecalho}>
-        <button type="button" className={styles.botaoNovaEstacao} onClick={() => setMostrarNovaEstacao((m) => !m)}>
-          <Plus size={16} />
-          Nova estação
-        </button>
-      </div>
-
-      {mostrarNovaEstacao && (
-        <NovaEstacaoForm contas={contas} onCriar={aoCriarEstacao} onFechar={() => setMostrarNovaEstacao(false)} />
-      )}
-      {erroNovaEstacao && <p className={styles.aviso}>{erroNovaEstacao}</p>}
 
       <div className={styles.barraFiltros}>
         <div className={styles.abas}>
@@ -401,27 +373,29 @@ function EstacoesAdmin() {
               className={`${styles.aba} ${abaPlano === aba.valor ? styles.abaAtiva : ''}`}
               onClick={() => mudarFiltro(() => setAbaPlano(aba.valor))}
             >
-              <aba.icone size={14} />
-              {aba.rotulo}
-              <span className={styles.abaContador}>{contadorPorPlano[aba.valor] ?? 0}</span>
+              <aba.icone size={14} className={styles[aba.cor]} />
+              {aba.rotulo} ({contadorPorPlano[aba.valor] ?? 0})
             </button>
           ))}
         </div>
 
         <div className={styles.controles}>
-          <select className={styles.seletorOrdenacao} value={ordenacao} onChange={(e) => setOrdenacao(e.target.value)}>
-            <option value="nome">Nome (A-Z)</option>
-            <option value="recentes">Última leitura</option>
-          </select>
+          <label className={styles.campoOrdenacao}>
+            <span className={styles.rotuloControle}>Ordenar por</span>
+            <select className={styles.seletorOrdenacao} value={ordenacao} onChange={(e) => setOrdenacao(e.target.value)}>
+              <option value="nome">Nome (A-Z)</option>
+              <option value="recentes">Mais recentes</option>
+            </select>
+          </label>
 
           <div className={styles.campoBusca}>
-            <Search size={14} />
             <input
               className={styles.inputBusca}
-              placeholder="Buscar por nome, identificador ou localização..."
+              placeholder="Buscar por nome, ID ou local..."
               value={busca}
               onChange={(e) => mudarFiltro(() => setBusca(e.target.value))}
             />
+            <Search size={14} />
           </div>
 
           <div className={styles.toggleVisualizacao}>
@@ -442,8 +416,18 @@ function EstacoesAdmin() {
               <Grid2x2 size={15} />
             </button>
           </div>
+
+          <button type="button" className={styles.botaoNovaEstacao} onClick={() => setMostrarNovaEstacao((m) => !m)}>
+            <Plus size={16} />
+            Nova estação
+          </button>
         </div>
       </div>
+
+      {mostrarNovaEstacao && (
+        <NovaEstacaoForm contas={contas} onCriar={aoCriarEstacao} onFechar={() => setMostrarNovaEstacao(false)} />
+      )}
+      {erroNovaEstacao && <p className={styles.aviso}>{erroNovaEstacao}</p>}
 
       <p className={styles.resultados}>{dispositivosVisiveis.length} estação(ões) encontrada(s)</p>
 

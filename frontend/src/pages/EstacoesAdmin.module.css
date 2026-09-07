@@ -5,15 +5,33 @@
 }
 
 .banner {
+  position: relative;
+  overflow: hidden;
+  padding: 1.4rem 1.6rem;
+  border-radius: 14px;
+  background: linear-gradient(115deg, var(--color-accent) 40%, #0891b2 100%);
+  color: #ffffff;
+  box-shadow: var(--shadow-card);
+}
+
+.bannerFoto {
+  position: absolute;
+  inset: 0;
+  background-image: url('../assets/estacao-banner.png');
+  background-position: right top;
+  background-size: auto 260px;
+  background-repeat: no-repeat;
+  opacity: 0.85;
+  mask-image: linear-gradient(90deg, transparent 0%, transparent 50%, black 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, transparent 50%, black 100%);
+}
+
+.bannerConteudo {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 1rem;
   flex-wrap: wrap;
-  padding: 1.25rem 1.5rem;
-  border-radius: 14px;
-  background: linear-gradient(135deg, var(--color-accent) 0%, #0891b2 100%);
-  color: #ffffff;
-  box-shadow: var(--shadow-card);
 }
 
 .bannerIcone {
@@ -38,36 +56,6 @@
   font-size: 0.85rem;
   color: rgba(255, 255, 255, 0.85);
   max-width: 46ch;
-}
-
-.banner .resumo {
-  margin-left: auto;
-  display: flex;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-}
-
-.banner .resumoItem {
-  padding: 0.5rem 0.9rem;
-  border-radius: 10px;
-  background-color: rgba(255, 255, 255, 0.16);
-  border: none;
-  font-size: 0.82rem;
-  color: #ffffff;
-}
-
-.banner .resumoItem strong {
-  color: #ffffff;
-  margin-right: 0.3rem;
-}
-
-.banner .resumoAlerta {
-  background-color: rgba(245, 158, 11, 0.35);
-}
-
-.cabecalho {
-  display: flex;
-  justify-content: flex-end;
 }
 
 .botaoNovaEstacao {
@@ -121,8 +109,8 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.5rem 0.8rem;
-  border-radius: 8px;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
   border: none;
   background: none;
   color: var(--color-text-secondary);
@@ -141,23 +129,46 @@
   color: var(--color-pill-ativo-texto);
 }
 
-.abaContador {
-  padding: 0.05rem 0.4rem;
-  border-radius: 999px;
-  background-color: rgba(255, 255, 255, 0.25);
-  font-size: 0.7rem;
+.abaAtiva .abaCorAzul,
+.abaAtiva .abaCorVerde,
+.abaAtiva .abaCorRoxa,
+.abaAtiva .abaCorNeutra {
+  color: inherit;
 }
 
-.aba:not(.abaAtiva) .abaContador {
-  background-color: var(--color-pill-bg);
+.abaCorAzul {
+  color: #4a6fa5;
+}
+
+.abaCorVerde {
+  color: #16a34a;
+}
+
+.abaCorRoxa {
+  color: #7c3aed;
+}
+
+.abaCorNeutra {
   color: var(--color-text-secondary);
 }
 
 .controles {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.6rem;
   flex-wrap: wrap;
+}
+
+.campoOrdenacao {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.rotuloControle {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
 }
 
 .seletorOrdenacao {
@@ -178,7 +189,7 @@
   border: 1px solid var(--color-card-border);
   background-color: var(--color-input-bg);
   color: var(--color-text-secondary);
-  min-width: 240px;
+  min-width: 220px;
 }
 
 .inputBusca {

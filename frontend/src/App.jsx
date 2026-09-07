@@ -3,6 +3,7 @@ import AppLayout from './components/AppLayout'
 import RotaProtegida from './components/RotaProtegida'
 import PortaDeEntradaApp from './components/PortaDeEntradaApp'
 import PainelAdministrativo from './components/PainelAdministrativo'
+import AdminDashboard from './pages/AdminDashboard'
 import EstacoesAdmin from './pages/EstacoesAdmin'
 import ContasAdmin from './pages/ContasAdmin'
 import ManutencaoAdmin from './pages/ManutencaoAdmin'
@@ -48,6 +49,7 @@ function App() {
           <Route element={<PortaDeEntradaApp />}>
             <Route path="adm" element={<PainelAdministrativo />}>
               <Route index element={<Navigate to="estacoes" replace />} />
+              <Route path="dashboard" element={<AdminDashboard />} />
               <Route path="estacoes" element={<EstacoesAdmin />} />
               <Route path="contas" element={<ContasAdmin />} />
               <Route path="manutencao" element={<ManutencaoAdmin />} />

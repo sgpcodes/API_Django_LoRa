@@ -74,24 +74,175 @@
   color: #ffffff;
 }
 
-.botaoSair {
+.areaConta {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.5rem 0.9rem;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  background: none;
-  color: rgba(255, 255, 255, 0.85);
-  font-weight: 600;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease;
+  gap: 0.75rem;
 }
 
-.botaoSair:hover {
-  border-color: #ffffff;
+.menuWrapper {
+  position: relative;
+}
+
+.botaoIcone {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.botaoIcone:hover {
+  background-color: rgba(255, 255, 255, 0.18);
+}
+
+.badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background-color: #ef4444;
   color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #1b4588;
+}
+
+.contaBotao {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem 0.6rem 0.35rem 0.35rem;
+  border-radius: 999px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.contaBotao:hover {
+  background-color: rgba(255, 255, 255, 0.18);
+}
+
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.contaTextos {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
+}
+
+.contaNome {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.contaPapel {
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.contaChevron {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 20;
+  min-width: 170px;
+  padding: 0.4rem;
+  border-radius: 10px;
+  background-color: #ffffff;
+  box-shadow: 0 8px 24px rgba(15, 28, 66, 0.18);
+}
+
+.dropdownAlertas {
+  min-width: 280px;
+  padding: 0.75rem;
+}
+
+.dropdownTitulo {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-bottom: 0.5rem;
+}
+
+.dropdownVazio {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.listaAlertas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.listaAlertas li {
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  background-color: #f1f5f9;
+  color: #1e293b;
+  font-size: 0.82rem;
+}
+
+.dropdownItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  border-radius: 8px;
+  border: none;
+  background: none;
+  color: #1e293b;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dropdownItem:hover {
+  background-color: #f1f5f9;
 }
 
 .conteudo {
