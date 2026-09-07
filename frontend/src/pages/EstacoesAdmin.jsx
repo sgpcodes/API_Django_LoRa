@@ -3,13 +3,22 @@ import { Grid2x2, List, Plus, Radio, Search, UserCog, UserRound, Users } from 'l
 import EstacaoAdminCard from '../components/EstacaoAdminCard'
 import NovaEstacaoForm from '../components/NovaEstacaoForm'
 import StatusMessage from '../components/StatusMessage'
-import { buscarLeituras, estaOnline, obterUltimaLeituraPorSensor } from '../services/leiturasService'
+import { buscarLeituras, estaOnline, obterUltimaLeituraPorSensor, solicitarAnaliseRssi } from '../services/leiturasService'
 import { atribuirEstacao, atualizarEstacao, buscarEstacoes, removerEstacao, trocarDonoEstacao } from '../services/estacaoService'
 import { buscarContas } from '../services/contasAdminService'
 import styles from './EstacoesAdmin.module.css'
 
 const INTERVALO_ATUALIZACAO_MS = 60_000
 const POR_PAGINA = 9
+
+// Mesmo comportamento (e mesmos tempos) já definidos em DadosLora.jsx pro
+// botão "Analisar": enquanto espera a resposta, confere com esse intervalo
+// se o pedido pendente já foi atendido; depois de TIMEOUT_ANALISE_MS sem
+// resposta, o botão volta ao normal e avisa que falhou (mesmo que o pedido
+// ainda possa ser atendido depois — ver TEMPO_LIMITE_PENDENCIA no backend).
+const INTERVALO_POLL_ANALISE_MS = 2_500
+const TIMEOUT_ANALISE_MS = 30_000
+const DURACAO_ERRO_MS = 3_000
 
 const ABAS_PLANO = [
   { valor: 'todas', rotulo: 'Todas', icone: Users },
@@ -78,6 +87,24 @@ function EstacoesAdmin() {
   const [mostrarNovaEstacao, setMostrarNovaEstacao] = useState(false)
   const [erroNovaEstacao, setErroNovaEstacao] = useState(null)
 
+  // Uma análise de RSSI pendente por sensor: sensorId -> { inicio }. Mesmo
+  // mecanismo de DadosLora.jsx — clicar em "Atualizar leitura RSSI" num
+  // dispositivo não mexe no estado dos outros.
+  const [analisesPorSensor, setAnalisesPorSensor] = useState({})
+  const [errosTemporarios, setErrosTemporarios] = useState({})
+
+  function mostrarErroTemporario(sensorId, mensagem) {
+    setErrosTemporarios((atual) => ({ ...atual, [sensorId]: mensagem }))
+    setTimeout(() => {
+      setErrosTemporarios((atual) => {
+        if (!(sensorId in atual)) return atual
+        const proximo = { ...atual }
+        delete proximo[sensorId]
+        return proximo
+      })
+    }, DURACAO_ERRO_MS)
+  }
+
   async function carregar() {
     try {
       const [dadosLeituras, dadosEstacoes, dadosContas] = await Promise.all([
@@ -101,6 +128,40 @@ function EstacoesAdmin() {
     const intervalo = setInterval(carregar, INTERVALO_ATUALIZACAO_MS)
     return () => clearInterval(intervalo)
   }, [])
+
+  // Enquanto algum sensor tem análise pendente, confere periodicamente se
+  // ele já respondeu — só recarrega leituras (mais leve que o `carregar()`
+  // completo, que também busca contas/estações).
+  const sensoresPendentes = Object.keys(analisesPorSensor)
+
+  useEffect(() => {
+    if (sensoresPendentes.length === 0) return undefined
+
+    const poll = setInterval(async () => {
+      try {
+        setLeituras(await buscarLeituras())
+      } catch {
+        // silencioso — o próximo poll tenta de novo.
+      }
+    }, INTERVALO_POLL_ANALISE_MS)
+
+    return () => clearInterval(poll)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sensoresPendentes.length])
+
+  async function aoClicarAnalisar(sensorId) {
+    setAnalisesPorSensor((atual) => ({ ...atual, [sensorId]: { inicio: Date.now() } }))
+    try {
+      await solicitarAnaliseRssi(sensorId)
+    } catch {
+      setAnalisesPorSensor((atual) => {
+        const proximo = { ...atual }
+        delete proximo[sensorId]
+        return proximo
+      })
+      mostrarErroTemporario(sensorId, 'Não foi possível solicitar a análise. Tente novamente.')
+    }
+  }
 
   const dispositivos = useMemo(() => {
     const estacaoPorIdentificador = new Map(estacoes.map((estacao) => [estacao.identificador, estacao]))
@@ -154,6 +215,45 @@ function EstacoesAdmin() {
 
     return [...dosSensores, ...semLeituraAinda]
   }, [leituras, estacoes])
+
+  // Toda vez que leituras novas chegam, confere se alguma análise pendente
+  // já foi respondida (leitura de RSSI mais recente que o início do
+  // pedido) ou estourou o tempo limite — nos dois casos, o sensor sai de
+  // "pendente" (o botão volta ao normal na hora); no caso de timeout,
+  // mostra a mensagem de falha por alguns segundos.
+  useEffect(() => {
+    if (sensoresPendentes.length === 0) return
+
+    const agora = Date.now()
+    const sensoresParaRemover = []
+    const sensoresExpirados = []
+
+    for (const sensorId of Object.keys(analisesPorSensor)) {
+      const pedido = analisesPorSensor[sensorId]
+      const dispositivo = dispositivos.find((d) => d.sensor_id === sensorId)
+      const dataUltimaAnalise = dispositivo?.ultimaAnaliseRssi?.data_hora
+
+      if (dataUltimaAnalise && new Date(dataUltimaAnalise).getTime() >= pedido.inicio) {
+        sensoresParaRemover.push(sensorId)
+      } else if (agora - pedido.inicio > TIMEOUT_ANALISE_MS) {
+        sensoresParaRemover.push(sensorId)
+        sensoresExpirados.push(sensorId)
+      }
+    }
+
+    if (sensoresParaRemover.length > 0) {
+      setAnalisesPorSensor((atual) => {
+        const proximo = { ...atual }
+        sensoresParaRemover.forEach((sensorId) => delete proximo[sensorId])
+        return proximo
+      })
+    }
+
+    sensoresExpirados.forEach((sensorId) => {
+      mostrarErroTemporario(sensorId, 'O sensor não respondeu a tempo. Confira se ele está ligado e tente de novo.')
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leituras])
 
   const contadorPorPlano = useMemo(() => {
     const contador = { todas: dispositivos.length, Standard: 0, Pro: 0, Plus: 0 }
@@ -358,9 +458,12 @@ function EstacoesAdmin() {
               contas={contas}
               processando={dispositivo.estacaoId != null && processandoId === dispositivo.estacaoId}
               erro={dispositivo.estacaoId != null ? erroPorId[dispositivo.estacaoId] : null}
+              analisando={dispositivo.sensor_id in analisesPorSensor}
+              erroAnalise={errosTemporarios[dispositivo.sensor_id] ?? null}
               onTrocarDono={(novoDonoId) => aoTrocarDono(dispositivo.estacaoId, novoDonoId)}
               onRemover={() => aoRemover(dispositivo.estacaoId)}
               onSalvarEdicao={(dados) => aoSalvarEdicao(dispositivo.estacaoId, dados)}
+              onAnalisar={() => aoClicarAnalisar(dispositivo.sensor_id)}
             />
           ))}
         </div>

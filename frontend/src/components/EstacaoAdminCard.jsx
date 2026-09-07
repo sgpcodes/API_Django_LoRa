@@ -21,7 +21,7 @@ import {
   Wind,
   X,
 } from 'lucide-react'
-import { estaOnline, solicitarAnaliseRssi } from '../services/leiturasService'
+import { estaOnline } from '../services/leiturasService'
 import styles from './DispositivoLoraCard.module.css'
 import adminStyles from './EstacaoAdminCard.module.css'
 
@@ -34,6 +34,13 @@ function formatarDataHora(iso) {
     minute: '2-digit',
     second: '2-digit',
   })
+}
+
+// "agora", "há 1 min", "há 2 min"... mesmo helper de DispositivoLoraCard.jsx.
+function formatarTempoRelativo(iso) {
+  const minutos = Math.floor((Date.now() - new Date(iso).getTime()) / 60_000)
+  if (minutos <= 0) return 'agora'
+  return `há ${minutos} min`
 }
 
 function seloDelta(delta, unidade) {
@@ -53,15 +60,24 @@ function seloDelta(delta, unidade) {
 // hardware que meça isso de verdade), qualidade do enlace LoRa, status
 // do dispositivo e configurações. "Ver detalhes" abre a configuração de
 // rádio (RSSI/SNR só de uma análise específica, ID do rádio etc.).
-function EstacaoAdminCard({ dispositivo, contas = [], processando, erro, onTrocarDono, onRemover, onSalvarEdicao }) {
+function EstacaoAdminCard({
+  dispositivo,
+  contas = [],
+  processando,
+  erro,
+  analisando,
+  erroAnalise,
+  onTrocarDono,
+  onRemover,
+  onSalvarEdicao,
+  onAnalisar,
+}) {
   const [detalhesAbertos, setDetalhesAbertos] = useState(false)
   const [menuAberto, setMenuAberto] = useState(false)
   const [trocandoDono, setTrocandoDono] = useState(false)
   const [novoDono, setNovoDono] = useState('')
   const [editando, setEditando] = useState(false)
   const [campos, setCampos] = useState(null)
-  const [analisando, setAnalisando] = useState(false)
-  const [avisoAnalise, setAvisoAnalise] = useState('')
   const menuRef = useRef(null)
 
   useEffect(() => {
@@ -71,6 +87,13 @@ function EstacaoAdminCard({ dispositivo, contas = [], processando, erro, onTroca
     document.addEventListener('mousedown', aoClicarFora)
     return () => document.removeEventListener('mousedown', aoClicarFora)
   }, [])
+
+  // Mesmo comportamento de DispositivoLoraCard.jsx: ao pedir a análise, os
+  // detalhes abrem sozinhos — sem isso, a resposta chegaria escondida atrás
+  // do "Ver detalhes" fechado.
+  useEffect(() => {
+    if (analisando) setDetalhesAbertos(true)
+  }, [analisando])
 
   const {
     sensor_id: sensorId,
@@ -129,19 +152,6 @@ function EstacaoAdminCard({ dispositivo, contas = [], processando, erro, onTroca
     evento.preventDefault()
     const sucesso = await onSalvarEdicao(campos)
     if (sucesso) setEditando(false)
-  }
-
-  async function aoAtualizarRssi() {
-    setAnalisando(true)
-    setAvisoAnalise('')
-    try {
-      await solicitarAnaliseRssi(sensorId)
-      setAvisoAnalise('Solicitado — o resultado chega na próxima leitura do dispositivo.')
-    } catch {
-      setAvisoAnalise('Não foi possível solicitar agora. Tente de novo.')
-    } finally {
-      setAnalisando(false)
-    }
   }
 
   return (
@@ -528,12 +538,17 @@ function EstacaoAdminCard({ dispositivo, contas = [], processando, erro, onTroca
               )}
 
               <div className={adminStyles.linhaAcoes}>
-                <button type="button" className={adminStyles.botaoAcao} onClick={aoAtualizarRssi} disabled={analisando}>
+                <button type="button" className={adminStyles.botaoAcao} onClick={onAnalisar} disabled={analisando}>
                   <RefreshCw size={13} className={analisando ? adminStyles.girando : undefined} />
-                  {analisando ? 'Solicitando...' : 'Atualizar leitura RSSI'}
+                  {analisando ? 'Aguardando resposta…' : 'Atualizar leitura RSSI'}
                 </button>
+                <span className={styles.dicaEspera}>
+                  {ultimaAnaliseRssi
+                    ? `Última leitura de RSSI: ${formatarTempoRelativo(ultimaAnaliseRssi.data_hora)}`
+                    : 'Nenhuma leitura de RSSI ainda'}
+                </span>
               </div>
-              {avisoAnalise && <p className={adminStyles.aviso}>{avisoAnalise}</p>}
+              {erroAnalise && <p className={adminStyles.aviso}>{erroAnalise}</p>}
             </>
           )}
         </div>

@@ -292,6 +292,7 @@
 
 .linhaAcoes {
   display: flex;
+  align-items: center;
   gap: 0.6rem;
   flex-wrap: wrap;
   padding-top: 0.75rem;
