@@ -61,3 +61,12 @@ export async function atualizarEstacao(estacaoId, dados) {
   const resposta = await api.patch(`/api/estacoes/${estacaoId}/`, dados)
   return resposta.data
 }
+
+// Apaga as leituras soltas (sem Estacao vinculada) de um sensor_id —
+// limpeza de dado de teste/typo direto pela tela de Estações, sem
+// precisar do Django Admin. Só atinge leituras órfãs (admin only); um
+// sensor com Estacao cadastrada não pode ser limpo por aqui.
+export async function apagarLeiturasOrfas(sensorId) {
+  const resposta = await api.delete(`/api/leituras/orfas/${sensorId}/`)
+  return resposta.data
+}

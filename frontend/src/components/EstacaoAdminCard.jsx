@@ -71,6 +71,7 @@ function EstacaoAdminCard({
   onRemover,
   onSalvarEdicao,
   onAnalisar,
+  onExcluirLeiturasOrfas,
 }) {
   const [detalhesAbertos, setDetalhesAbertos] = useState(false)
   const [menuAberto, setMenuAberto] = useState(false)
@@ -200,51 +201,72 @@ function EstacaoAdminCard({
             {detalhesAbertos ? 'Ocultar detalhes' : 'Ver detalhes'}
           </button>
 
-          {estacaoId != null && (
-            <div className={adminStyles.menuWrapper} ref={menuRef}>
-              <button
-                type="button"
-                className={styles.botaoRemover}
-                onClick={() => setMenuAberto((a) => !a)}
-                aria-label="Mais ações"
-                disabled={processando}
-              >
-                <MoreVertical size={16} />
-              </button>
-              {menuAberto && (
-                <div className={adminStyles.menuDropdown}>
-                  <button type="button" className={adminStyles.menuItem} onClick={abrirEdicao}>
-                    <Pencil size={14} /> Configurações
-                  </button>
-                  <button
-                    type="button"
-                    className={adminStyles.menuItem}
-                    onClick={() => {
-                      setMenuAberto(false)
-                      setTrocandoDono(true)
-                      setDetalhesAbertos(true)
-                    }}
-                  >
-                    <UserRound size={14} /> Trocar dono
-                  </button>
+          <div className={adminStyles.menuWrapper} ref={menuRef}>
+            <button
+              type="button"
+              className={styles.botaoRemover}
+              onClick={() => setMenuAberto((a) => !a)}
+              aria-label="Mais ações"
+              disabled={processando}
+            >
+              <MoreVertical size={16} />
+            </button>
+            {menuAberto && (
+              <div className={adminStyles.menuDropdown}>
+                {estacaoId != null ? (
+                  <>
+                    <button type="button" className={adminStyles.menuItem} onClick={abrirEdicao}>
+                      <Pencil size={14} /> Configurações
+                    </button>
+                    <button
+                      type="button"
+                      className={adminStyles.menuItem}
+                      onClick={() => {
+                        setMenuAberto(false)
+                        setTrocandoDono(true)
+                        setDetalhesAbertos(true)
+                      }}
+                    >
+                      <UserRound size={14} /> Trocar dono
+                    </button>
+                    <button
+                      type="button"
+                      className={`${adminStyles.menuItem} ${adminStyles.menuItemPerigo}`}
+                      onClick={() => {
+                        setMenuAberto(false)
+                        if (window.confirm(`Excluir a estação "${nome || sensorId}"? O histórico de leituras é mantido.`)) {
+                          onRemover()
+                        }
+                      }}
+                    >
+                      <Trash2 size={14} /> Excluir estação
+                    </button>
+                  </>
+                ) : (
                   <button
                     type="button"
                     className={`${adminStyles.menuItem} ${adminStyles.menuItemPerigo}`}
                     onClick={() => {
                       setMenuAberto(false)
-                      if (window.confirm(`Excluir a estação "${nome || sensorId}"? O histórico de leituras é mantido.`)) {
-                        onRemover()
+                      if (
+                        window.confirm(
+                          `Apagar todas as leituras de "${sensorId}"? Sem estação cadastrada, elas não servem pra nada — essa ação não pode ser desfeita.`,
+                        )
+                      ) {
+                        onExcluirLeiturasOrfas()
                       }
                     }}
                   >
-                    <Trash2 size={14} /> Excluir estação
+                    <Trash2 size={14} /> Excluir leituras
                   </button>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
+      {estacaoId == null && erro && <p className={adminStyles.aviso}>{erro}</p>}
 
       <div className={adminStyles.secaoDados}>
         <div className={styles.secaoTitulo}>

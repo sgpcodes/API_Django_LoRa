@@ -4,7 +4,14 @@ import EstacaoAdminCard from '../components/EstacaoAdminCard'
 import NovaEstacaoForm from '../components/NovaEstacaoForm'
 import StatusMessage from '../components/StatusMessage'
 import { buscarLeituras, obterUltimaLeituraPorSensor, solicitarAnaliseRssi } from '../services/leiturasService'
-import { atribuirEstacao, atualizarEstacao, buscarEstacoes, removerEstacao, trocarDonoEstacao } from '../services/estacaoService'
+import {
+  apagarLeiturasOrfas,
+  atribuirEstacao,
+  atualizarEstacao,
+  buscarEstacoes,
+  removerEstacao,
+  trocarDonoEstacao,
+} from '../services/estacaoService'
 import { buscarContas } from '../services/contasAdminService'
 import styles from './EstacoesAdmin.module.css'
 
@@ -317,6 +324,12 @@ function EstacoesAdmin() {
   const aoRemover = (estacaoId) => executarAcao(estacaoId, () => removerEstacao(estacaoId))
   const aoSalvarEdicao = (estacaoId, dados) => executarAcao(estacaoId, () => atualizarEstacao(estacaoId, dados))
 
+  // Chave prefixada (nunca colide com um estacaoId numérico) — sensores
+  // órfãos não têm id de Estacao, só o sensor_id que veio da leitura.
+  const chaveOrfa = (sensorId) => `orfa:${sensorId}`
+  const aoExcluirLeiturasOrfas = (sensorId) =>
+    executarAcao(chaveOrfa(sensorId), () => apagarLeiturasOrfas(sensorId))
+
   async function aoCriarEstacao(campos) {
     setErroNovaEstacao(null)
     try {
@@ -440,14 +453,23 @@ function EstacoesAdmin() {
               key={dispositivo.sensor_id}
               dispositivo={dispositivo}
               contas={contas}
-              processando={dispositivo.estacaoId != null && processandoId === dispositivo.estacaoId}
-              erro={dispositivo.estacaoId != null ? erroPorId[dispositivo.estacaoId] : null}
+              processando={
+                dispositivo.estacaoId != null
+                  ? processandoId === dispositivo.estacaoId
+                  : processandoId === chaveOrfa(dispositivo.sensor_id)
+              }
+              erro={
+                dispositivo.estacaoId != null
+                  ? erroPorId[dispositivo.estacaoId]
+                  : erroPorId[chaveOrfa(dispositivo.sensor_id)]
+              }
               analisando={dispositivo.sensor_id in analisesPorSensor}
               erroAnalise={errosTemporarios[dispositivo.sensor_id] ?? null}
               onTrocarDono={(novoDonoId) => aoTrocarDono(dispositivo.estacaoId, novoDonoId)}
               onRemover={() => aoRemover(dispositivo.estacaoId)}
               onSalvarEdicao={(dados) => aoSalvarEdicao(dispositivo.estacaoId, dados)}
               onAnalisar={() => aoClicarAnalisar(dispositivo.sensor_id)}
+              onExcluirLeiturasOrfas={() => aoExcluirLeiturasOrfas(dispositivo.sensor_id)}
             />
           ))}
         </div>

@@ -1,7 +1,14 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from .views import EstacaoViewSet, LeituraDetailView, LeituraListCreateView, RssiSolicitarView, RssiStatusView
+from .views import (
+    EstacaoViewSet,
+    LeituraDetailView,
+    LeituraListCreateView,
+    LeiturasOrfasPorSensorView,
+    RssiSolicitarView,
+    RssiStatusView,
+)
 
 router = DefaultRouter()
 # GET/POST /api/estacoes/, GET/PUT/PATCH/DELETE /api/estacoes/<id>/
@@ -18,6 +25,9 @@ urlpatterns = [
 
     # GET /api/leituras/<id>/        -> busca uma leitura pelo ID
     path('leituras/<str:leitura_id>/', LeituraDetailView.as_view(), name='leitura-detail'),
+
+    # DELETE /api/leituras/orfas/<sensor_id>/ -> apaga leituras soltas (sem estação) de um sensor_id
+    path('leituras/orfas/<str:sensor_id>/', LeiturasOrfasPorSensorView.as_view(), name='leituras-orfas-por-sensor'),
 
     # GET  /api/rssi/status/         -> o ESP32 consulta a cada check-in se há pedido pendente
     # POST /api/rssi/solicitar/      -> o botão "Analisar" do dashboard marca um pedido como pendente

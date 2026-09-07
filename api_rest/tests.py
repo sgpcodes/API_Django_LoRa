@@ -224,6 +224,57 @@ class EstacaoViewSetTests(APITestCase):
         self.assertEqual([o['sensor_id'] for o in resposta.data], ['SEM_DONO'])
 
 
+class LeiturasOrfasPorSensorTests(APITestCase):
+    """Exclusão de leituras soltas (sem Estacao vinculada) por sensor_id —
+    limpeza de dado de teste/typo, sem tocar no histórico de uma Estacao
+    de verdade."""
+
+    def setUp(self):
+        self.gestor = Usuario.objects.create_user(username='gestor1', password='x', role=Usuario.Role.GESTOR)
+        self.usuario1 = Usuario.objects.create_user(username='usuario1', password='x')
+
+    def test_usuario_comum_nao_pode_excluir_leituras_orfas(self):
+        Leitura.objects.create(sensor_id='TESTE', temperatura=20, umidade=50, data_hora=timezone.now())
+
+        self.client.force_authenticate(self.usuario1)
+        resposta = self.client.delete('/api/leituras/orfas/TESTE/')
+        self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(Leitura.objects.filter(sensor_id='TESTE').count(), 1)
+
+    def test_sem_autenticacao_e_rejeitado(self):
+        resposta = self.client.delete('/api/leituras/orfas/TESTE/')
+        self.assertEqual(resposta.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_gestor_exclui_leituras_orfas_do_sensor(self):
+        Leitura.objects.create(sensor_id='TESTE', temperatura=20, umidade=50, data_hora=timezone.now())
+        Leitura.objects.create(sensor_id='TESTE', temperatura=21, umidade=51, data_hora=timezone.now())
+        SolicitacaoRssi.objects.create(sensor_id='TESTE')
+
+        self.client.force_authenticate(self.gestor)
+        resposta = self.client.delete('/api/leituras/orfas/TESTE/')
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(resposta.data['quantidade'], 2)
+        self.assertEqual(Leitura.objects.filter(sensor_id='TESTE').count(), 0)
+        self.assertEqual(SolicitacaoRssi.objects.filter(sensor_id='TESTE').count(), 0)
+
+    def test_nao_apaga_leituras_de_estacao_cadastrada(self):
+        """Só apaga leituras SEM estação — não é uma forma alternativa de
+        limpar histórico de sensor de verdade (isso é papel da tela de
+        Manutenção, propositalmente mais burocrática)."""
+        estacao = Estacao.objects.create(identificador='REAL', dono=self.usuario1)
+        Leitura.objects.create(sensor_id='REAL', estacao=estacao, temperatura=20, umidade=50, data_hora=timezone.now())
+
+        self.client.force_authenticate(self.gestor)
+        resposta = self.client.delete('/api/leituras/orfas/REAL/')
+        self.assertEqual(resposta.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(Leitura.objects.filter(sensor_id='REAL').count(), 1)
+
+    def test_sensor_sem_leituras_orfas_retorna_404(self):
+        self.client.force_authenticate(self.gestor)
+        resposta = self.client.delete('/api/leituras/orfas/NAO_EXISTE/')
+        self.assertEqual(resposta.status_code, status.HTTP_404_NOT_FOUND)
+
+
 class _ViewFalsa:
     """Stub mínimo só para exercitar RecursoDoPlano.has_permission, que só
     olha `view.recurso_requerido` — não existe ainda nenhum endpoint real

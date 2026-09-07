@@ -289,3 +289,34 @@ class EstacaoViewSet(viewsets.ModelViewSet):
             orfaos.append({'sensor_id': leitura.sensor_id, 'ultima_leitura': _leitura_resumo(leitura)})
 
         return Response(orfaos)
+
+
+class LeiturasOrfasPorSensorView(APIView):
+    """DELETE /api/leituras/orfas/<sensor_id>/ — apaga todas as leituras
+    cruas de um sensor_id que nunca virou uma Estacao cadastrada (dado de
+    teste, sensor com identificador errado etc.). Só atinge leituras SEM
+    estação vinculada — nunca mexe no histórico de uma Estacao de verdade
+    (pra isso existe a tela de Manutenção, que é intencionalmente mais
+    burocrática por ser bem mais destrutiva)."""
+
+    permission_classes = [IsAuthenticated, EhGestor]
+
+    def delete(self, request, sensor_id):
+        from contas.models import LogAuditoria
+
+        leituras = Leitura.objects.filter(sensor_id=sensor_id, estacao__isnull=True)
+        total = leituras.count()
+        if total == 0:
+            return Response(
+                {'status': 'error', 'message': 'Nenhuma leitura órfã encontrada para esse sensor.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        leituras.delete()
+        SolicitacaoRssi.objects.filter(sensor_id=sensor_id, estacao__isnull=True).delete()
+
+        LogAuditoria.objects.create(
+            ator=request.user, acao='leituras_orfas.excluidas',
+            detalhes={'sensor_id': sensor_id, 'quantidade': total},
+        )
+        return Response({'status': 'success', 'quantidade': total})
