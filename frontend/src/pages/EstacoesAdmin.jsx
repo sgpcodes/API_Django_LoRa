@@ -1,21 +1,65 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Radio } from 'lucide-react'
+import { Grid2x2, List, Plus, Radio, Search, UserCog, UserRound, Users } from 'lucide-react'
 import EstacaoAdminCard from '../components/EstacaoAdminCard'
+import NovaEstacaoForm from '../components/NovaEstacaoForm'
 import StatusMessage from '../components/StatusMessage'
 import { buscarLeituras, estaOnline, obterUltimaLeituraPorSensor } from '../services/leiturasService'
-import { atualizarEstacao, buscarEstacoes, removerEstacao, trocarDonoEstacao } from '../services/estacaoService'
+import { atribuirEstacao, atualizarEstacao, buscarEstacoes, removerEstacao, trocarDonoEstacao } from '../services/estacaoService'
 import { buscarContas } from '../services/contasAdminService'
 import styles from './EstacoesAdmin.module.css'
 
 const INTERVALO_ATUALIZACAO_MS = 60_000
+const POR_PAGINA = 9
+
+const ABAS_PLANO = [
+  { valor: 'todas', rotulo: 'Todas', icone: Users },
+  { valor: 'Standard', rotulo: 'Standard', icone: UserRound },
+  { valor: 'Pro', rotulo: 'Pro', icone: UserCog },
+  { valor: 'Plus', rotulo: 'Plus', icone: UserCog },
+]
+
+function arredondar(valor) {
+  return valor == null ? null : Number(valor.toFixed(1))
+}
+
+// Por sensor, a diferença entre a leitura mais recente e a anterior a
+// ela — alimenta os selos "↑ 2.4°C" / "↓ 1 hPa" dos cards. Calculado aqui
+// (não no backend) porque só é usado nesta tela.
+function calcularDeltasPorSensor(leituras) {
+  const porSensor = new Map()
+  leituras.forEach((leitura) => {
+    const lista = porSensor.get(leitura.sensor_id) ?? []
+    lista.push(leitura)
+    porSensor.set(leitura.sensor_id, lista)
+  })
+
+  const deltas = new Map()
+  porSensor.forEach((lista, sensorId) => {
+    const ordenadas = [...lista].sort((a, b) => new Date(b.data_hora) - new Date(a.data_hora))
+    const [maisRecente, anterior] = ordenadas
+    if (!anterior) {
+      deltas.set(sensorId, { deltaTemperatura: null, deltaUmidade: null, deltaPressao: null })
+      return
+    }
+    deltas.set(sensorId, {
+      deltaTemperatura: arredondar(maisRecente.temperatura - anterior.temperatura),
+      deltaUmidade: arredondar(maisRecente.umidade - anterior.umidade),
+      deltaPressao:
+        maisRecente.pressao != null && anterior.pressao != null
+          ? arredondar(maisRecente.pressao - anterior.pressao)
+          : null,
+    })
+  })
+  return deltas
+}
 
 // Tela "Estações" do Painel Administrativo: todas as estações (ESP32) que
-// já mandaram leitura, num só lugar — dados atuais, dono (ou "Sem dono",
-// pros sensores ainda não cadastrados) e, ao abrir "Detalhes", RSSI/SNR e
-// configuração do rádio — tudo reduzido, sem precisar trocar de tela.
-// Atribuir um sensor sem dono a uma conta é feito na aba Contas; editar,
-// trocar o dono de uma já cadastrada ou remover é feito direto aqui
-// (RN15: em qualquer plano).
+// já mandaram leitura, num só lugar — dados atuais, dono/plano (ou "Sem
+// dono", pros sensores ainda não cadastrados) e, ao abrir "Detalhes",
+// RSSI/SNR e configuração do rádio — tudo reduzido, sem precisar trocar
+// de tela. Cadastrar uma estação nova (com ou sem sensor órfão) é feito
+// direto aqui; editar, trocar o dono de uma já cadastrada ou remover
+// também (RN15: em qualquer plano).
 function EstacoesAdmin() {
   const [leituras, setLeituras] = useState([])
   const [estacoes, setEstacoes] = useState([])
@@ -25,6 +69,14 @@ function EstacoesAdmin() {
 
   const [processandoId, setProcessandoId] = useState(null)
   const [erroPorId, setErroPorId] = useState({})
+
+  const [abaPlano, setAbaPlano] = useState('todas')
+  const [busca, setBusca] = useState('')
+  const [ordenacao, setOrdenacao] = useState('nome')
+  const [visualizacao, setVisualizacao] = useState('lista')
+  const [pagina, setPagina] = useState(1)
+  const [mostrarNovaEstacao, setMostrarNovaEstacao] = useState(false)
+  const [erroNovaEstacao, setErroNovaEstacao] = useState(null)
 
   async function carregar() {
     try {
@@ -52,22 +104,99 @@ function EstacoesAdmin() {
 
   const dispositivos = useMemo(() => {
     const estacaoPorIdentificador = new Map(estacoes.map((estacao) => [estacao.identificador, estacao]))
-    return obterUltimaLeituraPorSensor(leituras).map((leitura) => {
+    const deltasPorSensor = calcularDeltasPorSensor(leituras)
+
+    const dosSensores = obterUltimaLeituraPorSensor(leituras).map((leitura) => {
       const estacao = estacaoPorIdentificador.get(leitura.sensor_id)
+      const deltas = deltasPorSensor.get(leitura.sensor_id) ?? {}
       return {
         ...leitura,
+        ...deltas,
         estacaoId: estacao?.id ?? null,
         donoId: estacao?.dono ?? null,
         nome: estacao?.nome ?? null,
+        localizacao: estacao?.localizacao ?? null,
         donoNome: estacao?.dono_nome ?? null,
+        donoPlano: estacao?.dono_plano ?? null,
         intervaloEnvioMinutos: estacao?.intervalo_envio_minutos ?? null,
         limiteOfflineMinutos: estacao?.limite_offline_minutos ?? null,
         ativa: estacao?.ativa ?? null,
       }
     })
+
+    // Estações cadastradas via "Nova estação" que ainda não mandaram
+    // nenhuma leitura: sem isso, ficariam invisíveis nesta tela até o
+    // hardware enviar o primeiro dado.
+    const identificadoresComLeitura = new Set(dosSensores.map((d) => d.sensor_id))
+    const semLeituraAinda = estacoes
+      .filter((estacao) => !identificadoresComLeitura.has(estacao.identificador))
+      .map((estacao) => ({
+        sensor_id: estacao.identificador,
+        data_hora: null,
+        temperatura: null,
+        umidade: null,
+        pressao: null,
+        deltaTemperatura: null,
+        deltaUmidade: null,
+        deltaPressao: null,
+        ultimaAnaliseRssi: null,
+        ultimaConfiguracao: null,
+        estacaoId: estacao.id,
+        donoId: estacao.dono,
+        nome: estacao.nome,
+        localizacao: estacao.localizacao,
+        donoNome: estacao.dono_nome,
+        donoPlano: estacao.dono_plano,
+        intervaloEnvioMinutos: estacao.intervalo_envio_minutos,
+        limiteOfflineMinutos: estacao.limite_offline_minutos,
+        ativa: estacao.ativa,
+      }))
+
+    return [...dosSensores, ...semLeituraAinda]
   }, [leituras, estacoes])
 
-  const totalOnline = dispositivos.filter((d) => estaOnline(d.data_hora)).length
+  const contadorPorPlano = useMemo(() => {
+    const contador = { todas: dispositivos.length, Standard: 0, Pro: 0, Plus: 0 }
+    dispositivos.forEach((dispositivo) => {
+      if (dispositivo.donoPlano && contador[dispositivo.donoPlano] != null) contador[dispositivo.donoPlano] += 1
+    })
+    return contador
+  }, [dispositivos])
+
+  const dispositivosVisiveis = useMemo(() => {
+    const buscaNormalizada = busca.trim().toLowerCase()
+    let lista = dispositivos.filter((d) => (abaPlano === 'todas' ? true : d.donoPlano === abaPlano))
+    if (buscaNormalizada) {
+      lista = lista.filter((d) => {
+        return (
+          (d.nome ?? '').toLowerCase().includes(buscaNormalizada) ||
+          d.sensor_id.toLowerCase().includes(buscaNormalizada) ||
+          (d.localizacao ?? '').toLowerCase().includes(buscaNormalizada)
+        )
+      })
+    }
+    lista = [...lista].sort((a, b) => {
+      if (ordenacao === 'recentes') {
+        return new Date(b.data_hora ?? 0) - new Date(a.data_hora ?? 0)
+      }
+      return (a.nome || a.sensor_id).localeCompare(b.nome || b.sensor_id)
+    })
+    return lista
+  }, [dispositivos, abaPlano, busca, ordenacao])
+
+  const totalPaginas = Math.max(1, Math.ceil(dispositivosVisiveis.length / POR_PAGINA))
+  const paginaSegura = Math.min(pagina, totalPaginas)
+  const dispositivosDaPagina = dispositivosVisiveis.slice(
+    (paginaSegura - 1) * POR_PAGINA,
+    paginaSegura * POR_PAGINA,
+  )
+
+  function mudarFiltro(atualizar) {
+    atualizar()
+    setPagina(1)
+  }
+
+  const totalOnline = dispositivos.filter((d) => d.data_hora && estaOnline(d.data_hora)).length
   const totalSemDono = dispositivos.filter((d) => !d.donoNome).length
 
   async function executarAcao(estacaoId, acao) {
@@ -91,6 +220,22 @@ function EstacoesAdmin() {
   const aoRemover = (estacaoId) => executarAcao(estacaoId, () => removerEstacao(estacaoId))
   const aoSalvarEdicao = (estacaoId, dados) => executarAcao(estacaoId, () => atualizarEstacao(estacaoId, dados))
 
+  async function aoCriarEstacao(campos) {
+    setErroNovaEstacao(null)
+    try {
+      await atribuirEstacao({
+        identificador: campos.identificador,
+        donoId: campos.donoId,
+        nome: campos.nome,
+        localizacao: campos.localizacao,
+      })
+      await carregar()
+      setMostrarNovaEstacao(false)
+    } catch (erroRequisicao) {
+      throw erroRequisicao
+    }
+  }
+
   if (carregando) {
     return (
       <div className={styles.pagina}>
@@ -109,13 +254,16 @@ function EstacoesAdmin() {
 
   return (
     <div className={styles.pagina}>
-      <div className={styles.cabecalho}>
+      <div className={styles.banner}>
+        <div className={styles.bannerIcone}>
+          <Radio size={26} />
+        </div>
         <div>
-          <h1 className={styles.titulo}>
-            <Radio size={20} />
-            Estações
-          </h1>
-          <p className={styles.subtitulo}>Todos os sensores que já enviaram leitura, com status e configuração do rádio.</p>
+          <h1 className={styles.bannerTitulo}>Estações</h1>
+          <p className={styles.bannerSubtitulo}>
+            Todos os sensores LoRa cadastrados — status, leituras atuais, qualidade do enlace e configuração do
+            rádio, num só lugar.
+          </p>
         </div>
         <div className={styles.resumo}>
           <span className={styles.resumoItem}>
@@ -132,11 +280,78 @@ function EstacoesAdmin() {
         </div>
       </div>
 
-      {dispositivos.length === 0 ? (
-        <p className={styles.semDados}>Nenhuma estação enviou dados ainda.</p>
+      <div className={styles.cabecalho}>
+        <button type="button" className={styles.botaoNovaEstacao} onClick={() => setMostrarNovaEstacao((m) => !m)}>
+          <Plus size={16} />
+          Nova estação
+        </button>
+      </div>
+
+      {mostrarNovaEstacao && (
+        <NovaEstacaoForm contas={contas} onCriar={aoCriarEstacao} onFechar={() => setMostrarNovaEstacao(false)} />
+      )}
+      {erroNovaEstacao && <p className={styles.aviso}>{erroNovaEstacao}</p>}
+
+      <div className={styles.barraFiltros}>
+        <div className={styles.abas}>
+          {ABAS_PLANO.map((aba) => (
+            <button
+              key={aba.valor}
+              type="button"
+              className={`${styles.aba} ${abaPlano === aba.valor ? styles.abaAtiva : ''}`}
+              onClick={() => mudarFiltro(() => setAbaPlano(aba.valor))}
+            >
+              <aba.icone size={14} />
+              {aba.rotulo}
+              <span className={styles.abaContador}>{contadorPorPlano[aba.valor] ?? 0}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className={styles.controles}>
+          <select className={styles.seletorOrdenacao} value={ordenacao} onChange={(e) => setOrdenacao(e.target.value)}>
+            <option value="nome">Nome (A-Z)</option>
+            <option value="recentes">Última leitura</option>
+          </select>
+
+          <div className={styles.campoBusca}>
+            <Search size={14} />
+            <input
+              className={styles.inputBusca}
+              placeholder="Buscar por nome, identificador ou localização..."
+              value={busca}
+              onChange={(e) => mudarFiltro(() => setBusca(e.target.value))}
+            />
+          </div>
+
+          <div className={styles.toggleVisualizacao}>
+            <button
+              type="button"
+              className={visualizacao === 'lista' ? styles.toggleAtivo : ''}
+              onClick={() => setVisualizacao('lista')}
+              aria-label="Visualização em lista"
+            >
+              <List size={15} />
+            </button>
+            <button
+              type="button"
+              className={visualizacao === 'grade' ? styles.toggleAtivo : ''}
+              onClick={() => setVisualizacao('grade')}
+              aria-label="Visualização em grade"
+            >
+              <Grid2x2 size={15} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <p className={styles.resultados}>{dispositivosVisiveis.length} estação(ões) encontrada(s)</p>
+
+      {dispositivosVisiveis.length === 0 ? (
+        <p className={styles.semDados}>Nenhuma estação encontrada.</p>
       ) : (
-        <div className={styles.lista}>
-          {dispositivos.map((dispositivo) => (
+        <div className={visualizacao === 'grade' ? styles.grade : styles.lista}>
+          {dispositivosDaPagina.map((dispositivo) => (
             <EstacaoAdminCard
               key={dispositivo.sensor_id}
               dispositivo={dispositivo}
@@ -148,6 +363,30 @@ function EstacoesAdmin() {
               onSalvarEdicao={(dados) => aoSalvarEdicao(dispositivo.estacaoId, dados)}
             />
           ))}
+        </div>
+      )}
+
+      {totalPaginas > 1 && (
+        <div className={styles.paginacao}>
+          <button
+            type="button"
+            className={styles.botaoPagina}
+            disabled={paginaSegura === 1}
+            onClick={() => setPagina((p) => Math.max(1, p - 1))}
+          >
+            Anterior
+          </button>
+          <span className={styles.paginaAtual}>
+            Página {paginaSegura} de {totalPaginas}
+          </span>
+          <button
+            type="button"
+            className={styles.botaoPagina}
+            disabled={paginaSegura === totalPaginas}
+            onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+          >
+            Próxima
+          </button>
         </div>
       )}
     </div>

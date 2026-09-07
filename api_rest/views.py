@@ -1,4 +1,5 @@
 from django.db import DatabaseError
+from django.db.models import Prefetch
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -194,11 +195,18 @@ class EstacaoViewSet(viewsets.ModelViewSet):
     serializer_class = EstacaoSerializer
 
     def get_queryset(self):
+        from contas.models import Assinatura
+
         # select_related('dono'): sem isso, EstacaoSerializer.dono_nome/
         # dono_username disparavam 1 query extra por estação (N+1) pra
         # buscar o dono — com select_related, o dono já vem junto na
-        # mesma query (JOIN), sem custo extra por linha.
-        queryset = Estacao.objects.select_related('dono')
+        # mesma query (JOIN), sem custo extra por linha. prefetch_related
+        # cobre a mesma coisa pra dono_plano (mesmo problema de N+1 que já
+        # corrigimos em contas/views.py:UsuarioViewSet).
+        assinatura_ativa_qs = Assinatura.objects.filter(encerrada_em__isnull=True).select_related('plano')
+        queryset = Estacao.objects.select_related('dono').prefetch_related(
+            Prefetch('dono__assinaturas', queryset=assinatura_ativa_qs, to_attr='assinatura_ativa_prefetch'),
+        )
         user = self.request.user
         if user.eh_gestor:
             return queryset

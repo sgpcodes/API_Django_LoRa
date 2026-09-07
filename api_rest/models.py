@@ -44,6 +44,10 @@ class Estacao(models.Model):
                   'É o que liga uma Leitura recebida a esta Estação.',
     )
     nome = models.CharField(max_length=150, blank=True, help_text='Nome amigável, exibido no dashboard.')
+    localizacao = models.CharField(
+        max_length=200, blank=True,
+        help_text='Local em texto livre (ex.: "Área de Plantio - Talhão 2"), preenchido pelo Gestor — não vem do dispositivo.',
+    )
     dono = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='estacoes',
         help_text='Usuário (ou Gestor) responsável pela estação (RN15: toda estação tem exatamente um dono, '

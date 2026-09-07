@@ -30,8 +30,13 @@ export async function buscarSensoresOrfaos() {
 // Cadastra uma nova Estacao a partir de um sensor órfão, já atribuída a
 // um dono — é o "vincular estação" do admin (RN15: toda Estacao nasce com
 // um dono, nunca fica solta).
-export async function atribuirEstacao({ identificador, donoId, nome }) {
-  const resposta = await api.post('/api/estacoes/', { identificador, dono: donoId, nome: nome ?? '' })
+export async function atribuirEstacao({ identificador, donoId, nome, localizacao }) {
+  const resposta = await api.post('/api/estacoes/', {
+    identificador,
+    dono: donoId,
+    nome: nome ?? '',
+    localizacao: localizacao ?? '',
+  })
   return resposta.data
 }
 

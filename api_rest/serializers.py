@@ -51,12 +51,13 @@ class EstacaoSerializer(serializers.ModelSerializer):
     esta_offline = serializers.BooleanField(read_only=True)
     dono_username = serializers.CharField(source='dono.username', read_only=True)
     dono_nome = serializers.SerializerMethodField()
+    dono_plano = serializers.SerializerMethodField()
     ultima_leitura = serializers.SerializerMethodField()
 
     class Meta:
         model = Estacao
         fields = [
-            'id', 'identificador', 'nome', 'dono', 'dono_username', 'dono_nome',
+            'id', 'identificador', 'nome', 'localizacao', 'dono', 'dono_username', 'dono_nome', 'dono_plano',
             'intervalo_envio_minutos', 'limite_offline_minutos',
             'ultima_transmissao_em', 'ativa', 'criado_em', 'esta_offline', 'ultima_leitura',
         ]
@@ -65,6 +66,17 @@ class EstacaoSerializer(serializers.ModelSerializer):
 
     def get_dono_nome(self, obj):
         return obj.dono.first_name or obj.dono.username
+
+    def get_dono_plano(self, obj):
+        # `assinatura_ativa_prefetch` só existe quando veio da queryset
+        # otimizada de EstacaoViewSet.get_queryset() (evita 1 query extra
+        # por linha — mesmo padrão de contas/serializers.py:UsuarioSerializer).
+        if hasattr(obj.dono, 'assinatura_ativa_prefetch'):
+            lista = obj.dono.assinatura_ativa_prefetch
+            assinatura = lista[0] if lista else None
+        else:
+            assinatura = obj.dono.assinaturas.filter(encerrada_em__isnull=True).select_related('plano').first()
+        return assinatura.plano.nome if assinatura else None
 
     def get_ultima_leitura(self, obj):
         leitura = Leitura.objects.filter(estacao=obj).order_by('-data_hora').first()
