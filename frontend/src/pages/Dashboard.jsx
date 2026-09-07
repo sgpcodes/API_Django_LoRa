@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Thermometer, Droplets, Gauge, Wind } from 'lucide-react'
+import { Radio, Thermometer, Droplets, Gauge, Wind } from 'lucide-react'
 import CabecalhoStandard from '../components/CabecalhoStandard'
 import SummaryStatCard from '../components/SummaryStatCard'
 import GraficoHistoricoCarrossel from '../components/GraficoHistoricoCarrossel'
@@ -70,6 +70,28 @@ function Dashboard() {
       <div className={styles.pagina}>
         {cabecalho}
         <StatusMessage texto={erro} />
+      </div>
+    )
+  }
+
+  // Sem estação atribuída ainda: só o Dashboard fica bloqueado — o resto
+  // do sistema (Perfil, Notificações, Configurações, Plano) continua
+  // liberado normalmente pela Sidebar. Atualiza sozinho quando o admin
+  // atribuir uma (a busca acima já roda de novo a cada 1 min).
+  if (!estacao) {
+    return (
+      <div className={styles.pagina}>
+        {cabecalho}
+        <div className={styles.avisoEstacao}>
+          <span className={styles.avisoEstacaoIcone}>
+            <Radio size={26} />
+          </span>
+          <h2 className={styles.avisoEstacaoTitulo}>Aguardando sua estação</h2>
+          <p className={styles.avisoEstacaoTexto}>
+            Sua conta ainda não tem uma estação meteorológica vinculada. Assim que o administrador atribuir uma a
+            você, os dados aparecem aqui automaticamente — o resto do sistema já está liberado.
+          </p>
+        </div>
       </div>
     )
   }
