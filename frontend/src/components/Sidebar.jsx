@@ -13,6 +13,7 @@ import {
   ChevronRight,
   ChevronDown,
   Radio,
+  CloudSun,
   X,
 } from 'lucide-react'
 import logoLacop from '../assets/lacop.png'
@@ -30,6 +31,7 @@ import styles from './Sidebar.module.css'
 const ITENS_NAV = [
   { to: '/app', rotulo: 'Dashboard', icone: LayoutGrid, fim: true },
   { to: '/app/notificacoes', rotulo: 'Notificações', icone: Bell },
+  { to: '/app/inmet', rotulo: 'Clima INMET', icone: CloudSun },
   { to: '/app/configuracoes', rotulo: 'Configurações', icone: Settings },
   { to: '/app/plano', rotulo: 'Gerenciamento de Plano', icone: CreditCard },
 ]

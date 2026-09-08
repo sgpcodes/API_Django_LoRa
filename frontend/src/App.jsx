@@ -10,6 +10,7 @@ import ManutencaoAdmin from './pages/ManutencaoAdmin'
 import PerfilAdmin from './pages/PerfilAdmin'
 import NotificacoesAdmin from './pages/NotificacoesAdmin'
 import Dashboard from './pages/Dashboard'
+import ClimaInmet from './pages/ClimaInmet'
 import Notificacoes from './pages/Notificacoes'
 import Configuracoes from './pages/Configuracoes'
 import GerenciamentoPlano from './pages/GerenciamentoPlano'
@@ -60,6 +61,7 @@ function App() {
             </Route>
             <Route element={<AppLayout />}>
               <Route index element={<Dashboard />} />
+              <Route path="inmet" element={<ClimaInmet />} />
               <Route path="notificacoes" element={<Notificacoes />} />
               <Route path="perfil" element={<Perfil />} />
               <Route path="estacao" element={<Estacao />} />

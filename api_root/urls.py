@@ -23,4 +23,6 @@ urlpatterns = [
     path('api/', include('contas.urls')),
     # Telemetria: leituras, RSSI, Estações.
     path('api/', include('api_rest.urls')),
+    # Clima externo: proxy do INMET (aba "Clima INMET" do Usuário).
+    path('api/', include('clima_externo.urls')),
 ]

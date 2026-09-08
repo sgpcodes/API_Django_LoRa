@@ -1,0 +1,273 @@
+.pagina {
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.pagina > * {
+  min-width: 0;
+}
+
+.grid2Colunas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  align-items: stretch;
+}
+
+.grid2Colunas > * {
+  min-width: 0;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1.25rem;
+  border-radius: 14px;
+  background-color: var(--color-card-bg);
+  border: 1px solid var(--color-card-border);
+  box-shadow: var(--shadow-card);
+  transition: var(--transition-theme);
+}
+
+.tituloSecao {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.vazio {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+/* Seletor de referência */
+
+.seletores {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.campo select {
+  padding: 0.55rem 0.7rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-card-border);
+  background-color: var(--color-input-bg);
+  color: var(--color-text);
+  font-size: 0.85rem;
+  font-family: inherit;
+}
+
+.campo select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Estação de referência */
+
+.estacaoInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.estacaoLinha {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--color-text);
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--color-card-border);
+}
+
+.estacaoRotulo {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.statusOperante {
+  color: var(--color-status-online);
+  font-weight: 700;
+}
+
+.statusPane {
+  color: var(--color-status-offline);
+  font-weight: 700;
+}
+
+/* Previsão */
+
+.dias {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.dia {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.diaData {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: capitalize;
+  color: var(--color-text);
+}
+
+.diaPeriodos {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.periodo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.7rem;
+  border-radius: 10px;
+  background-color: var(--color-pill-bg);
+}
+
+.periodoCabecalho {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.periodoIcone {
+  color: var(--color-accent);
+}
+
+.periodoNome {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.periodoResumo {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+}
+
+.periodoMetricas {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.periodoMetricas span {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+/* Avisos */
+
+.avisos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.aviso {
+  display: flex;
+  border-radius: 10px;
+  background-color: var(--color-pill-bg);
+  overflow: hidden;
+}
+
+.avisoFaixa {
+  width: 4px;
+  flex-shrink: 0;
+  background-color: var(--cor-aviso, var(--color-accent));
+}
+
+.avisoConteudo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.75rem 1rem;
+}
+
+.avisoCabecalho {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--cor-aviso, var(--color-accent));
+}
+
+.avisoTitulo {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.avisoSeveridade {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-secondary);
+}
+
+.avisoTexto {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.avisoPeriodo {
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+}
+
+/* Mapa */
+
+.mapaContainer {
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--color-card-border);
+}
+
+.mapa {
+  width: 100%;
+  height: 420px;
+}
+
+@media (max-width: 1023px) {
+  .grid2Colunas,
+  .seletores,
+  .diaPeriodos {
+    grid-template-columns: 1fr;
+  }
+}

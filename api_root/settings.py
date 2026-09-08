@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'contas',
     'api_rest',
+    'clima_externo',
 ]
 
 # Usuario customizado (app contas) no lugar do auth.User padrão do Django —
