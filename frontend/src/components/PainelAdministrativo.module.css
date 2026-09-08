@@ -245,6 +245,14 @@
   background-color: #f1f5f9;
 }
 
+.dropdownAlertas .dropdownItem {
+  margin-top: 0.5rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid #e6ebf5;
+  color: var(--color-accent, #4a6fa5);
+  justify-content: center;
+}
+
 .conteudo {
   max-width: 1320px;
   margin: 0 auto;

@@ -19,6 +19,7 @@ from .serializers import (
     CadastroSerializer,
     ConfirmarEmailSerializer,
     FuncionalidadeSerializer,
+    LogAuditoriaSerializer,
     PlanoSerializer,
     RecredenciarSerializer,
     ReenviarConfirmacaoPublicoSerializer,
@@ -194,6 +195,27 @@ class LimparDadosOperacionaisView(APIView):
             ator=request.user, acao='manutencao.limpeza_operacional', detalhes=resumo,
         )
         return Response({'status': 'success', **resumo})
+
+
+# Ações de LogAuditoria que viram notificação real na tela do Gestor
+# (RN05) — cadastro/exclusão de conta e mudança nos usuários vinculados a
+# uma estação. Deixado como lista explícita (em vez de "tudo") pra não
+# virar um feed de ruído com toda ação administrativa (ex.: limpeza
+# operacional não é uma "notificação").
+ACOES_NOTIFICAVEIS = ['estacao.criada', 'estacao.usuarios_alterados']
+
+
+class AuditoriaRecenteView(APIView):
+    """GET /api/auditoria/recentes/ — últimos eventos relevantes pra
+    notificação do Gestor (estações cadastradas/reatribuídas). Só leitura,
+    Gestor-only (RN01) — o log em si guarda tudo, mas essa tela só
+    precisa do que é "notificação", não de auditoria completa."""
+
+    permission_classes = [IsAuthenticated, EhGestor]
+
+    def get(self, request):
+        eventos = LogAuditoria.objects.filter(acao__in=ACOES_NOTIFICAVEIS).select_related('ator')[:100]
+        return Response(LogAuditoriaSerializer(eventos, many=True).data)
 
 
 class UsuarioViewSet(viewsets.ModelViewSet):

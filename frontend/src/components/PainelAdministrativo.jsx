@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { Bell, ChevronDown, Database, LayoutDashboard, LogOut, Radio, ShieldCheck, Users } from 'lucide-react'
+import { Bell, ChevronDown, Database, LayoutDashboard, LogOut, Radio, ShieldCheck, User, Users } from 'lucide-react'
 import { logout } from '../services/authService'
 import { buscarMeuPerfil } from '../services/perfilService'
 import { buscarEstacoes, buscarSensoresOrfaos } from '../services/estacaoService'
@@ -11,6 +11,7 @@ const ABAS = [
   { to: '/app/adm/estacoes', rotulo: 'Estações', icone: Radio },
   { to: '/app/adm/contas', rotulo: 'Contas', icone: Users },
   { to: '/app/adm/manutencao', rotulo: 'Manutenção', icone: Database },
+  { to: '/app/adm/notificacoes', rotulo: 'Notificações', icone: Bell },
 ]
 
 const INTERVALO_ALERTAS_MS = 60_000
@@ -139,6 +140,16 @@ function PainelAdministrativo() {
                     ))}
                   </ul>
                 )}
+                <button
+                  type="button"
+                  className={styles.dropdownItem}
+                  onClick={() => {
+                    setMenuAlertasAberto(false)
+                    navigate('/app/adm/notificacoes')
+                  }}
+                >
+                  Ver todas as notificações
+                </button>
               </div>
             )}
           </div>
@@ -154,6 +165,17 @@ function PainelAdministrativo() {
             </button>
             {menuContaAberto && (
               <div className={styles.dropdown}>
+                <button
+                  type="button"
+                  className={styles.dropdownItem}
+                  onClick={() => {
+                    setMenuContaAberto(false)
+                    navigate('/app/adm/perfil')
+                  }}
+                >
+                  <User size={14} />
+                  Perfil
+                </button>
                 <button type="button" className={styles.dropdownItem} onClick={aoSair}>
                   <LogOut size={14} />
                   Sair

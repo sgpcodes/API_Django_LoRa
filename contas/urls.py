@@ -5,6 +5,7 @@ from django.urls import include, path
 
 from .views import (
     AssinaturaViewSet,
+    AuditoriaRecenteView,
     CadastroView,
     ConfirmarEmailView,
     FuncionalidadeViewSet,
@@ -49,5 +50,8 @@ urlpatterns = [
         LimparDadosOperacionaisView.as_view(),
         name='limpar-dados-operacionais',
     ),
+    # GET -> últimos eventos (estação cadastrada/usuários alterados) pra
+    # alimentar a tela de Notificações do Gestor. Gestor only.
+    path('auditoria/recentes/', AuditoriaRecenteView.as_view(), name='auditoria-recentes'),
     path('', include(router.urls)),
 ]

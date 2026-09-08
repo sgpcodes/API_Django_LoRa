@@ -4,7 +4,7 @@ from django.utils.http import urlsafe_base64_decode
 from rest_framework import exceptions, serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-from .models import Assinatura, Funcionalidade, Plano, TokenCredenciamento, Usuario
+from .models import Assinatura, Funcionalidade, LogAuditoria, Plano, TokenCredenciamento, Usuario
 from .tokens import gerador_token_verificacao_email
 from .validacao import limpar_cpf, validar_cpf
 
@@ -421,3 +421,17 @@ class ReenviarConfirmacaoPublicoSerializer(serializers.Serializer):
     não virar um jeito de descobrir quais e-mails têm conta cadastrada."""
 
     email = serializers.EmailField()
+
+
+class LogAuditoriaSerializer(serializers.ModelSerializer):
+    """Só leitura — alimenta a tela de Notificações do Gestor com eventos
+    reais (RN05). `ator_username` em vez do objeto Usuario inteiro: é só o
+    suficiente pra mostrar "quem fez", sem vazar mais dados da conta do
+    ator do que isso."""
+
+    ator_username = serializers.CharField(source='ator.username', read_only=True, default=None)
+
+    class Meta:
+        model = LogAuditoria
+        fields = ['id', 'acao', 'ator_username', 'detalhes', 'criado_em']
+        read_only_fields = fields

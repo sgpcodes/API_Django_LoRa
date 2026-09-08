@@ -7,6 +7,8 @@ import AdminDashboard from './pages/AdminDashboard'
 import EstacoesAdmin from './pages/EstacoesAdmin'
 import ContasAdmin from './pages/ContasAdmin'
 import ManutencaoAdmin from './pages/ManutencaoAdmin'
+import PerfilAdmin from './pages/PerfilAdmin'
+import NotificacoesAdmin from './pages/NotificacoesAdmin'
 import Dashboard from './pages/Dashboard'
 import Notificacoes from './pages/Notificacoes'
 import Configuracoes from './pages/Configuracoes'
@@ -53,6 +55,8 @@ function App() {
               <Route path="estacoes" element={<EstacoesAdmin />} />
               <Route path="contas" element={<ContasAdmin />} />
               <Route path="manutencao" element={<ManutencaoAdmin />} />
+              <Route path="perfil" element={<PerfilAdmin />} />
+              <Route path="notificacoes" element={<NotificacoesAdmin />} />
             </Route>
             <Route element={<AppLayout />}>
               <Route index element={<Dashboard />} />

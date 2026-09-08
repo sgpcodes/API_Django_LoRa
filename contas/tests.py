@@ -874,3 +874,43 @@ class LimparDadosOperacionaisTests(APITestCase):
         self.assertEqual(resposta.status_code, status.HTTP_200_OK)
         self.assertEqual(list(Usuario.objects.values_list('username', flat=True)), ['root'])
         self.assertTrue(LogAuditoria.objects.filter(acao='manutencao.limpeza_operacional').exists())
+
+
+class AuditoriaRecenteTests(APITestCase):
+    """GET /api/auditoria/recentes/ — alimenta a tela de Notificações do
+    Gestor com eventos reais (estação cadastrada/usuários alterados)."""
+
+    def setUp(self):
+        self.gestor = Usuario.objects.create_user(username='gestor1', password='x', role=Usuario.Role.GESTOR)
+        self.usuario1 = Usuario.objects.create_user(username='usuario1', password='x')
+
+    def test_sem_autenticacao_e_rejeitado(self):
+        resposta = self.client.get('/api/auditoria/recentes/')
+        self.assertEqual(resposta.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_usuario_comum_nao_acessa(self):
+        self.client.force_authenticate(self.usuario1)
+        resposta = self.client.get('/api/auditoria/recentes/')
+        self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_gestor_ve_so_acoes_notificaveis(self):
+        LogAuditoria.objects.create(ator=self.gestor, acao='estacao.criada', detalhes={'identificador': 'ESP32_X'})
+        LogAuditoria.objects.create(ator=self.gestor, acao='estacao.usuarios_alterados', detalhes={'identificador': 'ESP32_X'})
+        LogAuditoria.objects.create(ator=self.gestor, acao='manutencao.limpeza_operacional', detalhes={})
+        LogAuditoria.objects.create(ator=self.gestor, acao='usuario.excluido', detalhes={'username': 'x'})
+
+        self.client.force_authenticate(self.gestor)
+        resposta = self.client.get('/api/auditoria/recentes/')
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        acoes = {evento['acao'] for evento in resposta.data}
+        self.assertEqual(acoes, {'estacao.criada', 'estacao.usuarios_alterados'})
+
+    def test_evento_traz_ator_username_e_detalhes(self):
+        LogAuditoria.objects.create(ator=self.gestor, acao='estacao.criada', detalhes={'identificador': 'ESP32_X'})
+
+        self.client.force_authenticate(self.gestor)
+        resposta = self.client.get('/api/auditoria/recentes/')
+        evento = resposta.data[0]
+        self.assertEqual(evento['ator_username'], 'gestor1')
+        self.assertEqual(evento['detalhes'], {'identificador': 'ESP32_X'})
+        self.assertIn('criado_em', evento)
