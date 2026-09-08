@@ -260,11 +260,11 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         from rest_framework.exceptions import ValidationError
 
-        # A FK Estacao.dono é PROTECT (RN15: toda estação tem dono, nunca
-        # fica órfã) — sem essa checagem, tentar excluir uma conta que
-        # ainda tem estação vinculada estouraria um ProtectedError cru
-        # (erro 500 sem explicação). Melhor travar aqui com uma mensagem
-        # clara: primeiro reatribui/remove as estações, depois exclui.
+        # Estacao.usuarios é M2M (RN15) — apagar a conta não quebraria
+        # nada tecnicamente (só sumiria o vínculo), mas excluir uma conta
+        # que ainda enxerga estação(ões) sem avisar seria uma surpresa
+        # ruim pro Gestor. Trava aqui com mensagem clara: primeiro
+        # desvincula, depois exclui.
         if instance.estacoes.exists():
             raise ValidationError(
                 {'detail': 'Esta conta ainda tem estação(ões) vinculada(s). Transfira ou remova antes de excluir.'}

@@ -267,7 +267,8 @@ class UsuarioViewSetTests(APITestCase):
     def test_gestor_nao_consegue_excluir_conta_com_estacao_vinculada(self):
         from api_rest.models import Estacao
 
-        Estacao.objects.create(identificador='ESP32_TESTE_EXCLUSAO', dono=self.usuario1)
+        estacao = Estacao.objects.create(identificador='ESP32_TESTE_EXCLUSAO')
+        estacao.usuarios.add(self.usuario1)
         self.client.force_authenticate(self.gestor)
         resposta = self.client.delete(f'/api/contas/{self.usuario1.pk}/')
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
@@ -808,7 +809,8 @@ class LimparDadosOperacionaisTests(APITestCase):
         self.usuario1 = Usuario.objects.create_user(username='usuario1', password='x')
         plano = criar_plano('Standard-limpeza')
         Assinatura.objects.create(usuario=self.usuario1, plano=plano)
-        self.estacao = Estacao.objects.create(identificador='ESP32_LIMPEZA', dono=self.usuario1)
+        self.estacao = Estacao.objects.create(identificador='ESP32_LIMPEZA')
+        self.estacao.usuarios.add(self.usuario1)
         Leitura.objects.create(
             sensor_id='ESP32_LIMPEZA', estacao=self.estacao, temperatura=20, umidade=50,
             data_hora='2026-01-01T12:00:00Z',

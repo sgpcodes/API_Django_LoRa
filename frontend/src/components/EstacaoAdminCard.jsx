@@ -55,7 +55,7 @@ function seloDelta(delta, unidade) {
 }
 
 // Card de uma estação na tela de Estações do admin: cabeçalho (nome,
-// status, plano do dono, localização) + dados atuais da estação
+// status, contas vinculadas, localização) + dados atuais da estação
 // (temperatura/umidade/vento/pressão — vento fica "—" até existir
 // hardware que meça isso de verdade), qualidade do enlace LoRa, status
 // do dispositivo e configurações. "Ver detalhes" abre a configuração de
@@ -67,7 +67,7 @@ function EstacaoAdminCard({
   erro,
   analisando,
   erroAnalise,
-  onTrocarDono,
+  onGerenciarUsuarios,
   onRemover,
   onSalvarEdicao,
   onAnalisar,
@@ -75,8 +75,8 @@ function EstacaoAdminCard({
 }) {
   const [detalhesAbertos, setDetalhesAbertos] = useState(false)
   const [menuAberto, setMenuAberto] = useState(false)
-  const [trocandoDono, setTrocandoDono] = useState(false)
-  const [novoDono, setNovoDono] = useState('')
+  const [gerenciandoUsuarios, setGerenciandoUsuarios] = useState(false)
+  const [usuariosSelecionados, setUsuariosSelecionados] = useState([])
   const [editando, setEditando] = useState(false)
   const [campos, setCampos] = useState(null)
   const menuRef = useRef(null)
@@ -100,9 +100,7 @@ function EstacaoAdminCard({
     sensor_id: sensorId,
     data_hora: dataHora,
     estacaoId,
-    donoId,
-    donoNome,
-    donoPlano,
+    usuariosInfo = [],
     nome,
     localizacao,
     intervaloEnvioMinutos,
@@ -169,15 +167,17 @@ function EstacaoAdminCard({
                 {online ? 'Online' : 'Offline'}
               </span>
               {ativa === false && <span className={adminStyles.semDonoPill}>Inativa</span>}
-              {donoNome ? (
-                <span className={adminStyles.donoPill}>
-                  <UserRound size={11} />
-                  {donoNome}
-                </span>
+              {usuariosInfo.length === 0 ? (
+                <span className={adminStyles.semDonoPill}>Sem usuários vinculados</span>
               ) : (
-                <span className={adminStyles.semDonoPill}>Sem dono</span>
+                <>
+                  <span className={adminStyles.donoPill}>
+                    <UserRound size={11} />
+                    {usuariosInfo[0].nome}
+                  </span>
+                  {usuariosInfo.length > 1 && <span className={adminStyles.planoPill}>+{usuariosInfo.length - 1}</span>}
+                </>
               )}
-              {donoPlano && <span className={adminStyles.planoPill}>{donoPlano}</span>}
             </div>
             <span className={styles.subtexto}>
               {sensorId} · Última leitura: {formatarDataHora(dataHora)}
@@ -223,11 +223,12 @@ function EstacaoAdminCard({
                       className={adminStyles.menuItem}
                       onClick={() => {
                         setMenuAberto(false)
-                        setTrocandoDono(true)
+                        setUsuariosSelecionados(usuariosInfo.map((usuario) => usuario.id))
+                        setGerenciandoUsuarios(true)
                         setDetalhesAbertos(true)
                       }}
                     >
-                      <UserRound size={14} /> Trocar dono
+                      <UserRound size={14} /> Gerenciar usuários
                     </button>
                     <button
                       type="button"
@@ -520,39 +521,43 @@ function EstacaoAdminCard({
                 </div>
               )}
 
-              {trocandoDono && estacaoId != null && (
+              {gerenciandoUsuarios && estacaoId != null && (
                 <div className={adminStyles.gerenciar}>
                   <div className={styles.secaoTitulo}>
                     <UserRound size={14} />
-                    <span>Trocar dono</span>
+                    <span>Gerenciar usuários vinculados ({usuariosSelecionados.length} selecionada(s))</span>
+                  </div>
+                  <div className={adminStyles.checklistUsuarios}>
+                    {contas.map((conta) => (
+                      <label key={conta.id} className={adminStyles.checklistItem}>
+                        <input
+                          type="checkbox"
+                          checked={usuariosSelecionados.includes(conta.id)}
+                          disabled={processando}
+                          onChange={(e) =>
+                            setUsuariosSelecionados((atual) =>
+                              e.target.checked ? [...atual, conta.id] : atual.filter((id) => id !== conta.id),
+                            )
+                          }
+                        />
+                        {conta.first_name || conta.username} ({conta.plano_atual ?? 'sem plano'})
+                      </label>
+                    ))}
                   </div>
                   <div className={adminStyles.linhaTrocarDono}>
-                    <select
-                      className={adminStyles.seletor}
-                      value={novoDono}
-                      onChange={(evento) => setNovoDono(evento.target.value)}
-                      disabled={processando}
-                    >
-                      <option value="">Selecione uma conta...</option>
-                      {contas
-                        .filter((conta) => conta.id !== donoId)
-                        .map((conta) => (
-                          <option key={conta.id} value={conta.id}>
-                            {conta.first_name || conta.username} ({conta.plano_atual ?? 'sem plano'})
-                          </option>
-                        ))}
-                    </select>
                     <button
                       type="button"
                       className={adminStyles.botaoTrocar}
-                      disabled={!novoDono || processando}
-                      onClick={() => {
-                        onTrocarDono(novoDono)
-                        setNovoDono('')
-                        setTrocandoDono(false)
+                      disabled={processando}
+                      onClick={async () => {
+                        const sucesso = await onGerenciarUsuarios(usuariosSelecionados)
+                        if (sucesso) setGerenciandoUsuarios(false)
                       }}
                     >
-                      {processando ? 'Trocando...' : 'Trocar'}
+                      {processando ? 'Salvando...' : 'Salvar'}
+                    </button>
+                    <button type="button" className={styles.botaoDetalhes} onClick={() => setGerenciandoUsuarios(false)}>
+                      <X size={14} /> Cancelar
                     </button>
                   </div>
                   {erro && <p className={adminStyles.aviso}>{erro}</p>}

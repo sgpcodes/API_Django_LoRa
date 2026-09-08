@@ -16,6 +16,16 @@ from .models import Estacao, Leitura, SolicitacaoRssi
 from .permissions import RecursoDoPlano
 
 
+def criar_estacao(identificador, *usuarios):
+    """Cria uma Estacao já com as contas informadas vinculadas — helper
+    de teste porque `usuarios` é M2M (não dá pra passar como kwarg no
+    `.create()`, precisa da estação já ter PK antes de vincular)."""
+    estacao = Estacao.objects.create(identificador=identificador)
+    if usuarios:
+        estacao.usuarios.set(usuarios)
+    return estacao
+
+
 class IngestaoLeituraTests(APITestCase):
     """A view de ingestão (POST) é chamada pelo hardware, sem login — não
     pode passar a exigir autenticação nesta fase (o firmware não muda)."""
@@ -40,7 +50,7 @@ class IngestaoLeituraTests(APITestCase):
 
     def test_leitura_liga_a_estacao_existente_e_atualiza_ultima_transmissao(self):
         dono = Usuario.objects.create_user(username='dono1', password='x')
-        estacao = Estacao.objects.create(identificador='ESP32_01', dono=dono)
+        estacao = criar_estacao('ESP32_01', dono)
         self.assertIsNone(estacao.ultima_transmissao_em)
 
         resposta = self.client.post('/api/leituras', {
@@ -81,8 +91,8 @@ class LeituraIsolamentoTests(APITestCase):
         self.usuario1 = Usuario.objects.create_user(username='usuario1', password='x')
         self.usuario2 = Usuario.objects.create_user(username='usuario2', password='x')
 
-        self.estacao1 = Estacao.objects.create(identificador='EST_1', dono=self.usuario1)
-        self.estacao2 = Estacao.objects.create(identificador='EST_2', dono=self.usuario2)
+        self.estacao1 = criar_estacao('EST_1', self.usuario1)
+        self.estacao2 = criar_estacao('EST_2', self.usuario2)
 
         agora = timezone.now()
         self.leitura1 = Leitura.objects.create(
@@ -126,7 +136,7 @@ class RssiSolicitarTests(APITestCase):
     def setUp(self):
         self.usuario1 = Usuario.objects.create_user(username='usuario1', password='x')
         self.usuario2 = Usuario.objects.create_user(username='usuario2', password='x')
-        self.estacao1 = Estacao.objects.create(identificador='EST_1', dono=self.usuario1)
+        self.estacao1 = criar_estacao('EST_1', self.usuario1)
 
     def test_status_continua_aberto_para_o_hardware(self):
         resposta = self.client.get('/api/rssi/status/')
@@ -176,12 +186,32 @@ class EstacaoViewSetTests(APITestCase):
         resposta = self.client.post('/api/estacoes/', {'identificador': 'NOVA_1'})
         self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_gestor_cadastra_estacao_vinculando_um_dono(self):
+    def test_gestor_cadastra_estacao_vinculando_uma_conta(self):
         self.client.force_authenticate(self.gestor)
-        resposta = self.client.post('/api/estacoes/', {'identificador': 'NOVA_1', 'dono': self.usuario1.pk})
+        resposta = self.client.post('/api/estacoes/', {'identificador': 'NOVA_1', 'usuarios': [self.usuario1.pk]})
         self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
         estacao = Estacao.objects.get(identificador='NOVA_1')
-        self.assertEqual(estacao.dono, self.usuario1)
+        self.assertEqual(list(estacao.usuarios.all()), [self.usuario1])
+
+    def test_gestor_vincula_varias_contas_na_mesma_estacao(self):
+        """A regra central desta mudança: uma estação não tem "dono"
+        único — quantas contas o Gestor quiser podem enxergar a mesma
+        estação física, todas com o mesmo nível de acesso."""
+        usuario2 = Usuario.objects.create_user(username='usuario2', password='x')
+        usuario3 = Usuario.objects.create_user(username='usuario3', password='x')
+
+        self.client.force_authenticate(self.gestor)
+        resposta = self.client.post(
+            '/api/estacoes/', {'identificador': 'COMPARTILHADA', 'usuarios': [self.usuario1.pk, usuario2.pk, usuario3.pk]},
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
+        estacao = Estacao.objects.get(identificador='COMPARTILHADA')
+        self.assertEqual(estacao.usuarios.count(), 3)
+
+        for usuario in (self.usuario1, usuario2, usuario3):
+            self.client.force_authenticate(usuario)
+            resposta = self.client.get('/api/estacoes/')
+            self.assertIn('COMPARTILHADA', [e['identificador'] for e in resposta.data])
 
     def test_limite_de_estacoes_do_plano_e_respeitado(self):
         """RN10: usuario1 está no plano Standard (max_estacoes=1 no
@@ -189,16 +219,16 @@ class EstacaoViewSetTests(APITestCase):
         mesmo sendo o Gestor quem está cadastrando."""
         plano = Plano.objects.create(nome='Standard-teste', dias_historico=30, max_estacoes=1)
         Assinatura.objects.create(usuario=self.usuario1, plano=plano)
-        Estacao.objects.create(identificador='JA_EXISTENTE', dono=self.usuario1)
+        criar_estacao('JA_EXISTENTE', self.usuario1)
 
         self.client.force_authenticate(self.gestor)
-        resposta = self.client.post('/api/estacoes/', {'identificador': 'SEGUNDA', 'dono': self.usuario1.pk})
+        resposta = self.client.post('/api/estacoes/', {'identificador': 'SEGUNDA', 'usuarios': [self.usuario1.pk]})
         self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(Estacao.objects.filter(dono=self.usuario1).count(), 1)
+        self.assertEqual(Estacao.objects.filter(usuarios=self.usuario1).count(), 1)
 
     def test_usuario_comum_ve_so_as_proprias_estacoes(self):
-        Estacao.objects.create(identificador='MINHA', dono=self.usuario1)
-        Estacao.objects.create(identificador='ALHEIA', dono=self.gestor)
+        criar_estacao('MINHA', self.usuario1)
+        criar_estacao('ALHEIA', self.gestor)
 
         self.client.force_authenticate(self.usuario1)
         resposta = self.client.get('/api/estacoes/')
@@ -261,7 +291,7 @@ class LeiturasOrfasPorSensorTests(APITestCase):
         """Só apaga leituras SEM estação — não é uma forma alternativa de
         limpar histórico de sensor de verdade (isso é papel da tela de
         Manutenção, propositalmente mais burocrática)."""
-        estacao = Estacao.objects.create(identificador='REAL', dono=self.usuario1)
+        estacao = criar_estacao('REAL', self.usuario1)
         Leitura.objects.create(sensor_id='REAL', estacao=estacao, temperatura=20, umidade=50, data_hora=timezone.now())
 
         self.client.force_authenticate(self.gestor)

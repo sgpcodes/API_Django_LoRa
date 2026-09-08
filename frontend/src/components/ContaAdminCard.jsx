@@ -352,7 +352,7 @@ function ContaAdminCard({
                         className={styles.botaoRemoverEstacao}
                         onClick={() => {
                           if (window.confirm(`Remover a estação "${estacao.nome || estacao.identificador}" desta conta?`)) {
-                            onRemoverEstacaoDaLista(estacao.id)
+                            onRemoverEstacaoDaLista(estacao)
                           }
                         }}
                         title="Remover estação"

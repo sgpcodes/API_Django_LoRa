@@ -48,10 +48,11 @@ class Estacao(models.Model):
         max_length=200, blank=True,
         help_text='Local em texto livre (ex.: "Área de Plantio - Talhão 2"), preenchido pelo Gestor — não vem do dispositivo.',
     )
-    dono = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='estacoes',
-        help_text='Usuário (ou Gestor) responsável pela estação (RN15: toda estação tem exatamente um dono, '
-                  'nunca fica "órfã"). PROTECT: não deixa apagar um usuário que ainda tem estação vinculada.',
+    usuarios = models.ManyToManyField(
+        settings.AUTH_USER_MODEL, related_name='estacoes', blank=True,
+        help_text='Contas com acesso a esta estação (RN15). Não existe "dono" único — o Gestor pode vincular '
+                  'quantas contas quiser à mesma estação física; todas enxergam os mesmos dados, sem hierarquia '
+                  'entre elas. Só o Gestor administra o vínculo (adicionar/remover conta, editar, excluir).',
     )
     token_hash = models.CharField(
         max_length=128, blank=True,

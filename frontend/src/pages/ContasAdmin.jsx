@@ -19,7 +19,7 @@ import {
   reativarConta,
   suspenderConta,
 } from '../services/contasAdminService'
-import { atribuirEstacao, buscarEstacoes, buscarSensoresOrfaos, removerEstacao } from '../services/estacaoService'
+import { atribuirEstacao, atualizarUsuariosEstacao, buscarEstacoes, buscarSensoresOrfaos } from '../services/estacaoService'
 import styles from './ContasAdmin.module.css'
 
 const POR_PAGINA = 10
@@ -74,12 +74,16 @@ function ContasAdmin() {
     carregar()
   }, [])
 
+  // Uma estação pode ter várias contas vinculadas ao mesmo tempo (RN15),
+  // então ela aparece na lista de TODAS elas, não só de uma.
   const estacoesPorConta = useMemo(() => {
     const mapa = new Map()
     estacoes.forEach((estacao) => {
-      const lista = mapa.get(estacao.dono) ?? []
-      lista.push(estacao)
-      mapa.set(estacao.dono, lista)
+      estacao.usuarios.forEach((contaId) => {
+        const lista = mapa.get(contaId) ?? []
+        lista.push(estacao)
+        mapa.set(contaId, lista)
+      })
     })
     return mapa
   }, [estacoes])
@@ -133,7 +137,7 @@ function ContasAdmin() {
     } catch (erroRequisicao) {
       const dados = erroRequisicao.response?.data
       const mensagem =
-        dados?.dono?.[0] ??
+        dados?.usuarios?.[0] ??
         dados?.identificador?.[0] ??
         dados?.email?.[0] ??
         dados?.detail ??
@@ -147,7 +151,7 @@ function ContasAdmin() {
   }
 
   const aoAtribuir = (contaId, sensorId) =>
-    executarAcao(contaId, () => atribuirEstacao({ identificador: sensorId, donoId: contaId }))
+    executarAcao(contaId, () => atribuirEstacao({ identificador: sensorId, usuarioIds: [contaId] }))
 
   const aoSalvarEdicao = (contaId, dados) => executarAcao(contaId, () => atualizarConta(contaId, dados))
 
@@ -156,7 +160,10 @@ function ContasAdmin() {
 
   const aoExcluir = (contaId) => executarAcao(contaId, () => excluirConta(contaId))
 
-  const aoRemoverEstacaoDaLista = (contaId, estacaoId) => executarAcao(contaId, () => removerEstacao(estacaoId))
+  // Desvincula só esta conta da estação (não apaga a estação nem afeta
+  // as outras contas que também estejam vinculadas a ela).
+  const aoRemoverEstacaoDaLista = (contaId, estacao) =>
+    executarAcao(contaId, () => atualizarUsuariosEstacao(estacao.id, estacao.usuarios.filter((id) => id !== contaId)))
 
   async function aoCriarConta(campos) {
     await criarConta(campos)
@@ -273,7 +280,7 @@ function ContasAdmin() {
               onSalvarEdicao={(dados) => aoSalvarEdicao(conta.id, dados)}
               onSuspenderOuReativar={() => aoSuspenderOuReativar(conta)}
               onExcluir={() => aoExcluir(conta.id)}
-              onRemoverEstacaoDaLista={(estacaoId) => aoRemoverEstacaoDaLista(conta.id, estacaoId)}
+              onRemoverEstacaoDaLista={(estacao) => aoRemoverEstacaoDaLista(conta.id, estacao)}
             />
           ))}
         </div>

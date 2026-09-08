@@ -20,6 +20,9 @@ class EhGestorOuDonoDaEstacao(BasePermission):
     """RN06/RN07: um Usuário só acessa dados de estações explicitamente
     vinculadas a ele; o Gestor sempre passa (RN01).
 
+    "Vinculado" não é mais um dono único — uma Estacao pode ter várias
+    contas vinculadas (M2M), todas com o mesmo nível de acesso.
+
     `obj` pode ser a própria Estacao ou qualquer objeto que tenha um
     atributo `estacao` (ex.: uma Leitura) — cobre os dois casos com a
     mesma classe.
@@ -30,7 +33,7 @@ class EhGestorOuDonoDaEstacao(BasePermission):
         if user.eh_gestor:
             return True
         estacao = obj if isinstance(obj, Estacao) else getattr(obj, 'estacao', None)
-        return estacao is not None and estacao.dono_id == user.id
+        return estacao is not None and estacao.usuarios.filter(pk=user.pk).exists()
 
 
 class RecursoDoPlano(BasePermission):

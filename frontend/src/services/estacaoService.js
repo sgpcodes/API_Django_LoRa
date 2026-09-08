@@ -27,36 +27,40 @@ export async function buscarSensoresOrfaos() {
   return resposta.data
 }
 
-// Cadastra uma nova Estacao a partir de um sensor órfão, já atribuída a
-// um dono — é o "vincular estação" do admin (RN15: toda Estacao nasce com
-// um dono, nunca fica solta).
-export async function atribuirEstacao({ identificador, donoId, nome, localizacao }) {
+// Cadastra uma nova Estacao a partir de um sensor órfão, já vinculada a
+// uma ou mais contas — é o "vincular estação" do admin (RN15: toda
+// Estacao nasce com pelo menos uma conta vinculada, nunca fica solta).
+// Não existe "dono" único: a mesma estação pode ter quantas contas o
+// Gestor quiser, todas com o mesmo nível de acesso.
+export async function atribuirEstacao({ identificador, usuarioIds, nome, localizacao }) {
   const resposta = await api.post('/api/estacoes/', {
     identificador,
-    dono: donoId,
+    usuarios: usuarioIds,
     nome: nome ?? '',
     localizacao: localizacao ?? '',
   })
   return resposta.data
 }
 
-// Troca o dono de uma estação já cadastrada — admin só, em qualquer
-// plano (RN15). O limite de estações do plano do novo dono é validado no
-// backend do mesmo jeito que na atribuição inicial.
-export async function trocarDonoEstacao(estacaoId, novoDonoId) {
-  const resposta = await api.patch(`/api/estacoes/${estacaoId}/`, { dono: novoDonoId })
+// Substitui a lista de contas vinculadas a uma estação já cadastrada —
+// admin só, em qualquer plano (RN15). O limite de estações do plano de
+// cada conta NOVA na lista é validado no backend do mesmo jeito que na
+// atribuição inicial (contas que já estavam vinculadas não são recontadas).
+export async function atualizarUsuariosEstacao(estacaoId, usuarioIds) {
+  const resposta = await api.patch(`/api/estacoes/${estacaoId}/`, { usuarios: usuarioIds })
   return resposta.data
 }
 
-// Remove uma estação cadastrada — admin only. O histórico de leituras
-// dela não é apagado (fica com `estacao=null`), só o vínculo/cadastro.
+// Remove uma estação cadastrada inteira (todas as contas perdem o
+// vínculo de uma vez) — admin only. O histórico de leituras dela não é
+// apagado (fica com `estacao=null`), só o cadastro.
 export async function removerEstacao(estacaoId) {
   await api.delete(`/api/estacoes/${estacaoId}/`)
 }
 
 // Edita nome/intervalo de envio/limite offline/ativa de uma estação já
-// cadastrada — admin ou o próprio dono podem (troca de dono continua
-// exclusiva do admin, ver trocarDonoEstacao).
+// cadastrada — admin ou qualquer conta vinculada podem (mudar a lista de
+// contas continua exclusiva do admin, ver atualizarUsuariosEstacao).
 export async function atualizarEstacao(estacaoId, dados) {
   const resposta = await api.patch(`/api/estacoes/${estacaoId}/`, dados)
   return resposta.data

@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user_model
 from django.db import DatabaseError
 from django.db.models import Prefetch
 from django.utils import timezone
@@ -11,6 +12,8 @@ from .models import Estacao, Leitura, SolicitacaoRssi
 from .permissions import EhGestor, EhGestorOuDonoDaEstacao
 from .serializers import EstacaoSerializer, LeituraSerializer, _leitura_resumo
 from .validacao import detectar_inconsistencia
+
+Usuario = get_user_model()
 
 # Sensor que mandou leitura há mais tempo que isso, sem nunca ter virado
 # uma Estacao cadastrada, provavelmente não está mais em uso — some da
@@ -59,7 +62,7 @@ class LeituraListCreateView(APIView):
 
         leituras = Leitura.objects.filter(**filtro).order_by('-data_hora')
         if not request.user.eh_gestor:
-            leituras = leituras.filter(estacao__dono=request.user)
+            leituras = leituras.filter(estacao__usuarios=request.user)
 
         dados = [_leitura_para_dict(leitura) for leitura in leituras]
         return Response(dados)
@@ -145,7 +148,7 @@ class RssiSolicitarView(APIView):
 
         if not request.user.eh_gestor:
             estacao = Estacao.objects.filter(identificador=sensor_id).first()
-            if estacao is None or estacao.dono_id != request.user.id:
+            if estacao is None or not estacao.usuarios.filter(pk=request.user.pk).exists():
                 return Response(
                     {'status': 'error', 'message': 'Estação não encontrada ou não vinculada à sua conta.'},
                     status=status.HTTP_404_NOT_FOUND,
@@ -177,7 +180,7 @@ class LeituraDetailView(APIView):
             )
 
         if not request.user.eh_gestor:
-            if leitura.estacao_id is None or leitura.estacao.dono_id != request.user.id:
+            if leitura.estacao_id is None or not leitura.estacao.usuarios.filter(pk=request.user.pk).exists():
                 return Response(
                     {'erro': 'Leitura não encontrada.'},
                     status=status.HTTP_404_NOT_FOUND,
@@ -188,29 +191,33 @@ class LeituraDetailView(APIView):
 
 class EstacaoViewSet(viewsets.ModelViewSet):
     """CRUD de Estações. Cadastro/remoção é exclusivo do Gestor (RN02,
-    RN14, RN15 — vincular uma estação a um dono é um ato de cadastro, não
+    RN14, RN15 — vincular contas a uma estação é um ato de cadastro, não
     uma ação do próprio Usuário final); leitura e edição de configurações
-    (ex.: intervalo de envio) já podem ser feitas pelo dono."""
+    (ex.: intervalo de envio) já podem ser feitas por qualquer conta
+    vinculada."""
 
     serializer_class = EstacaoSerializer
 
     def get_queryset(self):
         from contas.models import Assinatura
 
-        # select_related('dono'): sem isso, EstacaoSerializer.dono_nome/
-        # dono_username disparavam 1 query extra por estação (N+1) pra
-        # buscar o dono — com select_related, o dono já vem junto na
-        # mesma query (JOIN), sem custo extra por linha. prefetch_related
-        # cobre a mesma coisa pra dono_plano (mesmo problema de N+1 que já
-        # corrigimos em contas/views.py:UsuarioViewSet).
+        # prefetch_related('usuarios'): sem isso, EstacaoSerializer.
+        # usuarios_info disparava 1 query extra por estação (N+1) pra
+        # buscar as contas vinculadas. O segundo Prefetch cobre a mesma
+        # coisa pro plano de cada uma (mesmo problema de N+1 que já
+        # corrigimos em contas/views.py:UsuarioViewSet) — como agora é
+        # "usuários", não "usuário", o prefetch é sobre cada um deles via
+        # `to_attr` no relacionamento reverso de Assinatura.
         assinatura_ativa_qs = Assinatura.objects.filter(encerrada_em__isnull=True).select_related('plano')
-        queryset = Estacao.objects.select_related('dono').prefetch_related(
-            Prefetch('dono__assinaturas', queryset=assinatura_ativa_qs, to_attr='assinatura_ativa_prefetch'),
+        queryset = Estacao.objects.prefetch_related(
+            Prefetch('usuarios', queryset=Usuario.objects.prefetch_related(
+                Prefetch('assinaturas', queryset=assinatura_ativa_qs, to_attr='assinatura_ativa_prefetch'),
+            )),
         )
         user = self.request.user
         if user.eh_gestor:
             return queryset
-        return queryset.filter(dono=user)
+        return queryset.filter(usuarios=user)
 
     def get_permissions(self):
         # 'orfas' também é Gestor-only (RN01) — precisa estar aqui: este
@@ -226,34 +233,34 @@ class EstacaoViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         from contas.models import LogAuditoria
 
-        # RN15: quem cadastra escolhe o dono (o serializer já resolve o
-        # default pra quem está autenticado, se `dono` não vier no payload).
+        # RN15: quem cadastra escolhe quais contas ficam vinculadas.
         estacao = serializer.save()
         LogAuditoria.objects.create(
             ator=self.request.user, acao='estacao.criada', alvo=estacao,
-            detalhes={'identificador': estacao.identificador, 'dono_id': estacao.dono_id},
+            detalhes={'identificador': estacao.identificador, 'usuarios_ids': list(estacao.usuarios.values_list('id', flat=True))},
         )
 
     def perform_update(self, serializer):
         from contas.models import LogAuditoria
 
-        # Só o Gestor pode trocar o dono (RN15) — se quem edita é o
-        # próprio dono da estação, o campo é descartado silenciosamente do
-        # payload antes de salvar (ele continua podendo editar o resto:
-        # nome, intervalo de envio etc.).
+        # Só o Gestor pode mudar as contas vinculadas (RN15) — se quem
+        # edita é uma das contas da própria estação, o campo é descartado
+        # silenciosamente do payload antes de salvar (ela continua podendo
+        # editar o resto: nome, intervalo de envio etc.).
         if not self.request.user.eh_gestor:
-            serializer.validated_data.pop('dono', None)
+            serializer.validated_data.pop('usuarios', None)
 
-        dono_anterior_id = serializer.instance.dono_id
+        usuarios_antes = set(serializer.instance.usuarios.values_list('id', flat=True))
         estacao = serializer.save()
+        usuarios_depois = set(estacao.usuarios.values_list('id', flat=True))
 
-        if estacao.dono_id != dono_anterior_id:
+        if usuarios_antes != usuarios_depois:
             LogAuditoria.objects.create(
-                ator=self.request.user, acao='estacao.dono_alterado', alvo=estacao,
+                ator=self.request.user, acao='estacao.usuarios_alterados', alvo=estacao,
                 detalhes={
                     'identificador': estacao.identificador,
-                    'dono_anterior_id': dono_anterior_id,
-                    'dono_novo_id': estacao.dono_id,
+                    'usuarios_antes': sorted(usuarios_antes),
+                    'usuarios_depois': sorted(usuarios_depois),
                 },
             )
 
@@ -270,9 +277,9 @@ class EstacaoViewSet(viewsets.ModelViewSet):
     def orfas(self, request):
         """GET /api/estacoes/orfas/ — sensor_id que já mandaram leitura mas
         ainda não viraram uma Estacao cadastrada (RN15: toda Estacao tem
-        dono, então "órfão" aqui é sempre a leitura crua, nunca a Estacao
-        em si). É esta lista que alimenta o "atribuir a um usuário" na
-        tela de Contas do admin."""
+        pelo menos uma conta vinculada, então "órfão" aqui é sempre a
+        leitura crua, nunca a Estacao em si). É esta lista que alimenta o
+        "atribuir a um usuário" na tela de Contas do admin."""
         identificadores_cadastrados = set(Estacao.objects.values_list('identificador', flat=True))
         desde = timezone.now() - JANELA_SENSORES_ORFAOS
 

@@ -41,11 +41,11 @@ def executar_limpeza_operacional():
     contas_alvo = Usuario.objects.filter(is_superuser=False)
 
     with transaction.atomic():
-        # Ordem importa: Estacao.dono é PROTECT (RN15), então as
-        # estações têm que sumir ANTES das contas, senão a exclusão da
-        # conta falha com ProtectedError. Leitura/SolicitacaoRssi não
-        # travam nada (SET_NULL), mas apagar antes evita ficarem
-        # penduradas sem estação por meio segundo.
+        # Ordem só por organização: Estacao.usuarios é M2M (não trava
+        # nada ao apagar uma conta, só limpa a linha de vínculo sozinho).
+        # Leitura/SolicitacaoRssi também não travam (SET_NULL), mas
+        # apagar antes evita ficarem penduradas sem estação por meio
+        # segundo.
         Leitura.objects.all().delete()
         SolicitacaoRssi.objects.all().delete()
         Estacao.objects.all().delete()

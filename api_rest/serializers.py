@@ -1,7 +1,10 @@
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from django.utils import timezone
 
 from .models import Estacao, Leitura
+
+Usuario = get_user_model()
 
 
 def _leitura_resumo(leitura):
@@ -40,42 +43,44 @@ class LeituraSerializer(serializers.ModelSerializer):
 
 
 class EstacaoSerializer(serializers.ModelSerializer):
-    """Cadastro/edição/reatribuição de Estação. `dono` é gravável (troca de
-    dono = RN15 "atribuir/trocar/remover em qualquer plano", ação do
-    Gestor), mas quem decide QUEM pode de fato mudá-lo é a view
-    (EstacaoViewSet.perform_update remove o campo do payload se quem edita
-    não é Gestor) — o dono da própria estação continua podendo editar
-    `nome`/`intervalo_envio_minutos`/etc., só não o `dono`.
+    """Cadastro/edição de Estação. `usuarios` é uma lista gravável (RN15:
+    não existe "dono" único — o Gestor vincula quantas contas quiser à
+    mesma estação, todas com o mesmo nível de acesso), mas quem decide se
+    esse campo pode ser mudado é a view (EstacaoViewSet.perform_update
+    remove o campo do payload se quem edita não é Gestor) — uma conta já
+    vinculada continua podendo editar `nome`/`intervalo_envio_minutos`/
+    etc. da própria estação, só não a lista de vínculos.
     """
 
     esta_offline = serializers.BooleanField(read_only=True)
-    dono_username = serializers.CharField(source='dono.username', read_only=True)
-    dono_nome = serializers.SerializerMethodField()
-    dono_plano = serializers.SerializerMethodField()
+    usuarios = serializers.PrimaryKeyRelatedField(many=True, queryset=Usuario.objects.all())
+    usuarios_info = serializers.SerializerMethodField()
     ultima_leitura = serializers.SerializerMethodField()
 
     class Meta:
         model = Estacao
         fields = [
-            'id', 'identificador', 'nome', 'localizacao', 'dono', 'dono_username', 'dono_nome', 'dono_plano',
+            'id', 'identificador', 'nome', 'localizacao', 'usuarios', 'usuarios_info',
             'intervalo_envio_minutos', 'limite_offline_minutos',
             'ultima_transmissao_em', 'ativa', 'criado_em', 'esta_offline', 'ultima_leitura',
         ]
         read_only_fields = ['id', 'ultima_transmissao_em', 'criado_em']
-        extra_kwargs = {'dono': {'required': False}}
 
-    def get_dono_nome(self, obj):
-        return obj.dono.first_name or obj.dono.username
+    def get_usuarios_info(self, obj):
+        return [
+            {'id': usuario.id, 'username': usuario.username, 'nome': usuario.first_name or usuario.username, 'plano': self._plano_de(usuario)}
+            for usuario in obj.usuarios.all()
+        ]
 
-    def get_dono_plano(self, obj):
+    def _plano_de(self, usuario):
         # `assinatura_ativa_prefetch` só existe quando veio da queryset
         # otimizada de EstacaoViewSet.get_queryset() (evita 1 query extra
-        # por linha — mesmo padrão de contas/serializers.py:UsuarioSerializer).
-        if hasattr(obj.dono, 'assinatura_ativa_prefetch'):
-            lista = obj.dono.assinatura_ativa_prefetch
+        # por usuário — mesmo padrão de contas/serializers.py:UsuarioSerializer).
+        if hasattr(usuario, 'assinatura_ativa_prefetch'):
+            lista = usuario.assinatura_ativa_prefetch
             assinatura = lista[0] if lista else None
         else:
-            assinatura = obj.dono.assinaturas.filter(encerrada_em__isnull=True).select_related('plano').first()
+            assinatura = usuario.assinaturas.filter(encerrada_em__isnull=True).select_related('plano').first()
         return assinatura.plano.nome if assinatura else None
 
     def get_ultima_leitura(self, obj):
@@ -83,34 +88,37 @@ class EstacaoSerializer(serializers.ModelSerializer):
         return _leitura_resumo(leitura) if leitura else None
 
     def validate(self, attrs):
-        """RN10: limite máximo de estações por nível de conta — vale tanto
-        pra criação (dono default: quem está autenticado, se não vier no
-        payload) quanto pra reatribuição (troca de dono numa estação já
-        existente). Só dispara quando o dono-ALVO muda de fato: editar
-        outros campos (nome, intervalo etc.) sem mexer no dono não conta
-        estação nenhuma a mais pra ninguém.
-        """
-        if self.instance is None and 'dono' not in attrs:
-            attrs['dono'] = self.context['request'].user
+        """RN10: limite máximo de estações por nível de conta — checado só
+        por conta NOVA sendo vinculada (adicionar uma 5ª conta a uma
+        estação que 4 pessoas já compartilham não gasta cota de ninguém
+        além de quem está entrando agora; editar outros campos sem mexer
+        em `usuarios` não dispara nada disso)."""
+        usuarios_novos = attrs.get('usuarios')
+        if usuarios_novos is None:
+            return attrs
 
-        dono_novo = attrs.get('dono')
-        dono_mudou = dono_novo is not None and (self.instance is None or dono_novo != self.instance.dono)
+        if self.instance is None and len(usuarios_novos) == 0:
+            raise serializers.ValidationError({'usuarios': 'Selecione ao menos uma conta.'})
 
-        if dono_mudou:
+        usuarios_atuais = set(self.instance.usuarios.all()) if self.instance is not None else set()
+        adicionados = [usuario for usuario in usuarios_novos if usuario not in usuarios_atuais]
+
+        if adicionados:
             from contas.models import Assinatura
 
-            assinatura = Assinatura.objects.filter(
-                usuario=dono_novo, encerrada_em__isnull=True,
-            ).select_related('plano').first()
+            for usuario in adicionados:
+                assinatura = Assinatura.objects.filter(
+                    usuario=usuario, encerrada_em__isnull=True,
+                ).select_related('plano').first()
 
-            if assinatura is not None and assinatura.plano.max_estacoes is not None:
-                estacoes_atuais = Estacao.objects.filter(dono=dono_novo)
-                if self.instance is not None:
-                    estacoes_atuais = estacoes_atuais.exclude(pk=self.instance.pk)
-                if estacoes_atuais.count() >= assinatura.plano.max_estacoes:
-                    raise serializers.ValidationError(
-                        {'dono': f'Limite de {assinatura.plano.max_estacoes} estação(ões) do plano '
-                                 f'"{assinatura.plano.nome}" atingido.'}
-                    )
+                if assinatura is not None and assinatura.plano.max_estacoes is not None:
+                    estacoes_atuais = Estacao.objects.filter(usuarios=usuario)
+                    if self.instance is not None:
+                        estacoes_atuais = estacoes_atuais.exclude(pk=self.instance.pk)
+                    if estacoes_atuais.count() >= assinatura.plano.max_estacoes:
+                        raise serializers.ValidationError(
+                            {'usuarios': f'{usuario.username}: limite de {assinatura.plano.max_estacoes} '
+                                         f'estação(ões) do plano "{assinatura.plano.nome}" atingido.'}
+                        )
 
         return attrs

@@ -5,12 +5,16 @@ from .models import Estacao, Leitura, SolicitacaoRssi
 
 @admin.register(Estacao)
 class EstacaoAdmin(admin.ModelAdmin):
-    list_display = ('identificador', 'nome', 'dono', 'esta_offline_display', 'ultima_transmissao_em', 'ativa')
+    list_display = ('identificador', 'nome', 'usuarios_display', 'esta_offline_display', 'ultima_transmissao_em', 'ativa')
     list_filter = ('ativa', 'intervalo_envio_minutos')
     search_fields = ('identificador', 'nome')
-    autocomplete_fields = ('dono',)
+    filter_horizontal = ('usuarios',)
     readonly_fields = ('ultima_transmissao_em', 'criado_em', 'token_hash')
     actions = ['gerar_novo_token']
+
+    @admin.display(description='Usuários')
+    def usuarios_display(self, obj):
+        return ', '.join(obj.usuarios.values_list('username', flat=True)) or '—'
 
     @admin.display(boolean=True, description='Offline')
     def esta_offline_display(self, obj):

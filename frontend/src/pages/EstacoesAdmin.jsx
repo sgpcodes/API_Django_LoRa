@@ -8,9 +8,9 @@ import {
   apagarLeiturasOrfas,
   atribuirEstacao,
   atualizarEstacao,
+  atualizarUsuariosEstacao,
   buscarEstacoes,
   removerEstacao,
-  trocarDonoEstacao,
 } from '../services/estacaoService'
 import { buscarContas } from '../services/contasAdminService'
 import styles from './EstacoesAdmin.module.css'
@@ -70,12 +70,12 @@ function calcularDeltasPorSensor(leituras) {
 }
 
 // Tela "Estações" do Painel Administrativo: todas as estações (ESP32) que
-// já mandaram leitura, num só lugar — dados atuais, dono/plano (ou "Sem
-// dono", pros sensores ainda não cadastrados) e, ao abrir "Detalhes",
-// RSSI/SNR e configuração do rádio — tudo reduzido, sem precisar trocar
-// de tela. Cadastrar uma estação nova (com ou sem sensor órfão) é feito
-// direto aqui; editar, trocar o dono de uma já cadastrada ou remover
-// também (RN15: em qualquer plano).
+// já mandaram leitura, num só lugar — dados atuais, contas vinculadas (ou
+// "Sem usuários vinculados", pros sensores ainda não cadastrados) e, ao
+// abrir "Detalhes", RSSI/SNR e configuração do rádio — tudo reduzido, sem
+// precisar trocar de tela. Cadastrar uma estação nova (com ou sem sensor
+// órfão) é feito direto aqui; editar, gerenciar as contas vinculadas de
+// uma já cadastrada (não existe dono único — RN15) ou remover também.
 function EstacoesAdmin() {
   const [leituras, setLeituras] = useState([])
   const [estacoes, setEstacoes] = useState([])
@@ -181,11 +181,9 @@ function EstacoesAdmin() {
         ...leitura,
         ...deltas,
         estacaoId: estacao?.id ?? null,
-        donoId: estacao?.dono ?? null,
+        usuariosInfo: estacao?.usuarios_info ?? [],
         nome: estacao?.nome ?? null,
         localizacao: estacao?.localizacao ?? null,
-        donoNome: estacao?.dono_nome ?? null,
-        donoPlano: estacao?.dono_plano ?? null,
         intervaloEnvioMinutos: estacao?.intervalo_envio_minutos ?? null,
         limiteOfflineMinutos: estacao?.limite_offline_minutos ?? null,
         ativa: estacao?.ativa ?? null,
@@ -210,11 +208,9 @@ function EstacoesAdmin() {
         ultimaAnaliseRssi: null,
         ultimaConfiguracao: null,
         estacaoId: estacao.id,
-        donoId: estacao.dono,
+        usuariosInfo: estacao.usuarios_info ?? [],
         nome: estacao.nome,
         localizacao: estacao.localizacao,
-        donoNome: estacao.dono_nome,
-        donoPlano: estacao.dono_plano,
         intervaloEnvioMinutos: estacao.intervalo_envio_minutos,
         limiteOfflineMinutos: estacao.limite_offline_minutos,
         ativa: estacao.ativa,
@@ -262,17 +258,26 @@ function EstacoesAdmin() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leituras])
 
+  // Uma estação não tem "o" plano — ela pode ter contas Standard, Pro e
+  // Plus todas vinculadas ao mesmo tempo. As abas contam/filtram por
+  // "tem pelo menos uma conta desse plano vinculada", então a mesma
+  // estação pode aparecer em mais de uma aba.
   const contadorPorPlano = useMemo(() => {
     const contador = { todas: dispositivos.length, Standard: 0, Pro: 0, Plus: 0 }
     dispositivos.forEach((dispositivo) => {
-      if (dispositivo.donoPlano && contador[dispositivo.donoPlano] != null) contador[dispositivo.donoPlano] += 1
+      const planos = new Set(dispositivo.usuariosInfo.map((usuario) => usuario.plano).filter(Boolean))
+      planos.forEach((plano) => {
+        if (contador[plano] != null) contador[plano] += 1
+      })
     })
     return contador
   }, [dispositivos])
 
   const dispositivosVisiveis = useMemo(() => {
     const buscaNormalizada = busca.trim().toLowerCase()
-    let lista = dispositivos.filter((d) => (abaPlano === 'todas' ? true : d.donoPlano === abaPlano))
+    let lista = dispositivos.filter((d) =>
+      abaPlano === 'todas' ? true : d.usuariosInfo.some((usuario) => usuario.plano === abaPlano),
+    )
     if (buscaNormalizada) {
       lista = lista.filter((d) => {
         return (
@@ -312,7 +317,7 @@ function EstacoesAdmin() {
       return true
     } catch (erroRequisicao) {
       const dados = erroRequisicao.response?.data
-      const mensagem = dados?.dono?.[0] ?? dados?.detail ?? dados?.non_field_errors?.[0] ?? 'Não foi possível concluir. Tente de novo.'
+      const mensagem = dados?.usuarios?.[0] ?? dados?.detail ?? dados?.non_field_errors?.[0] ?? 'Não foi possível concluir. Tente de novo.'
       setErroPorId((atual) => ({ ...atual, [estacaoId]: mensagem }))
       return false
     } finally {
@@ -320,7 +325,8 @@ function EstacoesAdmin() {
     }
   }
 
-  const aoTrocarDono = (estacaoId, novoDonoId) => executarAcao(estacaoId, () => trocarDonoEstacao(estacaoId, novoDonoId))
+  const aoGerenciarUsuarios = (estacaoId, usuarioIds) =>
+    executarAcao(estacaoId, () => atualizarUsuariosEstacao(estacaoId, usuarioIds))
   const aoRemover = (estacaoId) => executarAcao(estacaoId, () => removerEstacao(estacaoId))
   const aoSalvarEdicao = (estacaoId, dados) => executarAcao(estacaoId, () => atualizarEstacao(estacaoId, dados))
 
@@ -335,7 +341,7 @@ function EstacoesAdmin() {
     try {
       await atribuirEstacao({
         identificador: campos.identificador,
-        donoId: campos.donoId,
+        usuarioIds: campos.usuarioIds,
         nome: campos.nome,
         localizacao: campos.localizacao,
       })
@@ -465,7 +471,7 @@ function EstacoesAdmin() {
               }
               analisando={dispositivo.sensor_id in analisesPorSensor}
               erroAnalise={errosTemporarios[dispositivo.sensor_id] ?? null}
-              onTrocarDono={(novoDonoId) => aoTrocarDono(dispositivo.estacaoId, novoDonoId)}
+              onGerenciarUsuarios={(usuarioIds) => aoGerenciarUsuarios(dispositivo.estacaoId, usuarioIds)}
               onRemover={() => aoRemover(dispositivo.estacaoId)}
               onSalvarEdicao={(dados) => aoSalvarEdicao(dispositivo.estacaoId, dados)}
               onAnalisar={() => aoClicarAnalisar(dispositivo.sensor_id)}

@@ -6,7 +6,7 @@ const CAMPOS_INICIAIS = {
   identificador: '',
   nome: '',
   localizacao: '',
-  donoId: '',
+  usuarioIds: [],
 }
 
 // Painel inline (mesmo padrão de NovaContaForm.jsx) pra o admin cadastrar
@@ -20,6 +20,10 @@ function NovaEstacaoForm({ contas, onCriar, onFechar }) {
   async function aoEnviar(evento) {
     evento.preventDefault()
     setErro(null)
+    if (campos.usuarioIds.length === 0) {
+      setErro('Selecione ao menos uma conta.')
+      return
+    }
     setSalvando(true)
     try {
       await onCriar(campos)
@@ -27,7 +31,7 @@ function NovaEstacaoForm({ contas, onCriar, onFechar }) {
     } catch (erroRequisicao) {
       const dados = erroRequisicao.response?.data
       const mensagem =
-        dados?.identificador?.[0] ?? dados?.dono?.[0] ?? dados?.detail ?? 'Não foi possível cadastrar a estação.'
+        dados?.identificador?.[0] ?? dados?.usuarios?.[0] ?? dados?.detail ?? 'Não foi possível cadastrar a estação.'
       setErro(mensagem)
     } finally {
       setSalvando(false)
@@ -72,22 +76,33 @@ function NovaEstacaoForm({ contas, onCriar, onFechar }) {
             onChange={(e) => setCampos((c) => ({ ...c, localizacao: e.target.value }))}
           />
         </label>
-        <label className={styles.campo}>
-          <span className={styles.rotulo}>Dono</span>
-          <select
-            className={styles.input}
-            required
-            value={campos.donoId}
-            onChange={(e) => setCampos((c) => ({ ...c, donoId: e.target.value }))}
-          >
-            <option value="">Selecione uma conta...</option>
-            {contas.map((conta) => (
-              <option key={conta.id} value={conta.id}>
+      </div>
+
+      <div className={styles.campo}>
+        <span className={styles.rotulo}>Contas vinculadas ({campos.usuarioIds.length} selecionada(s))</span>
+        <div className={styles.checklist}>
+          {contas.length === 0 ? (
+            <p className={styles.checklistVazio}>Nenhuma conta cadastrada ainda.</p>
+          ) : (
+            contas.map((conta) => (
+              <label key={conta.id} className={styles.checklistItem}>
+                <input
+                  type="checkbox"
+                  checked={campos.usuarioIds.includes(conta.id)}
+                  onChange={(e) =>
+                    setCampos((c) => ({
+                      ...c,
+                      usuarioIds: e.target.checked
+                        ? [...c.usuarioIds, conta.id]
+                        : c.usuarioIds.filter((id) => id !== conta.id),
+                    }))
+                  }
+                />
                 {conta.first_name || conta.username} ({conta.plano_atual ?? 'sem plano'})
-              </option>
-            ))}
-          </select>
-        </label>
+              </label>
+            ))
+          )}
+        </div>
       </div>
 
       {erro && <p className={styles.aviso}>{erro}</p>}
