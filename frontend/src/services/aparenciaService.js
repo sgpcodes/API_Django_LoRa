@@ -1,9 +1,12 @@
-// Cor de destaque personalizável (tela Configurações → Aparência). Fica
-// salva por conta (mesmo padrão de estacaoService.js) até a pessoa
-// escolher outra — só muda quando ela clica de novo, nunca sozinha.
+// Cor de destaque personalizável (tela Configurações → Aparência) e tema
+// dia/noite (alternado pelo botão na sidebar). Os dois ficam salvos por
+// conta (mesmo padrão de estacaoService.js) até a pessoa escolher outro —
+// só mudam quando ela clica de novo, nunca sozinhos (nem por horário).
 import { obterClaimsDoToken } from './authService'
+import { obterTemaPorHorario } from './climaService'
 
 const CHAVE_BASE = 'agroclimatico_cor_principal'
+const CHAVE_TEMA_BASE = 'agroclimatico_tema'
 
 export const CORES_PRINCIPAIS = [
   { valor: 'azul', hex: '#2f6fed' },
@@ -25,6 +28,22 @@ export function obterCorPrincipal() {
 
 export function salvarCorPrincipal(valor) {
   localStorage.setItem(chaveDoUsuario(), valor)
+}
+
+function chaveTemaDoUsuario() {
+  const username = obterClaimsDoToken()?.username ?? 'anonimo'
+  return `${CHAVE_TEMA_BASE}:${username}`
+}
+
+// Sem escolha salva ainda (primeira visita): sugere pelo horário, só como
+// ponto de partida — a partir da primeira troca manual, fica só no que a
+// pessoa escolheu, para sempre (até ela trocar de novo).
+export function obterTema() {
+  return localStorage.getItem(chaveTemaDoUsuario()) ?? obterTemaPorHorario()
+}
+
+export function salvarTema(valor) {
+  localStorage.setItem(chaveTemaDoUsuario(), valor)
 }
 
 function hexDaCor(valor) {
