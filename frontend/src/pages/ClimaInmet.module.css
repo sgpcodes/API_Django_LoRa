@@ -11,15 +11,65 @@
   min-width: 0;
 }
 
-.grid2Colunas {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
-  align-items: stretch;
+/* Banner */
+
+.banner {
+  position: relative;
+  left: 50%;
+  right: 50%;
+  width: 100vw;
+  margin-top: -1.75rem;
+  margin-left: -50vw;
+  margin-right: -50vw;
+  overflow: hidden;
+  padding: 1.4rem 1.75rem;
+  background: linear-gradient(115deg, var(--color-accent) 40%, #0891b2 100%);
+  color: #ffffff;
+  box-shadow: var(--shadow-card);
 }
 
-.grid2Colunas > * {
-  min-width: 0;
+.bannerFoto {
+  position: absolute;
+  inset: 0;
+  background-image: url('../assets/estacao-banner.png');
+  background-position: right top;
+  background-size: auto 260px;
+  background-repeat: no-repeat;
+  opacity: 0.85;
+  mask-image: linear-gradient(90deg, transparent 0%, transparent 50%, black 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, transparent 50%, black 100%);
+}
+
+.bannerConteudo {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.bannerIcone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  background-color: rgba(255, 255, 255, 0.18);
+  flex-shrink: 0;
+}
+
+.bannerTitulo {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.bannerSubtitulo {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.85);
+  max-width: 46ch;
 }
 
 .card {
@@ -52,6 +102,58 @@
 
 /* Seletor de referência */
 
+.seletorCabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.chipStatus {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: 10px;
+  background-color: var(--color-pill-bg);
+}
+
+.chipStatusTexto {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.chipStatusTitulo {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.chipStatusSub {
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+}
+
+.pontoOnline,
+.pontoOffline {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.pontoOnline {
+  background-color: var(--color-status-online);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.18);
+}
+
+.pontoOffline {
+  background-color: var(--color-status-offline);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18);
+}
+
 .seletores {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -83,6 +185,49 @@
 }
 
 /* Estação de referência */
+
+.estacaoCabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.badgeOperante,
+.badgePane {
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.badgeOperante {
+  background-color: rgba(34, 197, 94, 0.14);
+  color: var(--color-status-online);
+}
+
+.badgePane {
+  background-color: rgba(239, 68, 68, 0.14);
+  color: var(--color-status-offline);
+}
+
+.estacaoGrid {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+.estacaoMapaContainer {
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--color-card-border);
+}
+
+.estacaoMapa {
+  width: 100%;
+  height: 260px;
+}
 
 .estacaoInfo {
   display: flex;
@@ -120,23 +265,91 @@
 
 /* Previsão */
 
-.dias {
-  display: flex;
-  flex-direction: column;
-  gap: 0.85rem;
+.diasSemana {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.6rem;
 }
 
-.dia {
+.diaCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.3rem;
+  padding: 0.9rem 0.6rem;
+  border-radius: 12px;
+  background-color: var(--color-pill-bg);
+}
+
+.diaCardAtivo {
+  background-color: var(--color-pill-ativo-bg);
+}
+
+.diaCardAtivo .diaCardNome,
+.diaCardAtivo .diaCardData,
+.diaCardAtivo .diaCardTemp,
+.diaCardAtivo .diaCardResumo,
+.diaCardAtivo .diaCardMetrica,
+.diaCardAtivo .diaCardIcone {
+  color: var(--color-pill-ativo-texto);
+}
+
+.diaCardNome {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.diaCardData {
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+}
+
+.diaCardIcone {
+  color: var(--color-accent);
+  margin: 0.2rem 0;
+}
+
+.diaCardTemp {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.diaCardResumo {
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+  min-height: 2.2em;
+}
+
+.diaCardMetrica {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+}
+
+.hojeDetalhe {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-card-border);
 }
 
-.diaData {
+.hojeDetalheTitulo {
   font-size: 0.8rem;
   font-weight: 700;
   text-transform: capitalize;
   color: var(--color-text);
+}
+
+.previsaoRodape {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
 }
 
 .diaPeriodos {
@@ -265,9 +478,19 @@
 }
 
 @media (max-width: 1023px) {
-  .grid2Colunas,
   .seletores,
-  .diaPeriodos {
+  .diaPeriodos,
+  .estacaoGrid {
     grid-template-columns: 1fr;
+  }
+
+  .diasSemana {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .diasSemana {
+    grid-template-columns: repeat(2, 1fr);
   }
 }

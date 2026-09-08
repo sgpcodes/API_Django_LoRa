@@ -13,7 +13,6 @@ import {
   Wind,
   Droplets,
 } from 'lucide-react'
-import CabecalhoStandard from '../components/CabecalhoStandard'
 import StatusMessage from '../components/StatusMessage'
 import { buscarMeuPerfil } from '../services/perfilService'
 import { buscarEstacoesInmet, buscarPrevisaoInmet, buscarAvisosInmet } from '../services/inmetService'
@@ -28,8 +27,8 @@ import styles from './ClimaInmet.module.css'
 // O endpoint de leituras horárias por estação está bloqueado por
 // bot-defense do INMET (ver clima_externo/views.py) — por isso a
 // "Estação de referência" abaixo mostra só identificação/localização/
-// status, sem valor de leitura ao vivo, em vez de fingir um dado que a
-// API não consegue mais entregar.
+// status (e um mapa focado nela), sem valor de leitura ao vivo, em vez
+// de fingir um dado que a API não consegue mais entregar.
 
 const UFS = [
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG',
@@ -46,8 +45,48 @@ const ICONE_CONDICAO = {
 
 const NOMES_DIA = { manha: 'Manhã', tarde: 'Tarde', noite: 'Noite' }
 
+const ABREVIACAO_DIA_SEMANA = {
+  domingo: 'Dom',
+  'segunda-feira': 'Seg',
+  'terca-feira': 'Ter',
+  'quarta-feira': 'Qua',
+  'quinta-feira': 'Qui',
+  'sexta-feira': 'Sex',
+  sabado: 'Sáb',
+}
+
 function normalizarTexto(texto) {
   return (texto ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+}
+
+function abreviarDiaSemana(diaSemana) {
+  const chave = normalizarTexto(diaSemana).replace(/\s+/g, '-')
+  return ABREVIACAO_DIA_SEMANA[chave] ?? diaSemana
+}
+
+function formatarDataCurta(data) {
+  const [mes, dia] = (data ?? '').split('/')
+  return dia && mes ? `${dia}/${mes}` : data
+}
+
+// Reduz um dia da previsão (que pode vir dividido em manhã/tarde/noite,
+// ou como um resumo único do dia inteiro — ver clima_externo/views.py) a
+// um único resumo, para o card compacto da linha de 5 dias.
+function resumirDia(dia) {
+  if (dia.dia_inteiro) return dia.dia_inteiro
+  const periodos = [dia.manha, dia.tarde, dia.noite].filter(Boolean)
+  if (periodos.length === 0) return null
+  const base = dia.tarde ?? periodos[0]
+  return {
+    resumo: base.resumo,
+    condicao: base.condicao,
+    dir_vento: base.dir_vento,
+    int_vento: base.int_vento,
+    temp_max: Math.max(...periodos.map((p) => p.temp_max)),
+    temp_min: Math.min(...periodos.map((p) => p.temp_min)),
+    umidade_max: Math.max(...periodos.map((p) => p.umidade_max)),
+    umidade_min: Math.min(...periodos.map((p) => p.umidade_min)),
+  }
 }
 
 function CardVazio({ texto }) {
@@ -197,18 +236,25 @@ function ClimaInmet() {
     [estacoesDoEstado, codigoEstacao],
   )
 
-  const cabecalho = (
-    <CabecalhoStandard
-      subtitulo="Dados públicos oficiais do INMET para a sua região — separado dos dados da sua estação."
-      mostrarChips={false}
-      mostrarExportar={false}
-    />
+  const banner = (
+    <div className={styles.banner}>
+      <div className={styles.bannerFoto} aria-hidden="true" />
+      <div className={styles.bannerConteudo}>
+        <div className={styles.bannerIcone}>
+          <CloudSun size={26} />
+        </div>
+        <div>
+          <h1 className={styles.bannerTitulo}>Clima INMET</h1>
+          <p className={styles.bannerSubtitulo}>Acompanhe as condições meteorológicas da estação selecionada.</p>
+        </div>
+      </div>
+    </div>
   )
 
   if (carregandoInicial) {
     return (
       <div className={styles.pagina}>
-        {cabecalho}
+        {banner}
         <StatusMessage texto="Carregando dados do INMET..." />
       </div>
     )
@@ -216,10 +262,23 @@ function ClimaInmet() {
 
   return (
     <div className={styles.pagina}>
-      {cabecalho}
+      {banner}
 
       <section className={styles.card}>
-        <h2 className={styles.tituloSecao}><MapPin size={16} /> Seletor de referência</h2>
+        <div className={styles.seletorCabecalho}>
+          <h2 className={styles.tituloSecao}><MapPin size={16} /> Selecionar de referência</h2>
+          {estacaoSelecionada && (
+            <div className={styles.chipStatus}>
+              <span className={estacaoSelecionada.operante ? styles.pontoOnline : styles.pontoOffline} />
+              <div className={styles.chipStatusTexto}>
+                <span className={styles.chipStatusTitulo}>
+                  {estacaoSelecionada.operante ? 'Estação ativa' : 'Estação com pane'}
+                </span>
+                <span className={styles.chipStatusSub}>{estacaoSelecionada.nome}</span>
+              </div>
+            </div>
+          )}
+        </div>
         <div className={styles.seletores}>
           <label className={styles.campo}>
             <span>Estado</span>
@@ -261,12 +320,108 @@ function ClimaInmet() {
         </div>
       </section>
 
-      <section className={styles.grid2Colunas}>
-        <div className={styles.card}>
+      <section className={styles.card}>
+        <h2 className={styles.tituloSecao}><CloudSun size={16} /> Previsão do tempo (5 dias)</h2>
+        {erroPrevisao ? (
+          <CardVazio texto={erroPrevisao} />
+        ) : !previsao || previsao.dias.length === 0 ? (
+          <CardVazio texto="Escolha um município para ver a previsão." />
+        ) : (
+          <>
+            <div className={styles.diasSemana}>
+              {previsao.dias.map((dia, indice) => {
+                const resumo = resumirDia(dia)
+                if (!resumo) return null
+                const Icone = ICONE_CONDICAO[resumo.condicao] ?? Sun
+                return (
+                  <div key={dia.data} className={`${styles.diaCard} ${indice === 0 ? styles.diaCardAtivo : ''}`}>
+                    <span className={styles.diaCardNome}>{indice === 0 ? 'Hoje' : abreviarDiaSemana(dia.dia_semana)}</span>
+                    <span className={styles.diaCardData}>{formatarDataCurta(dia.data)}</span>
+                    <Icone size={26} className={styles.diaCardIcone} />
+                    <span className={styles.diaCardTemp}>{resumo.temp_min}° / {resumo.temp_max}°</span>
+                    <span className={styles.diaCardResumo}>{resumo.resumo}</span>
+                    <span className={styles.diaCardMetrica}><Droplets size={12} /> {resumo.umidade_min}–{resumo.umidade_max}%</span>
+                    <span className={styles.diaCardMetrica}><Wind size={12} /> {resumo.dir_vento} {resumo.int_vento}</span>
+                  </div>
+                )
+              })}
+            </div>
+
+            {!previsao.dias[0].dia_inteiro && (
+              <div className={styles.hojeDetalhe}>
+                <span className={styles.hojeDetalheTitulo}>
+                  Hoje — {previsao.dias[0].dia_semana ?? formatarDataCurta(previsao.dias[0].data)}
+                </span>
+                <div className={styles.diaPeriodos}>
+                  <PeriodoPrevisao nome={NOMES_DIA.manha} dados={previsao.dias[0].manha} />
+                  <PeriodoPrevisao nome={NOMES_DIA.tarde} dados={previsao.dias[0].tarde} />
+                  <PeriodoPrevisao nome={NOMES_DIA.noite} dados={previsao.dias[0].noite} />
+                </div>
+              </div>
+            )}
+
+            <p className={styles.previsaoRodape}>Condições previstas para os próximos dias com base no modelo do INMET.</p>
+          </>
+        )}
+      </section>
+
+      <section className={styles.card}>
+        <h2 className={styles.tituloSecao}><AlertTriangle size={16} /> Avisos oficiais</h2>
+        {erroAvisos ? (
+          <CardVazio texto={erroAvisos} />
+        ) : !avisos || (avisos.hoje.length === 0 && avisos.futuro.length === 0) ? (
+          <CardVazio texto="Nenhum aviso oficial ativo para o estado selecionado no momento." />
+        ) : (
+          <div className={styles.avisos}>
+            {[...avisos.hoje, ...avisos.futuro].map((aviso) => (
+              <CardAviso key={aviso.id} aviso={aviso} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className={styles.card}>
+        <div className={styles.estacaoCabecalho}>
           <h2 className={styles.tituloSecao}><Landmark size={16} /> Estação de referência (INMET)</h2>
-          {!estacaoSelecionada ? (
-            <CardVazio texto="Escolha um estado com estação disponível para ver os detalhes." />
-          ) : (
+          {estacaoSelecionada && (
+            <span className={estacaoSelecionada.operante ? styles.badgeOperante : styles.badgePane}>
+              {estacaoSelecionada.operante ? 'Ativa' : 'Com pane'}
+            </span>
+          )}
+        </div>
+        {!estacaoSelecionada ? (
+          <CardVazio texto="Escolha um estado com estação disponível para ver os detalhes." />
+        ) : (
+          <div className={styles.estacaoGrid}>
+            <div className={styles.estacaoMapaContainer}>
+              <MapContainer
+                key={estacaoSelecionada.codigo}
+                center={[Number(estacaoSelecionada.latitude), Number(estacaoSelecionada.longitude)]}
+                zoom={9}
+                scrollWheelZoom={false}
+                className={styles.estacaoMapa}
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                <CircleMarker
+                  center={[Number(estacaoSelecionada.latitude), Number(estacaoSelecionada.longitude)]}
+                  radius={8}
+                  pathOptions={{
+                    color: estacaoSelecionada.operante ? 'var(--color-status-online)' : 'var(--color-status-offline)',
+                    fillOpacity: 0.8,
+                  }}
+                >
+                  <Popup>
+                    <strong>{estacaoSelecionada.nome}</strong>
+                    <br />
+                    {estacaoSelecionada.uf} · {estacaoSelecionada.situacao}
+                  </Popup>
+                </CircleMarker>
+              </MapContainer>
+            </div>
+
             <div className={styles.estacaoInfo}>
               <div className={styles.estacaoLinha}>
                 <span className={styles.estacaoRotulo}>Nome</span>
@@ -295,49 +450,6 @@ function ClimaInmet() {
                 identificação e localização oficiais dela.
               </p>
             </div>
-          )}
-        </div>
-
-        <div className={styles.card}>
-          <h2 className={styles.tituloSecao}><CloudSun size={16} /> Previsão (5 dias)</h2>
-          {erroPrevisao ? (
-            <CardVazio texto={erroPrevisao} />
-          ) : !previsao || previsao.dias.length === 0 ? (
-            <CardVazio texto="Escolha um município para ver a previsão." />
-          ) : (
-            <div className={styles.dias}>
-              {previsao.dias.map((dia) => (
-                <div key={dia.data} className={styles.dia}>
-                  <span className={styles.diaData}>{dia.dia_semana ?? dia.data}</span>
-                  {dia.dia_inteiro ? (
-                    <div className={styles.diaPeriodos}>
-                      <PeriodoPrevisao nome="Previsão do dia" dados={dia.dia_inteiro} />
-                    </div>
-                  ) : (
-                    <div className={styles.diaPeriodos}>
-                      <PeriodoPrevisao nome={NOMES_DIA.manha} dados={dia.manha} />
-                      <PeriodoPrevisao nome={NOMES_DIA.tarde} dados={dia.tarde} />
-                      <PeriodoPrevisao nome={NOMES_DIA.noite} dados={dia.noite} />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
-
-      <section className={styles.card}>
-        <h2 className={styles.tituloSecao}><AlertTriangle size={16} /> Avisos oficiais</h2>
-        {erroAvisos ? (
-          <CardVazio texto={erroAvisos} />
-        ) : !avisos || (avisos.hoje.length === 0 && avisos.futuro.length === 0) ? (
-          <CardVazio texto="Nenhum aviso oficial ativo para o estado selecionado no momento." />
-        ) : (
-          <div className={styles.avisos}>
-            {[...avisos.hoje, ...avisos.futuro].map((aviso) => (
-              <CardAviso key={aviso.id} aviso={aviso} />
-            ))}
           </div>
         )}
       </section>
