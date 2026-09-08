@@ -4,43 +4,77 @@
   gap: 1.25rem;
 }
 
-.cabecalho {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 1rem;
+.banner {
+  position: relative;
+  left: 50%;
+  right: 50%;
+  width: 100vw;
+  margin-top: -1.75rem;
+  margin-left: -50vw;
+  margin-right: -50vw;
+  overflow: hidden;
+  padding: 1.4rem 1.75rem;
+  background: linear-gradient(115deg, #101a3d 0%, #1b3a8a 60%, #1e40af 100%);
+  color: #ffffff;
+  box-shadow: var(--shadow-card);
 }
 
-.titulo {
+.bannerRede {
+  position: absolute;
+  inset: 0;
+  opacity: 0.9;
+}
+
+.bannerRede svg {
+  width: 100%;
+  height: 100%;
+}
+
+.bannerConteudo {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 0.55rem;
-  font-size: 1.3rem;
-  font-weight: 700;
-  color: var(--color-text);
-  margin: 0;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
-.subtitulo {
+.bannerIcone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  background-color: rgba(255, 255, 255, 0.18);
+  flex-shrink: 0;
+}
+
+.bannerTitulo {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.bannerSubtitulo {
   margin: 0.25rem 0 0;
   font-size: 0.85rem;
-  color: var(--color-text-secondary);
+  color: rgba(255, 255, 255, 0.85);
+  max-width: 52ch;
 }
 
 .botaoNovaConta {
   display: flex;
   align-items: center;
   gap: 0.45rem;
-  padding: 0.65rem 1.15rem;
-  border-radius: 10px;
+  padding: 0.6rem 1.1rem;
+  border-radius: 8px;
   border: none;
   background-color: var(--color-accent);
   color: #ffffff;
   font-weight: 700;
   font-size: 0.85rem;
   cursor: pointer;
-  height: fit-content;
+  white-space: nowrap;
 }
 
 .botaoNovaConta:hover {
@@ -70,8 +104,8 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.5rem 0.8rem;
-  border-radius: 8px;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
   border: none;
   background: none;
   color: var(--color-text-secondary);
@@ -90,23 +124,46 @@
   color: var(--color-pill-ativo-texto);
 }
 
-.abaContador {
-  padding: 0.05rem 0.4rem;
-  border-radius: 999px;
-  background-color: rgba(255, 255, 255, 0.25);
-  font-size: 0.7rem;
+.abaAtiva .abaCorAzul,
+.abaAtiva .abaCorVerde,
+.abaAtiva .abaCorRoxa,
+.abaAtiva .abaCorNeutra {
+  color: inherit;
 }
 
-.aba:not(.abaAtiva) .abaContador {
-  background-color: var(--color-pill-bg);
+.abaCorAzul {
+  color: #4a6fa5;
+}
+
+.abaCorVerde {
+  color: #16a34a;
+}
+
+.abaCorRoxa {
+  color: #7c3aed;
+}
+
+.abaCorNeutra {
   color: var(--color-text-secondary);
 }
 
 .controles {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.6rem;
   flex-wrap: wrap;
+}
+
+.campoOrdenacao {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.rotuloControle {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
 }
 
 .seletorOrdenacao {
@@ -127,7 +184,7 @@
   border: 1px solid var(--color-card-border);
   background-color: var(--color-input-bg);
   color: var(--color-text-secondary);
-  min-width: 240px;
+  min-width: 220px;
 }
 
 .inputBusca {

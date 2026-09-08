@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
+  Crown,
   Grid2x2,
   List,
   Plus,
   Search,
-  UserCog,
-  UserRound,
   Users,
+  UsersRound,
 } from 'lucide-react'
 import ContaAdminCard from '../components/ContaAdminCard'
 import NovaContaForm from '../components/NovaContaForm'
@@ -25,10 +25,10 @@ import styles from './ContasAdmin.module.css'
 const POR_PAGINA = 10
 
 const ABAS_PLANO = [
-  { valor: 'todas', rotulo: 'Todas as contas', icone: Users },
-  { valor: 'Standard', rotulo: 'Standard', icone: UserRound },
-  { valor: 'Pro', rotulo: 'Pro', icone: UserCog },
-  { valor: 'Plus', rotulo: 'Plus', icone: UserCog },
+  { valor: 'todas', rotulo: 'Todas as contas', icone: Users, cor: 'abaCorNeutra' },
+  { valor: 'Standard', rotulo: 'Standard', icone: Users, cor: 'abaCorAzul' },
+  { valor: 'Pro', rotulo: 'Pro', icone: UsersRound, cor: 'abaCorVerde' },
+  { valor: 'Plus', rotulo: 'Plus', icone: Crown, cor: 'abaCorRoxa' },
 ]
 
 // Tela "Contas" do Painel Administrativo: uma conta Standard/Pro/Plus por
@@ -197,18 +197,44 @@ function ContasAdmin() {
 
   return (
     <div className={styles.pagina}>
-      <div className={styles.cabecalho}>
-        <div>
-          <h1 className={styles.titulo}>
-            <Users size={20} />
-            Contas
-          </h1>
-          <p className={styles.subtitulo}>Gerencie todas as contas cadastradas na plataforma.</p>
+      <div className={styles.banner}>
+        <div className={styles.bannerRede} aria-hidden="true">
+          <svg viewBox="0 0 420 200" preserveAspectRatio="xMidYMid slice">
+            <circle cx="310" cy="90" r="78" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="1" />
+            <circle cx="310" cy="90" r="55" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="1" />
+            <line x1="232" y1="90" x2="388" y2="90" stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
+            <line x1="310" y1="12" x2="310" y2="168" stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
+            <g stroke="rgba(147,197,253,0.55)" strokeWidth="1">
+              <line x1="270" y1="55" x2="340" y2="40" />
+              <line x1="340" y1="40" x2="375" y2="85" />
+              <line x1="270" y1="55" x2="255" y2="110" />
+              <line x1="255" y1="110" x2="300" y2="150" />
+              <line x1="300" y1="150" x2="365" y2="135" />
+              <line x1="365" y1="135" x2="375" y2="85" />
+              <line x1="270" y1="55" x2="375" y2="85" />
+            </g>
+            <g fill="#93c5fd">
+              <circle cx="270" cy="55" r="3.5" />
+              <circle cx="340" cy="40" r="3" />
+              <circle cx="375" cy="85" r="4" />
+              <circle cx="255" cy="110" r="3" />
+              <circle cx="300" cy="150" r="3.5" />
+              <circle cx="365" cy="135" r="3" />
+            </g>
+          </svg>
         </div>
-        <button type="button" className={styles.botaoNovaConta} onClick={() => setMostrarNovaConta((m) => !m)}>
-          <Plus size={16} />
-          Nova conta
-        </button>
+        <div className={styles.bannerConteudo}>
+          <div className={styles.bannerIcone}>
+            <Users size={26} />
+          </div>
+          <div>
+            <h1 className={styles.bannerTitulo}>Contas</h1>
+            <p className={styles.bannerSubtitulo}>
+              Gerencie todas as contas cadastradas no sistema. Acompanhe o plano, status e configure permissões e
+              estações atribuídas.
+            </p>
+          </div>
+        </div>
       </div>
 
       {mostrarNovaConta && <NovaContaForm onCriar={aoCriarConta} onFechar={() => setMostrarNovaConta(false)} />}
@@ -222,31 +248,33 @@ function ContasAdmin() {
               className={`${styles.aba} ${abaPlano === aba.valor ? styles.abaAtiva : ''}`}
               onClick={() => mudarFiltro(() => setAbaPlano(aba.valor))}
             >
-              <aba.icone size={14} />
-              {aba.rotulo}
-              <span className={styles.abaContador}>{contadorPorPlano[aba.valor] ?? 0}</span>
+              <aba.icone size={14} className={styles[aba.cor]} />
+              {aba.rotulo} ({contadorPorPlano[aba.valor] ?? 0})
             </button>
           ))}
         </div>
 
         <div className={styles.controles}>
-          <select
-            className={styles.seletorOrdenacao}
-            value={ordenacao}
-            onChange={(e) => setOrdenacao(e.target.value)}
-          >
-            <option value="recentes">Mais recentes</option>
-            <option value="nome">Nome (A-Z)</option>
-          </select>
+          <label className={styles.campoOrdenacao}>
+            <span className={styles.rotuloControle}>Ordenar por</span>
+            <select
+              className={styles.seletorOrdenacao}
+              value={ordenacao}
+              onChange={(e) => setOrdenacao(e.target.value)}
+            >
+              <option value="recentes">Mais recentes</option>
+              <option value="nome">Nome (A-Z)</option>
+            </select>
+          </label>
 
           <div className={styles.campoBusca}>
-            <Search size={14} />
             <input
               className={styles.inputBusca}
               placeholder="Buscar por nome, e-mail ou usuário..."
               value={busca}
               onChange={(e) => mudarFiltro(() => setBusca(e.target.value))}
             />
+            <Search size={14} />
           </div>
 
           <div className={styles.toggleVisualizacao}>
@@ -267,6 +295,11 @@ function ContasAdmin() {
               <Grid2x2 size={15} />
             </button>
           </div>
+
+          <button type="button" className={styles.botaoNovaConta} onClick={() => setMostrarNovaConta((m) => !m)}>
+            <Plus size={16} />
+            Nova conta
+          </button>
         </div>
       </div>
 

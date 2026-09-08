@@ -1,9 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Calendar,
   ChevronDown,
+  ChevronRight,
   ChevronUp,
+  Compass,
   CreditCard,
+  Droplets,
+  Eye,
+  Gauge,
   Link2,
   Mail,
   MapPin,
@@ -11,17 +17,36 @@ import {
   Pencil,
   Phone,
   Radio,
+  RefreshCw,
   Satellite,
+  Settings2,
   ShieldOff,
   ShieldCheck,
+  Thermometer,
   Trash2,
+  UserPlus,
   UserRound,
+  Wind,
   X,
 } from 'lucide-react'
+import { solicitarAnaliseRssi } from '../services/leiturasService'
 import styles from './ContaAdminCard.module.css'
+
+// Paleta fixa pro avatar — a mesma conta sempre cai na mesma cor (baseado
+// no id), só pra distinguir visualmente os cards numa lista longa.
+const CORES_AVATAR = ['#4a6fa5', '#7c3aed', '#0891b2', '#16a34a', '#db2777', '#ea580c']
+
+function corDoAvatar(id) {
+  return CORES_AVATAR[id % CORES_AVATAR.length]
+}
 
 function formatarData(iso) {
   return new Date(iso).toLocaleDateString('pt-BR')
+}
+
+function formatarDataHora(iso) {
+  if (!iso) return 'nunca'
+  return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
 function formatarEndereco({ rua, numero, cidade, estado, cep }) {
@@ -40,11 +65,11 @@ function iniciais(nome) {
     .join('')
 }
 
-// Card de uma conta na tela de Contas do admin: recolhido por padrão,
-// "Detalhes" expande os dados completos + estações vinculadas + o
-// seletor de atribuição. O menu "⋮" reúne as ações de gestão da conta
-// (editar, suspender/reativar, excluir) — excluir só é permitido pelo
-// backend se a conta não tiver mais nenhuma estação vinculada (RN15).
+// Card de uma conta na tela de Contas do admin: cabeçalho (avatar, nome,
+// plano, status, e-mail, contagem de estações) + "Detalhes" expande dados
+// completos em caixas, mais um painel com status/estações vinculadas/
+// dados da estação/ações rápidas/mais ações, e um rodapé de configuração
+// (protocolo + frequência de leitura da estação principal).
 function ContaAdminCard({
   conta,
   estacoesDaConta,
@@ -59,11 +84,15 @@ function ContaAdminCard({
   onExcluir,
   onRemoverEstacaoDaLista,
 }) {
+  const navigate = useNavigate()
   const [detalhesAbertos, setDetalhesAbertos] = useState(false)
   const [sensorEscolhido, setSensorEscolhido] = useState('')
+  const [mostrarAtribuir, setMostrarAtribuir] = useState(false)
   const [menuAberto, setMenuAberto] = useState(false)
   const [editando, setEditando] = useState(false)
   const [campos, setCampos] = useState(camposIniciais(conta))
+  const [analisando, setAnalisando] = useState(false)
+  const [avisoAnalise, setAvisoAnalise] = useState('')
   const menuRef = useRef(null)
 
   function camposIniciais(c) {
@@ -91,6 +120,8 @@ function ContaAdminCard({
   const nome = conta.first_name || conta.username
   const limite = conta.plano_max_estacoes
   const noLimite = limite != null && conta.estacoes_vinculadas >= limite
+  const estacaoPrincipal = estacoesDaConta[0] ?? null
+  const leituraPrincipal = estacaoPrincipal?.ultima_leitura ?? null
 
   // Uma estação pode ter várias contas vinculadas (RN15), então o
   // seletor oferece tanto sensores órfãos (viram uma Estacao nova, já
@@ -99,7 +130,7 @@ function ContaAdminCard({
   const estacoesParaVincular = todasEstacoes.filter((estacao) => !estacao.usuarios.includes(conta.id))
   const semOpcoes = sensoresOrfaos.length === 0 && estacoesParaVincular.length === 0
 
-  function aoAtribuir(evento) {
+  function aoAtribuirEstacao(evento) {
     evento.preventDefault()
     if (!sensorEscolhido) return
 
@@ -137,11 +168,32 @@ function ContaAdminCard({
     }
   }
 
+  function aoVerEstacao() {
+    if (!estacaoPrincipal) return
+    navigate(`/app/adm/estacoes?q=${encodeURIComponent(estacaoPrincipal.identificador)}`)
+  }
+
+  async function aoAtualizarRssi() {
+    if (!estacaoPrincipal) return
+    setAnalisando(true)
+    setAvisoAnalise('')
+    try {
+      await solicitarAnaliseRssi(estacaoPrincipal.identificador)
+      setAvisoAnalise('Solicitado — acompanhe o resultado na aba Estações.')
+    } catch {
+      setAvisoAnalise('Não foi possível solicitar agora. Tente de novo.')
+    } finally {
+      setAnalisando(false)
+    }
+  }
+
   return (
     <div className={styles.card}>
       <div className={styles.topo}>
         <div className={styles.identificacao}>
-          <div className={styles.avatar}>{iniciais(nome)}</div>
+          <div className={styles.avatar} style={{ backgroundColor: corDoAvatar(conta.id) }}>
+            {iniciais(nome)}
+          </div>
           <div>
             <div className={styles.nomeLinha}>
               <span className={styles.nome}>{nome}</span>
@@ -151,19 +203,19 @@ function ContaAdminCard({
               </span>
             </div>
             <span className={styles.subtexto}>
-              {conta.email || conta.username} · {conta.estacoes_vinculadas} de {limite ?? '∞'} estação(ões)
+              <Mail size={12} />
+              {conta.email || conta.username}
+              <ChevronRight size={12} className={styles.subtextoSeparador} />
+              <UserRound size={12} />
+              {conta.estacoes_vinculadas} de {limite ?? '∞'} estação(ões)
             </span>
           </div>
         </div>
 
         <div className={styles.acoesTopo}>
-          <button
-            type="button"
-            className={styles.botaoDetalhes}
-            onClick={() => setDetalhesAbertos((a) => !a)}
-          >
+          <button type="button" className={styles.botaoDetalhes} onClick={() => setDetalhesAbertos((a) => !a)}>
             {detalhesAbertos ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
-            {detalhesAbertos ? 'Ocultar detalhes' : 'Detalhes'}
+            {detalhesAbertos ? 'Ocultar detalhes' : 'Ver detalhes'}
           </button>
 
           <div className={styles.menuWrapper} ref={menuRef}>
@@ -294,142 +346,234 @@ function ContaAdminCard({
               {erro && <p className={styles.aviso}>{erro}</p>}
             </form>
           ) : (
-            <div className={styles.infoGrid}>
-              <div className={styles.infoCampo}>
-                <span className={styles.infoRotulo}>
-                  <Mail size={12} /> E-mail
-                </span>
-                <span className={styles.infoValor}>{conta.email || '—'}</span>
-              </div>
-              <div className={styles.infoCampo}>
-                <span className={styles.infoRotulo}>
-                  <Phone size={12} /> Telefone
-                </span>
-                <span className={styles.infoValor}>{conta.telefone || '—'}</span>
-              </div>
-              <div className={styles.infoCampo}>
-                <span className={styles.infoRotulo}>
-                  <UserRound size={12} /> Usuário
-                </span>
-                <span className={styles.infoValor}>{conta.username}</span>
-              </div>
-              <div className={styles.infoCampo}>
-                <span className={styles.infoRotulo}>
-                  <MapPin size={12} /> Endereço
-                </span>
-                <span className={styles.infoValor}>{formatarEndereco(conta)}</span>
-              </div>
-              <div className={styles.infoCampo}>
-                <span className={styles.infoRotulo}>
-                  <Calendar size={12} /> Membro desde
-                </span>
-                <span className={styles.infoValor}>{formatarData(conta.date_joined)}</span>
-              </div>
-              <div className={styles.infoCampo}>
-                <span className={styles.infoRotulo}>
-                  <CreditCard size={12} /> Plano
-                </span>
-                <span className={styles.planoPill}>{conta.plano_atual ?? 'Sem plano'}</span>
-              </div>
-              <div className={styles.infoCampo}>
-                <span className={styles.infoRotulo}>Status</span>
-                <span className={`${styles.statusPill} ${conta.is_active ? styles.statusAtiva : styles.statusSuspensa}`}>
-                  {conta.is_active ? 'Ativa' : 'Suspensa'}
-                </span>
-              </div>
-            </div>
-          )}
-
-          <div className={styles.secaoEstacoes}>
-            <span className={styles.secaoTitulo}>
-              <Radio size={13} /> Estações vinculadas
-            </span>
-            {estacoesDaConta.length === 0 ? (
-              <div className={styles.estacaoVazia}>
-                <span className={styles.estacaoVaziaIcone}>
-                  <Satellite size={22} />
-                </span>
-                <div>
-                  <p className={styles.estacaoVaziaTitulo}>Nenhuma estação vinculada ainda.</p>
-                  <p className={styles.estacaoVaziaTexto}>Vincule estações a esta conta para gerenciar permissões e acessos.</p>
+            <>
+              <div className={styles.infoGrid}>
+                <div className={styles.infoCaixa}>
+                  <span className={styles.infoRotulo}>
+                    <Mail size={12} /> E-mail
+                  </span>
+                  <span className={styles.infoValor}>{conta.email || '—'}</span>
+                </div>
+                <div className={styles.infoCaixa}>
+                  <span className={styles.infoRotulo}>
+                    <Phone size={12} /> Telefone
+                  </span>
+                  <span className={styles.infoValor}>{conta.telefone || '—'}</span>
+                </div>
+                <div className={styles.infoCaixa}>
+                  <span className={styles.infoRotulo}>
+                    <UserRound size={12} /> Usuário
+                  </span>
+                  <span className={styles.infoValor}>{conta.username}</span>
+                </div>
+                <div className={styles.infoCaixa}>
+                  <span className={styles.infoRotulo}>
+                    <MapPin size={12} /> Endereço
+                  </span>
+                  <span className={styles.infoValor}>{formatarEndereco(conta)}</span>
+                </div>
+                <div className={styles.infoCaixa}>
+                  <span className={styles.infoRotulo}>
+                    <Calendar size={12} /> Membro desde
+                  </span>
+                  <span className={styles.infoValor}>{formatarData(conta.date_joined)}</span>
+                </div>
+                <div className={styles.infoCaixa}>
+                  <span className={styles.infoRotulo}>
+                    <CreditCard size={12} /> Plano
+                  </span>
+                  <span className={styles.planoPill}>{conta.plano_atual ?? 'Sem plano'}</span>
                 </div>
               </div>
-            ) : (
-              <ul className={styles.listaEstacoes}>
-                {estacoesDaConta.map((estacao) => (
-                  <li key={estacao.id} className={styles.itemEstacao}>
-                    <span>{estacao.nome || estacao.identificador}</span>
-                    <span className={styles.itemEstacaoAcoes}>
-                      <span className={`${styles.statusPill} ${estacao.esta_offline ? styles.statusSuspensa : styles.statusAtiva}`}>
-                        {estacao.esta_offline ? 'Offline' : 'Online'}
-                      </span>
+
+              <div className={styles.linhaPaineis}>
+                <div className={styles.painel}>
+                  <span className={styles.painelTitulo}>Status da conta</span>
+                  <span className={styles.statusLinha}>
+                    <span className={`${styles.pontoStatus} ${conta.is_active ? styles.pontoAtivo : styles.pontoSuspenso}`} />
+                    <span className={`${styles.statusPill} ${conta.is_active ? styles.statusAtiva : styles.statusSuspensa}`}>
+                      {conta.is_active ? 'Ativa' : 'Suspensa'}
+                    </span>
+                  </span>
+                </div>
+
+                <div className={styles.painel}>
+                  <span className={styles.painelTitulo}>Estações vinculadas ({estacoesDaConta.length})</span>
+                  {estacoesDaConta.length === 0 ? (
+                    <div className={styles.estacaoVazia}>
+                      <Satellite size={18} />
+                      <span>Nenhuma estação vinculada ainda.</span>
+                    </div>
+                  ) : (
+                    <ul className={styles.listaEstacoes}>
+                      {estacoesDaConta.map((estacao) => (
+                        <li key={estacao.id} className={styles.itemEstacao}>
+                          <span className={styles.itemEstacaoIcone}>
+                            <Radio size={13} />
+                          </span>
+                          <div className={styles.itemEstacaoTextos}>
+                            <span className={styles.itemEstacaoNome}>
+                              {estacao.nome || estacao.identificador}
+                              <span className={`${styles.statusPillMini} ${estacao.esta_offline ? styles.statusSuspensa : styles.statusAtiva}`}>
+                                {estacao.esta_offline ? 'Offline' : 'Online'}
+                              </span>
+                            </span>
+                            <span className={styles.itemEstacaoData}>
+                              Última leitura: {formatarDataHora(estacao.ultima_leitura?.data_hora)}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            className={styles.botaoRemoverEstacao}
+                            onClick={() => {
+                              if (window.confirm(`Remover a estação "${estacao.nome || estacao.identificador}" desta conta?`)) {
+                                onRemoverEstacaoDaLista(estacao)
+                              }
+                            }}
+                            title="Remover estação"
+                            aria-label={`Remover ${estacao.identificador}`}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                <div className={styles.painel}>
+                  <span className={styles.painelTitulo}>Dados transmitidos pela estação</span>
+                  <div className={styles.gradeDados}>
+                    <div className={styles.itemDado}>
+                      <Thermometer size={13} className={styles.iconeTemperatura} />
+                      <span className={styles.itemDadoRotulo}>Temperatura</span>
+                      <span className={styles.itemDadoValor}>{leituraPrincipal?.temperatura != null ? `${leituraPrincipal.temperatura} °C` : '—'}</span>
+                    </div>
+                    <div className={styles.itemDado}>
+                      <Droplets size={13} className={styles.iconeUmidade} />
+                      <span className={styles.itemDadoRotulo}>Umidade</span>
+                      <span className={styles.itemDadoValor}>{leituraPrincipal?.umidade != null ? `${leituraPrincipal.umidade}%` : '—'}</span>
+                    </div>
+                    <div className={styles.itemDado}>
+                      <Wind size={13} className={styles.iconeVento} />
+                      <span className={styles.itemDadoRotulo}>Vel. do vento</span>
+                      <span className={styles.itemDadoValor}>—</span>
+                    </div>
+                    <div className={styles.itemDado}>
+                      <Compass size={13} className={styles.iconeDirecao} />
+                      <span className={styles.itemDadoRotulo}>Direção do vento</span>
+                      <span className={styles.itemDadoValor}>—</span>
+                    </div>
+                    <div className={styles.itemDado}>
+                      <Gauge size={13} className={styles.iconePressao} />
+                      <span className={styles.itemDadoRotulo}>Pressão atmosférica</span>
+                      <span className={styles.itemDadoValor}>{leituraPrincipal?.pressao != null ? `${leituraPrincipal.pressao} hPa` : '—'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className={styles.painel}>
+                  <span className={styles.painelTitulo}>Ações rápidas</span>
+                  <div className={styles.listaAcoes}>
+                    <button type="button" className={styles.itemAcao} onClick={aoVerEstacao} disabled={!estacaoPrincipal}>
+                      <Eye size={13} /> Ver detalhes
+                    </button>
+                    <button type="button" className={styles.itemAcao} onClick={aoAtualizarRssi} disabled={!estacaoPrincipal || analisando}>
+                      <RefreshCw size={13} className={analisando ? styles.girando : undefined} />
+                      {analisando ? 'Solicitando...' : 'Atualizar leitura RSSI'}
+                    </button>
+                    <button type="button" className={styles.itemAcao} onClick={aoVerEstacao} disabled={!estacaoPrincipal}>
+                      <Settings2 size={13} /> Gerenciar estação
+                    </button>
+                  </div>
+                  {avisoAnalise && <p className={styles.avisoDiscreto}>{avisoAnalise}</p>}
+                </div>
+
+                <div className={styles.painel}>
+                  <span className={styles.painelTitulo}>Mais ações</span>
+                  <div className={styles.listaAcoes}>
+                    <button type="button" className={styles.itemAcao} onClick={() => setMostrarAtribuir((m) => !m)}>
+                      <UserPlus size={13} /> Atribuir estação
+                    </button>
+                    <button type="button" className={styles.itemAcao} onClick={aoAbrirEdicao}>
+                      <Settings2 size={13} /> Configurações
+                    </button>
+                    {estacoesDaConta.length === 1 && (
                       <button
                         type="button"
-                        className={styles.botaoRemoverEstacao}
+                        className={styles.itemAcao}
                         onClick={() => {
-                          if (window.confirm(`Remover a estação "${estacao.nome || estacao.identificador}" desta conta?`)) {
-                            onRemoverEstacaoDaLista(estacao)
+                          if (window.confirm(`Remover a estação "${estacaoPrincipal.nome || estacaoPrincipal.identificador}" desta conta?`)) {
+                            onRemoverEstacaoDaLista(estacaoPrincipal)
                           }
                         }}
-                        title="Remover estação"
-                        aria-label={`Remover ${estacao.identificador}`}
                       >
-                        <Trash2 size={13} />
+                        <Radio size={13} /> Remover estação
                       </button>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          <form className={styles.formAtribuir} onSubmit={aoAtribuir}>
-            <label className={styles.infoRotulo} htmlFor={`sensor-${conta.id}`}>
-              Atribuir estação
-            </label>
-            <div className={styles.linhaAtribuir}>
-              <div className={styles.seletorComIcone}>
-                <Link2 size={14} />
-                <select
-                  id={`sensor-${conta.id}`}
-                  className={styles.seletor}
-                  value={sensorEscolhido}
-                  onChange={(evento) => setSensorEscolhido(evento.target.value)}
-                  disabled={noLimite || semOpcoes}
-                >
-                  <option value="">{semOpcoes ? 'Nenhuma estação disponível no momento' : 'Selecione um sensor...'}</option>
-                  {sensoresOrfaos.length > 0 && (
-                    <optgroup label="Sensores novos (sem cadastro)">
-                      {sensoresOrfaos.map((orfao) => (
-                        <option key={orfao.sensor_id} value={`orfao:${orfao.sensor_id}`}>
-                          {orfao.sensor_id}
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
-                  {estacoesParaVincular.length > 0 && (
-                    <optgroup label="Estações já cadastradas">
-                      {estacoesParaVincular.map((estacao) => (
-                        <option key={estacao.id} value={`existente:${estacao.id}`}>
-                          {estacao.nome || estacao.identificador}
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
-                </select>
+                    )}
+                    <button type="button" className={`${styles.itemAcao} ${styles.itemAcaoPerigo}`} onClick={aoExcluir}>
+                      <Trash2 size={13} /> Excluir conta
+                    </button>
+                  </div>
+                </div>
               </div>
-              <button
-                type="submit"
-                className={styles.botaoAtribuir}
-                disabled={!sensorEscolhido || processando || noLimite}
-              >
-                <Link2 size={14} />
-                {processando ? 'Atribuindo...' : 'Atribuir'}
-              </button>
-            </div>
-            {noLimite && <p className={styles.aviso}>Limite de estações do plano atingido.</p>}
-            {erro && !editando && <p className={styles.aviso}>{erro}</p>}
-          </form>
+
+              {mostrarAtribuir && (
+                <form className={styles.formAtribuir} onSubmit={aoAtribuirEstacao}>
+                  <label className={styles.infoRotulo} htmlFor={`sensor-${conta.id}`}>
+                    Atribuir estação
+                  </label>
+                  <div className={styles.linhaAtribuir}>
+                    <div className={styles.seletorComIcone}>
+                      <Link2 size={14} />
+                      <select
+                        id={`sensor-${conta.id}`}
+                        className={styles.seletor}
+                        value={sensorEscolhido}
+                        onChange={(evento) => setSensorEscolhido(evento.target.value)}
+                        disabled={noLimite || semOpcoes}
+                      >
+                        <option value="">{semOpcoes ? 'Nenhuma estação disponível no momento' : 'Selecione um sensor...'}</option>
+                        {sensoresOrfaos.length > 0 && (
+                          <optgroup label="Sensores novos (sem cadastro)">
+                            {sensoresOrfaos.map((orfao) => (
+                              <option key={orfao.sensor_id} value={`orfao:${orfao.sensor_id}`}>
+                                {orfao.sensor_id}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                        {estacoesParaVincular.length > 0 && (
+                          <optgroup label="Estações já cadastradas">
+                            {estacoesParaVincular.map((estacao) => (
+                              <option key={estacao.id} value={`existente:${estacao.id}`}>
+                                {estacao.nome || estacao.identificador}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                      </select>
+                    </div>
+                    <button type="submit" className={styles.botaoAtribuir} disabled={!sensorEscolhido || processando || noLimite}>
+                      <Link2 size={14} />
+                      {processando ? 'Atribuindo...' : 'Atribuir'}
+                    </button>
+                  </div>
+                  {noLimite && <p className={styles.aviso}>Limite de estações do plano atingido.</p>}
+                  {erro && <p className={styles.aviso}>{erro}</p>}
+                </form>
+              )}
+
+              <div className={styles.rodapeConfig}>
+                <Settings2 size={13} />
+                <span>Protocolo: LoRa</span>
+                <span className={styles.rodapeSeparador}>|</span>
+                <span>
+                  Frequência de leitura: {estacaoPrincipal?.intervalo_envio_minutos != null ? `${estacaoPrincipal.intervalo_envio_minutos} min` : '—'}
+                </span>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>

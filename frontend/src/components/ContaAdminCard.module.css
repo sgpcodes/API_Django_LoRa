@@ -32,7 +32,6 @@
   height: 44px;
   border-radius: 10px;
   flex-shrink: 0;
-  background-color: var(--color-accent);
   color: #ffffff;
   font-weight: 700;
   font-size: 0.9rem;
@@ -68,6 +67,15 @@
   border-radius: 999px;
 }
 
+.statusPillMini {
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .statusAtiva {
   background-color: rgba(34, 197, 94, 0.14);
   color: #16a34a;
@@ -79,8 +87,18 @@
 }
 
 .subtexto {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
   font-size: 0.78rem;
   color: var(--color-text-secondary);
+  margin-top: 0.15rem;
+}
+
+.subtextoSeparador {
+  color: var(--color-text-secondary);
+  opacity: 0.6;
+  margin: 0 0.1rem;
 }
 
 .acoesTopo {
@@ -192,11 +210,14 @@
   gap: 0.75rem;
 }
 
-.infoCampo {
+.infoCaixa {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.3rem;
   min-width: 0;
+  padding: 0.65rem 0.8rem;
+  border-radius: 10px;
+  background-color: var(--color-pill-bg);
 }
 
 .infoRotulo {
@@ -211,66 +232,61 @@
 }
 
 .infoValor {
-  font-size: 0.88rem;
+  font-size: 0.86rem;
   font-weight: 600;
   color: var(--color-text);
   overflow-wrap: anywhere;
 }
 
-.secaoEstacoes {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--color-card-border);
+/* Linha de 5 painéis: status / estações / dados / ações rápidas / mais ações */
+.linhaPaineis {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.75rem;
+  align-items: start;
 }
 
-.secaoTitulo {
+.painel {
   display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.8rem;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--color-card-border);
+  background-color: var(--color-card-bg);
+}
+
+.painelTitulo {
+  font-size: 0.75rem;
   font-weight: 700;
   color: var(--color-text);
 }
 
-.semEstacoes {
-  margin: 0;
-  font-size: 0.82rem;
-  color: var(--color-text-secondary);
+.statusLinha {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.pontoStatus {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.pontoAtivo {
+  background-color: #16a34a;
+}
+
+.pontoSuspenso {
+  background-color: #dc2626;
 }
 
 .estacaoVazia {
   display: flex;
   align-items: center;
-  gap: 0.9rem;
-  padding: 1.1rem 1.25rem;
-  border-radius: 10px;
-  border: 1px dashed var(--color-card-border);
-  background-color: var(--color-pill-bg);
-}
-
-.estacaoVaziaIcone {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  flex-shrink: 0;
-  background-color: var(--color-card-bg);
-  color: var(--color-accent);
-}
-
-.estacaoVaziaTitulo {
-  margin: 0;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--color-text);
-}
-
-.estacaoVaziaTexto {
-  margin: 0.2rem 0 0;
+  gap: 0.5rem;
   font-size: 0.78rem;
   color: var(--color-text-secondary);
 }
@@ -282,23 +298,52 @@
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
+  max-height: 160px;
+  overflow-y: auto;
 }
 
 .itemEstacao {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0.5rem 0.7rem;
+  gap: 0.5rem;
+  padding: 0.5rem 0.6rem;
   border-radius: 8px;
   background-color: var(--color-pill-bg);
-  font-size: 0.85rem;
-  color: var(--color-text);
 }
 
-.itemEstacaoAcoes {
+.itemEstacaoIcone {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background-color: var(--color-card-bg);
+  color: var(--color-accent);
+  flex-shrink: 0;
+}
+
+.itemEstacaoTextos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.itemEstacaoNome {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.itemEstacaoData {
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
 }
 
 .botaoRemoverEstacao {
@@ -312,11 +357,114 @@
   background: none;
   color: var(--color-text-secondary);
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .botaoRemoverEstacao:hover {
   background-color: rgba(239, 68, 68, 0.14);
   color: #dc2626;
+}
+
+.gradeDados {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+.itemDado {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  background-color: var(--color-pill-bg);
+}
+
+.itemDadoRotulo {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.itemDadoValor {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.iconeTemperatura {
+  color: #f97316;
+}
+
+.iconeUmidade {
+  color: #0ea5e9;
+}
+
+.iconeVento {
+  color: #10b981;
+}
+
+.iconeDirecao {
+  color: #8b5cf6;
+}
+
+.iconePressao {
+  color: #ec4899;
+}
+
+.listaAcoes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.itemAcao {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: 8px;
+  border: none;
+  background: none;
+  color: var(--color-accent);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.itemAcao:hover:not(:disabled) {
+  background-color: var(--color-pill-bg);
+}
+
+.itemAcao:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.itemAcaoPerigo {
+  color: #dc2626;
+}
+
+.girando {
+  animation: girar 1s linear infinite;
+}
+
+@keyframes girar {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.avisoDiscreto {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
 }
 
 .formAtribuir {
@@ -383,6 +531,22 @@
   margin: 0;
   font-size: 0.78rem;
   color: #b45309;
+}
+
+.rodapeConfig {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 10px;
+  background-color: var(--color-pill-bg);
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.rodapeSeparador {
+  opacity: 0.5;
 }
 
 .formEdicao {

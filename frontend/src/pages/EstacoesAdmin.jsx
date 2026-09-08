@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Activity, Gem, Grid2x2, LayoutGrid, Leaf, List, Plus, Radio, Search } from 'lucide-react'
 import EstacaoAdminCard from '../components/EstacaoAdminCard'
 import NovaEstacaoForm from '../components/NovaEstacaoForm'
@@ -86,8 +87,13 @@ function EstacoesAdmin() {
   const [processandoId, setProcessandoId] = useState(null)
   const [erroPorId, setErroPorId] = useState({})
 
+  // "Ver detalhes"/"Gerenciar estação" na tela de Contas linka pra cá com
+  // ?q=<identificador>, então a busca já chega pré-preenchida — sem isso,
+  // o link cairia numa lista genérica em vez de já mostrar a estação certa.
+  const [searchParams] = useSearchParams()
+
   const [abaPlano, setAbaPlano] = useState('todas')
-  const [busca, setBusca] = useState('')
+  const [busca, setBusca] = useState(() => searchParams.get('q') ?? '')
   const [ordenacao, setOrdenacao] = useState('nome')
   const [visualizacao, setVisualizacao] = useState('lista')
   const [pagina, setPagina] = useState(1)
