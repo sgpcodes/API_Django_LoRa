@@ -150,8 +150,16 @@ function ContasAdmin() {
     }
   }
 
+  // Sensor ainda não cadastrado (órfão): cria a Estacao já vinculada a
+  // esta conta.
   const aoAtribuir = (contaId, sensorId) =>
     executarAcao(contaId, () => atribuirEstacao({ identificador: sensorId, usuarioIds: [contaId] }))
+
+  // Estação já cadastrada (com ou sem outras contas vinculadas): só
+  // adiciona esta conta à lista existente — não mexe em quem já estava lá
+  // (RN15: uma estação pode ter quantas contas o Gestor quiser).
+  const aoVincularEstacaoExistente = (contaId, estacao) =>
+    executarAcao(contaId, () => atualizarUsuariosEstacao(estacao.id, [...estacao.usuarios, contaId]))
 
   const aoSalvarEdicao = (contaId, dados) => executarAcao(contaId, () => atualizarConta(contaId, dados))
 
@@ -274,9 +282,11 @@ function ContasAdmin() {
               conta={conta}
               estacoesDaConta={estacoesPorConta.get(conta.id) ?? []}
               sensoresOrfaos={orfaos}
+              todasEstacoes={estacoes}
               processando={processandoId === conta.id}
               erro={erroPorConta[conta.id]}
               onAtribuir={(sensorId) => aoAtribuir(conta.id, sensorId)}
+              onVincularEstacaoExistente={(estacao) => aoVincularEstacaoExistente(conta.id, estacao)}
               onSalvarEdicao={(dados) => aoSalvarEdicao(conta.id, dados)}
               onSuspenderOuReativar={() => aoSuspenderOuReativar(conta)}
               onExcluir={() => aoExcluir(conta.id)}

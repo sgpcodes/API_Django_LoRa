@@ -49,9 +49,11 @@ function ContaAdminCard({
   conta,
   estacoesDaConta,
   sensoresOrfaos,
+  todasEstacoes = [],
   processando,
   erro,
   onAtribuir,
+  onVincularEstacaoExistente,
   onSalvarEdicao,
   onSuspenderOuReativar,
   onExcluir,
@@ -90,10 +92,24 @@ function ContaAdminCard({
   const limite = conta.plano_max_estacoes
   const noLimite = limite != null && conta.estacoes_vinculadas >= limite
 
+  // Uma estação pode ter várias contas vinculadas (RN15), então o
+  // seletor oferece tanto sensores órfãos (viram uma Estacao nova, já
+  // com esta conta) quanto estações que já existem e ainda não incluem
+  // esta conta (só adiciona ela à lista, sem mexer em quem já está lá).
+  const estacoesParaVincular = todasEstacoes.filter((estacao) => !estacao.usuarios.includes(conta.id))
+  const semOpcoes = sensoresOrfaos.length === 0 && estacoesParaVincular.length === 0
+
   function aoAtribuir(evento) {
     evento.preventDefault()
     if (!sensorEscolhido) return
-    onAtribuir(sensorEscolhido)
+
+    if (sensorEscolhido.startsWith('existente:')) {
+      const estacaoId = Number(sensorEscolhido.slice('existente:'.length))
+      const estacao = estacoesParaVincular.find((e) => e.id === estacaoId)
+      if (estacao) onVincularEstacaoExistente(estacao)
+    } else {
+      onAtribuir(sensorEscolhido.slice('orfao:'.length))
+    }
     setSensorEscolhido('')
   }
 
@@ -379,16 +395,27 @@ function ContaAdminCard({
                   className={styles.seletor}
                   value={sensorEscolhido}
                   onChange={(evento) => setSensorEscolhido(evento.target.value)}
-                  disabled={noLimite || sensoresOrfaos.length === 0}
+                  disabled={noLimite || semOpcoes}
                 >
-                  <option value="">
-                    {sensoresOrfaos.length === 0 ? 'Nenhum sensor sem dono no momento' : 'Selecione um sensor...'}
-                  </option>
-                  {sensoresOrfaos.map((orfao) => (
-                    <option key={orfao.sensor_id} value={orfao.sensor_id}>
-                      {orfao.sensor_id}
-                    </option>
-                  ))}
+                  <option value="">{semOpcoes ? 'Nenhuma estação disponível no momento' : 'Selecione um sensor...'}</option>
+                  {sensoresOrfaos.length > 0 && (
+                    <optgroup label="Sensores novos (sem cadastro)">
+                      {sensoresOrfaos.map((orfao) => (
+                        <option key={orfao.sensor_id} value={`orfao:${orfao.sensor_id}`}>
+                          {orfao.sensor_id}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {estacoesParaVincular.length > 0 && (
+                    <optgroup label="Estações já cadastradas">
+                      {estacoesParaVincular.map((estacao) => (
+                        <option key={estacao.id} value={`existente:${estacao.id}`}>
+                          {estacao.nome || estacao.identificador}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
               </div>
               <button
