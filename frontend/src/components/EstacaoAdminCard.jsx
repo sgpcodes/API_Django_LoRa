@@ -12,8 +12,10 @@ import {
   MapPin,
   MoreVertical,
   Pencil,
+  Plus,
   Radio,
   RefreshCw,
+  Search,
   SignalHigh,
   Thermometer,
   Trash2,
@@ -77,6 +79,7 @@ function EstacaoAdminCard({
   const [menuAberto, setMenuAberto] = useState(false)
   const [gerenciandoUsuarios, setGerenciandoUsuarios] = useState(false)
   const [usuariosSelecionados, setUsuariosSelecionados] = useState([])
+  const [buscaUsuario, setBuscaUsuario] = useState('')
   const [editando, setEditando] = useState(false)
   const [campos, setCampos] = useState(null)
   const menuRef = useRef(null)
@@ -224,6 +227,7 @@ function EstacaoAdminCard({
                       onClick={() => {
                         setMenuAberto(false)
                         setUsuariosSelecionados(usuariosInfo.map((usuario) => usuario.id))
+                        setBuscaUsuario('')
                         setGerenciandoUsuarios(true)
                         setDetalhesAbertos(true)
                       }}
@@ -525,25 +529,77 @@ function EstacaoAdminCard({
                 <div className={adminStyles.gerenciar}>
                   <div className={styles.secaoTitulo}>
                     <UserRound size={14} />
-                    <span>Gerenciar usuários vinculados ({usuariosSelecionados.length} selecionada(s))</span>
+                    <span>Usuários vinculados ({usuariosSelecionados.length})</span>
                   </div>
-                  <div className={adminStyles.checklistUsuarios}>
-                    {contas.map((conta) => (
-                      <label key={conta.id} className={adminStyles.checklistItem}>
-                        <input
-                          type="checkbox"
-                          checked={usuariosSelecionados.includes(conta.id)}
+
+                  <div className={adminStyles.chipsUsuarios}>
+                    {usuariosSelecionados.length === 0 ? (
+                      <p className={adminStyles.avisoDiscreto}>Nenhum usuário vinculado ainda.</p>
+                    ) : (
+                      usuariosSelecionados.map((id) => {
+                        const conta = contas.find((c) => c.id === id)
+                        return (
+                          <span key={id} className={adminStyles.chipUsuario}>
+                            <UserRound size={12} />
+                            {conta ? conta.first_name || conta.username : `conta #${id}`}
+                            <button
+                              type="button"
+                              className={adminStyles.chipRemover}
+                              disabled={processando}
+                              aria-label="Remover"
+                              onClick={() => setUsuariosSelecionados((atual) => atual.filter((existente) => existente !== id))}
+                            >
+                              <X size={11} />
+                            </button>
+                          </span>
+                        )
+                      })
+                    )}
+                  </div>
+
+                  <div className={adminStyles.campoBuscaUsuario}>
+                    <Search size={13} />
+                    <input
+                      placeholder="Buscar conta pra adicionar..."
+                      value={buscaUsuario}
+                      onChange={(e) => setBuscaUsuario(e.target.value)}
+                    />
+                  </div>
+                  <div className={adminStyles.listaAdicionarUsuarios}>
+                    {(() => {
+                      const buscaNormalizada = buscaUsuario.trim().toLowerCase()
+                      const disponiveis = contas.filter((conta) => {
+                        if (usuariosSelecionados.includes(conta.id)) return false
+                        if (!buscaNormalizada) return true
+                        const nome = (conta.first_name || conta.username).toLowerCase()
+                        return nome.includes(buscaNormalizada) || conta.username.toLowerCase().includes(buscaNormalizada)
+                      })
+                      if (disponiveis.length === 0) {
+                        return (
+                          <p className={adminStyles.avisoDiscreto}>
+                            {buscaNormalizada ? 'Nenhuma conta encontrada.' : 'Todas as contas já estão vinculadas.'}
+                          </p>
+                        )
+                      }
+                      return disponiveis.map((conta) => (
+                        <button
+                          key={conta.id}
+                          type="button"
+                          className={adminStyles.itemAdicionarUsuario}
                           disabled={processando}
-                          onChange={(e) =>
-                            setUsuariosSelecionados((atual) =>
-                              e.target.checked ? [...atual, conta.id] : atual.filter((id) => id !== conta.id),
-                            )
-                          }
-                        />
-                        {conta.first_name || conta.username} ({conta.plano_atual ?? 'sem plano'})
-                      </label>
-                    ))}
+                          onClick={() => {
+                            setUsuariosSelecionados((atual) => [...atual, conta.id])
+                            setBuscaUsuario('')
+                          }}
+                        >
+                          <Plus size={13} />
+                          {conta.first_name || conta.username}
+                          <span className={adminStyles.itemAdicionarPlano}>{conta.plano_atual ?? 'sem plano'}</span>
+                        </button>
+                      ))
+                    })()}
                   </div>
+
                   <div className={adminStyles.linhaTrocarDono}>
                     <button
                       type="button"
