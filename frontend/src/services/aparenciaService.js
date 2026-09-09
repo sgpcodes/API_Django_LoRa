@@ -58,17 +58,26 @@ function hexParaRgba(hex, alpha) {
 }
 
 // Variáveis CSS que dependem da cor de destaque — aplicadas como estilo
-// inline no elemento raiz do app (AppLayout), que bate em especificidade
-// as declarações padrão de styles/theme.css (por [data-theme=...]) sem
-// precisar editar aquele arquivo. Cascka pra qualquer componente dentro
-// (Sidebar incluída), porque custom property é herdada normalmente.
+// inline no elemento raiz do app (AppLayout pro Standard, PainelAdministrativo
+// pro Gestor), que bate em especificidade as declarações padrão de
+// styles/theme.css (por [data-theme=...]) sem precisar editar aquele
+// arquivo. Casca pra qualquer componente dentro (Sidebar/header do admin
+// incluídos), porque custom property é herdada normalmente.
+//
+// --color-sidebar-bg é o fundo inteiro do menu (sidebar no Standard,
+// barra de topo no admin) — muda de verdade com a cor escolhida, não só
+// um detalhe. Por isso o item "selecionado" não pode mais ser a mesma
+// cor sólida (ficaria invisível em cima do próprio fundo): vira um
+// destaque translúcido branco por cima, que funciona em cima de
+// qualquer cor escolhida.
 export function variaveisCssDaCor(valor) {
   const hex = hexDaCor(valor)
   return {
     '--color-accent': hex,
     '--chart-line': hex,
     '--color-pill-ativo-bg': hex,
-    '--color-sidebar-selecionado-bg': hex,
+    '--color-sidebar-bg': hex,
+    '--color-sidebar-selecionado-bg': 'rgba(255, 255, 255, 0.18)',
     '--color-sidebar-text-ativo': hex,
     '--chart-area-inicio': hexParaRgba(hex, 0.35),
     '--chart-area-fim': hexParaRgba(hex, 0),

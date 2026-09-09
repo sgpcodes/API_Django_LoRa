@@ -1,6 +1,7 @@
 .pagina {
   min-height: 100vh;
-  background-color: #eef3fb;
+  background-color: var(--color-bg);
+  transition: var(--transition-theme);
 }
 
 .cabecalho {
@@ -8,12 +9,16 @@
   align-items: center;
   gap: 1.5rem;
   padding: 0.85rem 1.75rem;
-  background-color: #1b4588;
+  /* Mesma variável do fundo da sidebar do Standard — muda de verdade com
+     a cor de destaque escolhida em Configurações → Aparência, em vez de
+     ficar sempre azul (ver aparenciaService.js:variaveisCssDaCor). */
+  background-color: var(--color-sidebar-bg);
   box-shadow: 0 2px 12px rgba(15, 28, 66, 0.18);
   position: sticky;
   top: 0;
   z-index: 10;
   flex-wrap: wrap;
+  transition: var(--transition-theme);
 }
 
 .marca {
@@ -118,7 +123,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid #1b4588;
+  border: 2px solid var(--color-sidebar-bg);
 }
 
 .contaBotao {
@@ -181,7 +186,8 @@
   min-width: 170px;
   padding: 0.4rem;
   border-radius: 10px;
-  background-color: #ffffff;
+  background-color: var(--color-card-bg);
+  border: 1px solid var(--color-card-border);
   box-shadow: 0 8px 24px rgba(15, 28, 66, 0.18);
 }
 
@@ -196,14 +202,14 @@
   font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
-  color: #64748b;
+  color: var(--color-text-secondary);
   margin-bottom: 0.5rem;
 }
 
 .dropdownVazio {
   margin: 0;
   font-size: 0.82rem;
-  color: #64748b;
+  color: var(--color-text-secondary);
 }
 
 .listaAlertas {
@@ -220,8 +226,8 @@
 .listaAlertas li {
   padding: 0.45rem 0.55rem;
   border-radius: 8px;
-  background-color: #f1f5f9;
-  color: #1e293b;
+  background-color: var(--color-pill-bg);
+  color: var(--color-text);
   font-size: 0.82rem;
 }
 
@@ -234,7 +240,7 @@
   border-radius: 8px;
   border: none;
   background: none;
-  color: #1e293b;
+  color: var(--color-text);
   font-weight: 600;
   font-size: 0.85rem;
   text-align: left;
@@ -242,13 +248,13 @@
 }
 
 .dropdownItem:hover {
-  background-color: #f1f5f9;
+  background-color: var(--color-pill-bg);
 }
 
 .dropdownAlertas .dropdownItem {
   margin-top: 0.5rem;
   padding-top: 0.65rem;
-  border-top: 1px solid #e6ebf5;
+  border-top: 1px solid var(--color-card-border);
   color: var(--color-accent, #4a6fa5);
   justify-content: center;
 }

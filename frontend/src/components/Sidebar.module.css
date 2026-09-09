@@ -140,7 +140,7 @@
 
 .linkAtivo .badgeOff {
   background-color: #ffffff;
-  color: var(--color-sidebar-selecionado-bg);
+  color: var(--color-accent);
 }
 
 .rotuloLink {

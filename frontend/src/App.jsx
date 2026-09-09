@@ -8,6 +8,7 @@ import EstacoesAdmin from './pages/EstacoesAdmin'
 import ContasAdmin from './pages/ContasAdmin'
 import ManutencaoAdmin from './pages/ManutencaoAdmin'
 import PerfilAdmin from './pages/PerfilAdmin'
+import AdminConfiguracoes from './pages/AdminConfiguracoes'
 import NotificacoesAdmin from './pages/NotificacoesAdmin'
 import Dashboard from './pages/Dashboard'
 import ClimaInmet from './pages/ClimaInmet'
@@ -57,6 +58,7 @@ function App() {
               <Route path="contas" element={<ContasAdmin />} />
               <Route path="manutencao" element={<ManutencaoAdmin />} />
               <Route path="perfil" element={<PerfilAdmin />} />
+              <Route path="configuracoes" element={<AdminConfiguracoes />} />
               <Route path="notificacoes" element={<NotificacoesAdmin />} />
             </Route>
             <Route element={<AppLayout />}>

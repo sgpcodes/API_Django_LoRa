@@ -1,9 +1,21 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { Bell, ChevronDown, Database, LayoutDashboard, LogOut, Radio, ShieldCheck, User, Users } from 'lucide-react'
+import {
+  Bell,
+  ChevronDown,
+  Database,
+  LayoutDashboard,
+  LogOut,
+  Radio,
+  Settings,
+  ShieldCheck,
+  User,
+  Users,
+} from 'lucide-react'
 import { logout } from '../services/authService'
 import { buscarMeuPerfil } from '../services/perfilService'
 import { buscarEstacoes, buscarSensoresOrfaos } from '../services/estacaoService'
+import { obterCorPrincipal, obterTema, salvarCorPrincipal, salvarTema, variaveisCssDaCor } from '../services/aparenciaService'
 import styles from './PainelAdministrativo.module.css'
 
 const ABAS = [
@@ -18,9 +30,11 @@ const INTERVALO_ALERTAS_MS = 60_000
 
 // Casca do Painel Administrativo (destino de quem loga como Gestor):
 // cabeçalho fixo (marca, abas, alertas, conta) + tela renderizada via
-// <Outlet /> em cada aba. Layout deliberadamente simples e à parte do
-// tema dia/noite/cor de destaque do app do Usuário comum — é uma área
-// interna, não uma vitrine.
+// <Outlet /> em cada aba. Tema dia/noite e cor de destaque são as mesmas
+// preferências que o app do Usuário comum tem (Configurações → Aparência,
+// ver AdminConfiguracoes.jsx) — salvas por conta (aparenciaService.js),
+// então Gestor e Usuário não pisam na preferência um do outro mesmo
+// logados no mesmo navegador.
 function PainelAdministrativo() {
   const navigate = useNavigate()
 
@@ -28,6 +42,8 @@ function PainelAdministrativo() {
   const [alertas, setAlertas] = useState([])
   const [menuAlertasAberto, setMenuAlertasAberto] = useState(false)
   const [menuContaAberto, setMenuContaAberto] = useState(false)
+  const [tema, setTema] = useState(obterTema)
+  const [corPrincipal, setCorPrincipal] = useState(obterCorPrincipal)
   const alertasRef = useRef(null)
   const contaRef = useRef(null)
 
@@ -81,6 +97,22 @@ function PainelAdministrativo() {
     navigate('/login', { replace: true })
   }
 
+  // Só muda quando a pessoa clica no botão — nunca sozinho por horário.
+  // Salva na hora (mesma conta, mesmo navegador), então fica assim até
+  // ela trocar de novo, mesmo depois de recarregar a página.
+  function alternarTema() {
+    setTema((atual) => {
+      const novoTema = atual === 'dia' ? 'noite' : 'dia'
+      salvarTema(novoTema)
+      return novoTema
+    })
+  }
+
+  function mudarCorPrincipal(valor) {
+    salvarCorPrincipal(valor)
+    setCorPrincipal(valor)
+  }
+
   const nome = perfil ? `${perfil.first_name} ${perfil.last_name}`.trim() || perfil.username : ''
   const iniciais = nome
     ? nome
@@ -92,7 +124,7 @@ function PainelAdministrativo() {
     : ''
 
   return (
-    <div className={styles.pagina} data-theme="dia">
+    <div className={styles.pagina} data-theme={tema} style={variaveisCssDaCor(corPrincipal)}>
       <header className={styles.cabecalho}>
         <div className={styles.marca}>
           <span className={styles.iconeMarca}>
@@ -176,6 +208,17 @@ function PainelAdministrativo() {
                   <User size={14} />
                   Perfil
                 </button>
+                <button
+                  type="button"
+                  className={styles.dropdownItem}
+                  onClick={() => {
+                    setMenuContaAberto(false)
+                    navigate('/app/adm/configuracoes')
+                  }}
+                >
+                  <Settings size={14} />
+                  Configurações
+                </button>
                 <button type="button" className={styles.dropdownItem} onClick={aoSair}>
                   <LogOut size={14} />
                   Sair
@@ -187,7 +230,7 @@ function PainelAdministrativo() {
       </header>
 
       <main className={styles.conteudo}>
-        <Outlet />
+        <Outlet context={{ tema, onAlternarTema: alternarTema, corPrincipal, onMudarCorPrincipal: mudarCorPrincipal }} />
       </main>
     </div>
   )
