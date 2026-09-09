@@ -241,13 +241,26 @@
 /* Linha de 5 painéis: status / estações / dados / ações rápidas / mais ações */
 .linhaPaineis {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  /* 4 "encaixes": Status+Estações empilhados na 1ª coluna (mais
+     estreita, os dois têm pouco conteúdo horizontal), Dados
+     transmitidos vira uma faixa larga e baixa (5 métricas numa linha
+     só, em vez de uma grade 2x3 alta e solta), Ações rápidas/Mais ações
+     dividem o resto — em vez de 5 colunas soltas do mesmo tamanho, sem
+     nenhuma se complementar visualmente com a vizinha. */
+  grid-template-columns: minmax(200px, 1fr) minmax(320px, 1.8fr) minmax(190px, 1fr) minmax(190px, 1fr);
   gap: 0.75rem;
   /* "start", não "stretch": cada painel deve ter a altura do próprio
      conteúdo (um com só um badge fica baixinho, "Mais ações" com 4
      itens fica mais alto) — só a LARGURA precisa ser igual entre eles,
      isso já vem do grid em si (mesmo min-width:0 abaixo). */
   align-items: start;
+}
+
+.colunaStatusEstacoes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
 }
 
 .painel {
@@ -376,9 +389,12 @@
   color: #dc2626;
 }
 
+/* "Retângulo deitado": as 5 métricas ficam lado a lado numa linha só
+   (a coluna que o painel ocupa é larga o bastante pra isso — ver
+   .linhaPaineis), em vez da grade 2x3 alta de antes. */
 .gradeDados {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.5rem;
 }
 

@@ -394,61 +394,63 @@ function ContaAdminCard({
               </div>
 
               <div className={styles.linhaPaineis}>
-                <div className={styles.painel}>
-                  <span className={styles.painelTitulo}>Status da conta</span>
-                  <span className={styles.statusLinha}>
-                    <span className={`${styles.pontoStatus} ${conta.is_active ? styles.pontoAtivo : styles.pontoSuspenso}`} />
-                    <span className={`${styles.statusPill} ${conta.is_active ? styles.statusAtiva : styles.statusSuspensa}`}>
-                      {conta.is_active ? 'Ativa' : 'Suspensa'}
+                <div className={styles.colunaStatusEstacoes}>
+                  <div className={styles.painel}>
+                    <span className={styles.painelTitulo}>Status da conta</span>
+                    <span className={styles.statusLinha}>
+                      <span className={`${styles.pontoStatus} ${conta.is_active ? styles.pontoAtivo : styles.pontoSuspenso}`} />
+                      <span className={`${styles.statusPill} ${conta.is_active ? styles.statusAtiva : styles.statusSuspensa}`}>
+                        {conta.is_active ? 'Ativa' : 'Suspensa'}
+                      </span>
                     </span>
-                  </span>
-                </div>
+                  </div>
 
-                <div className={styles.painel}>
-                  <span className={styles.painelTitulo}>Estações vinculadas ({estacoesDaConta.length})</span>
-                  {estacoesDaConta.length === 0 ? (
-                    <div className={styles.estacaoVazia}>
-                      <Satellite size={18} />
-                      <span>Nenhuma estação vinculada ainda.</span>
-                    </div>
-                  ) : (
-                    <ul className={styles.listaEstacoes}>
-                      {estacoesDaConta.map((estacao) => (
-                        <li key={estacao.id} className={styles.itemEstacao}>
-                          <span className={styles.itemEstacaoIcone}>
-                            <Radio size={13} />
-                          </span>
-                          <div className={styles.itemEstacaoTextos}>
-                            <span className={styles.itemEstacaoNome}>
-                              {estacao.nome || estacao.identificador}
-                              <span className={`${styles.statusPillMini} ${estacao.esta_offline ? styles.statusSuspensa : styles.statusAtiva}`}>
-                                {estacao.esta_offline ? 'Offline' : 'Online'}
+                  <div className={styles.painel}>
+                    <span className={styles.painelTitulo}>Estações vinculadas ({estacoesDaConta.length})</span>
+                    {estacoesDaConta.length === 0 ? (
+                      <div className={styles.estacaoVazia}>
+                        <Satellite size={18} />
+                        <span>Nenhuma estação vinculada ainda.</span>
+                      </div>
+                    ) : (
+                      <ul className={styles.listaEstacoes}>
+                        {estacoesDaConta.map((estacao) => (
+                          <li key={estacao.id} className={styles.itemEstacao}>
+                            <span className={styles.itemEstacaoIcone}>
+                              <Radio size={13} />
+                            </span>
+                            <div className={styles.itemEstacaoTextos}>
+                              <span className={styles.itemEstacaoNome}>
+                                {estacao.nome || estacao.identificador}
+                                <span className={`${styles.statusPillMini} ${estacao.esta_offline ? styles.statusSuspensa : styles.statusAtiva}`}>
+                                  {estacao.esta_offline ? 'Offline' : 'Online'}
+                                </span>
                               </span>
-                            </span>
-                            <span className={styles.itemEstacaoData}>
-                              Última leitura: {formatarDataHora(estacao.ultima_leitura?.data_hora)}
-                            </span>
-                          </div>
-                          <button
-                            type="button"
-                            className={styles.botaoRemoverEstacao}
-                            onClick={() => {
-                              if (window.confirm(`Remover a estação "${estacao.nome || estacao.identificador}" desta conta?`)) {
-                                onRemoverEstacaoDaLista(estacao)
-                              }
-                            }}
-                            title="Remover estação"
-                            aria-label={`Remover ${estacao.identificador}`}
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                              <span className={styles.itemEstacaoData}>
+                                Última leitura: {formatarDataHora(estacao.ultima_leitura?.data_hora)}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              className={styles.botaoRemoverEstacao}
+                              onClick={() => {
+                                if (window.confirm(`Remover a estação "${estacao.nome || estacao.identificador}" desta conta?`)) {
+                                  onRemoverEstacaoDaLista(estacao)
+                                }
+                              }}
+                              title="Remover estação"
+                              aria-label={`Remover ${estacao.identificador}`}
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
                 </div>
 
-                <div className={styles.painel}>
+                <div className={`${styles.painel} ${styles.painelDadosLargo}`}>
                   <span className={styles.painelTitulo}>Dados transmitidos pela estação</span>
                   <div className={styles.gradeDados}>
                     <div className={styles.itemDado}>
