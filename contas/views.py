@@ -1,5 +1,12 @@
 import logging
+import os
+import sys
 
+import django
+import requests
+from django.conf import settings
+from django.core.cache import cache
+from django.db import connection
 from django.db.models import Count, Prefetch
 from django.utils import timezone
 from rest_framework import status, viewsets
@@ -9,6 +16,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
+from api_rest.models import Estacao, Leitura, SolicitacaoRssi
 from api_rest.permissions import EhGestor
 
 from .emails import enviar_email_confirmacao
@@ -216,6 +224,96 @@ class AuditoriaRecenteView(APIView):
     def get(self, request):
         eventos = LogAuditoria.objects.filter(acao__in=ACOES_NOTIFICAVEIS).select_related('ator')[:100]
         return Response(LogAuditoriaSerializer(eventos, many=True).data)
+
+
+def _tamanho_legivel(num_bytes):
+    if num_bytes is None:
+        return None
+    valor = float(num_bytes)
+    for unidade in ('B', 'KB', 'MB', 'GB', 'TB'):
+        if valor < 1024:
+            return f'{valor:.1f} {unidade}'
+        valor /= 1024
+    return f'{valor:.1f} PB'
+
+
+def _tamanho_do_banco():
+    """Tamanho de verdade do banco — consulta nativa do Postgres em
+    produção; em dev (sqlite local) usa o tamanho do arquivo. Sem
+    fallback inventado: se não der pra descobrir, devolve None e o
+    front mostra "—", em vez de estimar um número que não existe."""
+    try:
+        if connection.vendor == 'postgresql':
+            with connection.cursor() as cursor:
+                cursor.execute('SELECT pg_database_size(current_database())')
+                return cursor.fetchone()[0]
+        if connection.vendor == 'sqlite':
+            caminho = connection.settings_dict.get('NAME')
+            return os.path.getsize(caminho) if caminho and os.path.exists(caminho) else None
+    except Exception:
+        logger.warning('Não foi possível determinar o tamanho do banco.', exc_info=True)
+        return None
+    return None
+
+
+def _checar_integracao(chave, url, **kwargs):
+    """Ping curto (GET com timeout baixo) numa API externa — resultado
+    fica em cache por alguns minutos pra não bater na API de novo a
+    cada carregamento da tela de Manutenção."""
+    cache_key = f'manutencao:integracao:{chave}'
+    resultado = cache.get(cache_key)
+    if resultado is None:
+        try:
+            resposta = requests.get(url, timeout=4, **kwargs)
+            online = resposta.status_code < 500
+        except requests.RequestException:
+            online = False
+        resultado = {'online': online, 'verificado_em': timezone.now().isoformat()}
+        cache.set(cache_key, resultado, 60 * 5)
+    return resultado
+
+
+class InfoSistemaView(APIView):
+    """GET /api/manutencao/info-sistema/ — painel de "entranhas do
+    sistema" na tela de Manutenção: tamanho real do banco, contagem por
+    tabela, atividade recente (mesmo LogAuditoria da tela de
+    Notificações), status das integrações externas (INMET/IBGE) e
+    versão do ambiente. Só leitura, Gestor-only — nada aqui é inventado,
+    só reúne números que já existem em outros lugares do sistema."""
+
+    permission_classes = [IsAuthenticated, EhGestor]
+
+    def get(self, request):
+        tamanho_bytes = _tamanho_do_banco()
+
+        return Response({
+            'banco': {
+                'motor': connection.vendor,
+                'tamanho_bytes': tamanho_bytes,
+                'tamanho_legivel': _tamanho_legivel(tamanho_bytes),
+            },
+            'contagens': {
+                'contas': Usuario.objects.count(),
+                'estacoes': Estacao.objects.count(),
+                'leituras': Leitura.objects.count(),
+                'solicitacoes_rssi': SolicitacaoRssi.objects.count(),
+                'log_auditoria': LogAuditoria.objects.count(),
+            },
+            'atividade_recente': LogAuditoriaSerializer(
+                LogAuditoria.objects.select_related('ator')[:15], many=True,
+            ).data,
+            'integracoes': {
+                'inmet': _checar_integracao('inmet', 'https://apitempo.inmet.gov.br/estacoes/T'),
+                'ibge': _checar_integracao(
+                    'ibge', 'https://servicodados.ibge.gov.br/api/v1/localidades/estados/RJ/municipios',
+                ),
+            },
+            'ambiente': {
+                'django_versao': django.get_version(),
+                'python_versao': sys.version.split()[0],
+                'debug': settings.DEBUG,
+            },
+        })
 
 
 class UsuarioViewSet(viewsets.ModelViewSet):

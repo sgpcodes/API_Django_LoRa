@@ -13,3 +13,11 @@ export async function executarLimpeza() {
   const resposta = await api.post('/api/manutencao/limpar-dados/', { confirmar: true })
   return resposta.data
 }
+
+// Painel de "entranhas do sistema": tamanho real do banco, contagem por
+// tabela, atividade recente e status das integrações externas (INMET/
+// IBGE). Ver contas/views.py:InfoSistemaView.
+export async function buscarInfoSistema() {
+  const resposta = await api.get('/api/manutencao/info-sistema/')
+  return resposta.data
+}

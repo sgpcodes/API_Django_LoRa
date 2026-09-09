@@ -876,6 +876,70 @@ class LimparDadosOperacionaisTests(APITestCase):
         self.assertTrue(LogAuditoria.objects.filter(acao='manutencao.limpeza_operacional').exists())
 
 
+class InfoSistemaTests(APITestCase):
+    """GET /api/manutencao/info-sistema/ — painel de "entranhas do
+    sistema" na tela de Manutenção. Gestor only; integrações externas são
+    mockadas (não bate no INMET/IBGE de verdade nos testes)."""
+
+    def setUp(self):
+        self.gestor = Usuario.objects.create_user(username='gestor1', password='x', role=Usuario.Role.GESTOR)
+        self.usuario = Usuario.objects.create_user(username='usuario1', password='x')
+
+    def test_usuario_comum_nao_acessa(self):
+        self.client.force_authenticate(self.usuario)
+        resposta = self.client.get('/api/manutencao/info-sistema/')
+        self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_sem_autenticacao_e_rejeitado(self):
+        resposta = self.client.get('/api/manutencao/info-sistema/')
+        self.assertEqual(resposta.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_gestor_recebe_contagens_atividade_e_ambiente(self):
+        from unittest.mock import Mock, patch
+
+        from django.core.cache import cache
+
+        cache.clear()
+        self.client.force_authenticate(self.gestor)
+        with patch('contas.views.requests.get') as mock_get:
+            mock_get.return_value = Mock(status_code=200)
+            resposta = self.client.get('/api/manutencao/info-sistema/')
+
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(resposta.data['contagens']['contas'], 2)
+        self.assertIn('motor', resposta.data['banco'])
+        self.assertTrue(resposta.data['integracoes']['inmet']['online'])
+        self.assertTrue(resposta.data['integracoes']['ibge']['online'])
+        self.assertIn('django_versao', resposta.data['ambiente'])
+        self.assertIn('python_versao', resposta.data['ambiente'])
+
+    def test_integracao_fora_do_ar_aparece_como_offline(self):
+        from unittest.mock import patch
+
+        from django.core.cache import cache
+        from requests.exceptions import ConnectionError as RequestsConnectionError
+
+        cache.clear()
+        self.client.force_authenticate(self.gestor)
+        with patch('contas.views.requests.get', side_effect=RequestsConnectionError()):
+            resposta = self.client.get('/api/manutencao/info-sistema/')
+
+        self.assertFalse(resposta.data['integracoes']['inmet']['online'])
+
+    def test_segunda_chamada_usa_cache_da_integracao(self):
+        from unittest.mock import Mock, patch
+
+        from django.core.cache import cache
+
+        cache.clear()
+        self.client.force_authenticate(self.gestor)
+        with patch('contas.views.requests.get') as mock_get:
+            mock_get.return_value = Mock(status_code=200)
+            self.client.get('/api/manutencao/info-sistema/')
+            self.client.get('/api/manutencao/info-sistema/')
+        self.assertEqual(mock_get.call_count, 2)  # 2 integrações, não 4 (não repetiu na 2ª chamada)
+
+
 class AuditoriaRecenteTests(APITestCase):
     """GET /api/auditoria/recentes/ — alimenta a tela de Notificações do
     Gestor com eventos reais (estação cadastrada/usuários alterados)."""

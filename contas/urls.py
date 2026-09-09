@@ -9,6 +9,7 @@ from .views import (
     CadastroView,
     ConfirmarEmailView,
     FuncionalidadeViewSet,
+    InfoSistemaView,
     LimparDadosOperacionaisView,
     PlanoViewSet,
     RecredenciarView,
@@ -53,5 +54,8 @@ urlpatterns = [
     # GET -> últimos eventos (estação cadastrada/usuários alterados) pra
     # alimentar a tela de Notificações do Gestor. Gestor only.
     path('auditoria/recentes/', AuditoriaRecenteView.as_view(), name='auditoria-recentes'),
+    # GET -> tamanho do banco, contagem por tabela, atividade recente e
+    # status das integrações externas. Gestor only.
+    path('manutencao/info-sistema/', InfoSistemaView.as_view(), name='manutencao-info-sistema'),
     path('', include(router.urls)),
 ]

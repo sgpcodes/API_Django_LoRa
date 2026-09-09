@@ -2,26 +2,191 @@
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  max-width: 720px;
 }
 
-.cabecalho {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+/* Banner — mesmo padrão "full-bleed" das outras telas do admin
+   (Dashboard/Estações/Contas): esse layout não tem sidebar, só barra de
+   topo, então esticar até a borda da janela não sobrepõe nada. */
+.banner {
+  position: relative;
+  left: 50%;
+  right: 50%;
+  width: 100vw;
+  margin-top: -1.75rem;
+  margin-left: -50vw;
+  margin-right: -50vw;
+  overflow: hidden;
+  padding: 1.4rem 1.75rem;
+  background: linear-gradient(115deg, #101a3d 0%, #1b3a8a 60%, #1e40af 100%);
+  color: #ffffff;
+  box-shadow: var(--shadow-card);
 }
 
-.titulo {
+.bannerConteudo {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
-  font-size: 1.3rem;
-  font-weight: 700;
-  color: var(--color-text);
-  margin: 0;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
-.subtitulo {
+.bannerIcone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  background-color: rgba(255, 255, 255, 0.18);
+  flex-shrink: 0;
+}
+
+.bannerTitulo {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.bannerSubtitulo {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* Painel de informações do sistema */
+
+.gradeInfo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.9rem;
+}
+
+.cartaoInfo,
+.cartaoAtividade {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.1rem 1.25rem;
+  border-radius: 12px;
+  background-color: var(--color-card-bg);
+  border: 1px solid var(--color-card-border);
+  box-shadow: var(--shadow-card);
+}
+
+.cartaoInfoCabecalho {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.valorGrande {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.legendaInfo {
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+
+.listaIntegracoes,
+.listaAmbiente {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.itemIntegracao {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--color-text);
+}
+
+.itemIntegracaoNome {
+  flex: 1;
+}
+
+.iconeOnline {
+  color: #16a34a;
+}
+
+.iconeOffline {
+  color: #dc2626;
+}
+
+.pillOnline,
+.pillOffline {
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  width: fit-content;
+}
+
+.pillOnline {
+  background-color: rgba(34, 197, 94, 0.14);
+  color: #16a34a;
+}
+
+.pillOffline {
+  background-color: rgba(239, 68, 68, 0.14);
+  color: #dc2626;
+}
+
+.listaAmbiente span {
+  font-size: 0.85rem;
+  color: var(--color-text);
+}
+
+.listaAtividade {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.itemAtividade {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--color-card-border);
+  font-size: 0.82rem;
+}
+
+.listaAtividade > li:first-child {
+  border-top: none;
+}
+
+.itemAtividadeTexto {
+  color: var(--color-text-secondary);
+}
+
+.itemAtividadeTexto strong {
+  color: var(--color-text);
+}
+
+.itemAtividadeData {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+}
+
+.semAtividade {
   margin: 0;
   font-size: 0.85rem;
   color: var(--color-text-secondary);
@@ -40,6 +205,7 @@
   display: flex;
   flex-direction: column;
   gap: 1.1rem;
+  max-width: 720px;
   padding: 1.5rem;
   border-radius: 14px;
   background-color: var(--color-card-bg);
@@ -179,6 +345,7 @@
   display: flex;
   align-items: center;
   gap: 0.55rem;
+  max-width: 720px;
   padding: 0.9rem 1.1rem;
   border-radius: 10px;
   background-color: rgba(34, 197, 94, 0.12);
