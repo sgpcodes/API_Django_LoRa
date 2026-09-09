@@ -455,6 +455,19 @@
   color: #dc2626;
 }
 
+/* "Ações rápidas" (o que se faz na estação agora mesmo) ganha um fundo
+   próprio pra se destacar de "Mais ações" (configuração/gestão da
+   conta), que fica como link simples — mesma distinção visual que as
+   duas seções já tinham por hierarquia, só que agora também no estilo. */
+.itemAcaoDestaque {
+  background-color: var(--color-pill-bg);
+}
+
+.itemAcaoDestaque:hover:not(:disabled) {
+  background-color: var(--color-pill-ativo-bg);
+  color: var(--color-pill-ativo-texto);
+}
+
 .girando {
   animation: girar 1s linear infinite;
 }
@@ -538,6 +551,12 @@
   margin: 0;
   font-size: 0.78rem;
   color: #b45309;
+}
+
+.blocoRodapeConfig {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
 }
 
 .rodapeConfig {

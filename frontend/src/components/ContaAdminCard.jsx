@@ -117,7 +117,7 @@ function ContaAdminCard({
     return () => document.removeEventListener('mousedown', aoClicarFora)
   }, [])
 
-  const nome = conta.first_name || conta.username
+  const nome = [conta.first_name, conta.last_name].filter(Boolean).join(' ') || conta.username
   const limite = conta.plano_max_estacoes
   const noLimite = limite != null && conta.estacoes_vinculadas >= limite
   const estacaoPrincipal = estacoesDaConta[0] ?? null
@@ -475,14 +475,29 @@ function ContaAdminCard({
                 <div className={styles.painel}>
                   <span className={styles.painelTitulo}>Ações rápidas</span>
                   <div className={styles.listaAcoes}>
-                    <button type="button" className={styles.itemAcao} onClick={aoVerEstacao} disabled={!estacaoPrincipal}>
+                    <button
+                      type="button"
+                      className={`${styles.itemAcao} ${styles.itemAcaoDestaque}`}
+                      onClick={aoVerEstacao}
+                      disabled={!estacaoPrincipal}
+                    >
                       <Eye size={13} /> Ver detalhes
                     </button>
-                    <button type="button" className={styles.itemAcao} onClick={aoAtualizarRssi} disabled={!estacaoPrincipal || analisando}>
+                    <button
+                      type="button"
+                      className={`${styles.itemAcao} ${styles.itemAcaoDestaque}`}
+                      onClick={aoAtualizarRssi}
+                      disabled={!estacaoPrincipal || analisando}
+                    >
                       <RefreshCw size={13} className={analisando ? styles.girando : undefined} />
                       {analisando ? 'Solicitando...' : 'Atualizar leitura RSSI'}
                     </button>
-                    <button type="button" className={styles.itemAcao} onClick={aoVerEstacao} disabled={!estacaoPrincipal}>
+                    <button
+                      type="button"
+                      className={`${styles.itemAcao} ${styles.itemAcaoDestaque}`}
+                      onClick={aoVerEstacao}
+                      disabled={!estacaoPrincipal}
+                    >
                       <Settings2 size={13} /> Gerenciar estação
                     </button>
                   </div>
@@ -564,13 +579,16 @@ function ContaAdminCard({
                 </form>
               )}
 
-              <div className={styles.rodapeConfig}>
-                <Settings2 size={13} />
-                <span>Protocolo: LoRa</span>
-                <span className={styles.rodapeSeparador}>|</span>
-                <span>
-                  Frequência de leitura: {estacaoPrincipal?.intervalo_envio_minutos != null ? `${estacaoPrincipal.intervalo_envio_minutos} min` : '—'}
-                </span>
+              <div className={styles.blocoRodapeConfig}>
+                <span className={styles.painelTitulo}>Configurações da conta</span>
+                <div className={styles.rodapeConfig}>
+                  <Settings2 size={13} />
+                  <span>Protocolo: LoRa</span>
+                  <span className={styles.rodapeSeparador}>|</span>
+                  <span>
+                    Frequência de leitura: {estacaoPrincipal?.intervalo_envio_minutos != null ? `${estacaoPrincipal.intervalo_envio_minutos} min` : '—'}
+                  </span>
+                </div>
               </div>
             </>
           )}
