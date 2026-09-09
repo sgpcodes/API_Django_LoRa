@@ -15,7 +15,7 @@ import api from './api'
 const DIAS_HISTORICO_MAXIMO = 30
 const PONTOS_CARDEAIS = ['N', 'NE', 'L', 'SE', 'S', 'SO', 'O', 'NO']
 
-function direcaoTexto(graus) {
+export function direcaoTexto(graus) {
   if (graus == null) return '—'
   const indice = Math.round(graus / 45) % 8
   return PONTOS_CARDEAIS[indice]
