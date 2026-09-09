@@ -13,7 +13,10 @@
   margin-left: -50vw;
   margin-right: -50vw;
   overflow: hidden;
-  padding: 1.4rem 1.75rem;
+  /* Padding de baixo bem maior que o normal: a barra de filtros (ver
+     .barraFiltros) sobe por cima dessa faixa extra, criando o efeito de
+     cartão "flutuando" sobre o banner, em vez de ficar só embaixo dele. */
+  padding: 1.4rem 1.75rem 3.5rem;
   background: linear-gradient(115deg, #101a3d 0%, #1b3a8a 60%, #1e40af 100%);
   color: #ffffff;
   box-shadow: var(--shadow-card);
@@ -82,6 +85,10 @@
 }
 
 .barraFiltros {
+  position: relative;
+  /* Sobe por cima do padding extra do banner (ver .banner) — efeito de
+     cartão flutuando sobre o banner, como no design de referência. */
+  margin-top: -2.75rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
