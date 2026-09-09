@@ -8,6 +8,13 @@ export async function buscarContas() {
   return resposta.data.filter((conta) => conta.role === 'usuario')
 }
 
+// Usado pela lista "Contas administradoras" do Perfil do Gestor (ver
+// PerfilAdmin.jsx) — mesmas contas, filtradas pro outro papel.
+export async function buscarContasAdministradoras() {
+  const resposta = await api.get('/api/contas/')
+  return resposta.data.filter((conta) => conta.role === 'gestor')
+}
+
 export async function suspenderConta(id) {
   await api.post(`/api/contas/${id}/suspender/`)
 }

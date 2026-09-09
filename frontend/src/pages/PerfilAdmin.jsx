@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   User,
@@ -25,7 +25,7 @@ import {
 import StatusMessage from '../components/StatusMessage'
 import imagemApoioPerfil from '../assets/apoio-perfil.jpeg'
 import { buscarMeuPerfil, atualizarMeuPerfil, trocarMinhaSenha } from '../services/perfilService'
-import { buscarContas } from '../services/contasAdminService'
+import { buscarContas, buscarContasAdministradoras } from '../services/contasAdminService'
 import { buscarEstacoes, buscarSensoresOrfaos } from '../services/estacaoService'
 import styles from './Perfil.module.css'
 
@@ -78,6 +78,8 @@ function PerfilAdmin() {
   const [perfil, setPerfil] = useState(null)
   const [resumoPainel, setResumoPainel] = useState(null)
   const [carregando, setCarregando] = useState(true)
+  const [administradores, setAdministradores] = useState([])
+  const [adminExpandidoId, setAdminExpandidoId] = useState(null)
 
   const [editando, setEditando] = useState(false)
   const [nome, setNome] = useState('')
@@ -101,9 +103,10 @@ function PerfilAdmin() {
   const [erroSenha, setErroSenha] = useState('')
 
   useEffect(() => {
-    Promise.all([buscarMeuPerfil(), buscarContas(), buscarEstacoes(), buscarSensoresOrfaos()])
-      .then(([dadosPerfil, contas, estacoes, orfaos]) => {
+    Promise.all([buscarMeuPerfil(), buscarContas(), buscarEstacoes(), buscarSensoresOrfaos(), buscarContasAdministradoras()])
+      .then(([dadosPerfil, contas, estacoes, orfaos, admins]) => {
         setPerfil(dadosPerfil)
+        setAdministradores(admins)
         setNome(dadosPerfil.first_name)
         setSobrenome(dadosPerfil.last_name)
         setEmail(dadosPerfil.email)
@@ -400,6 +403,76 @@ function PerfilAdmin() {
               <LinhaEmBreve icone={Globe} rotulo="Cookies e rastreamento" />
               <LinhaEmBreve icone={Bell} rotulo="Comunicações" />
             </ul>
+          </section>
+
+          <section className={styles.cartao}>
+            <div className={styles.cabecalhoCartao}>
+              <h2 className={styles.tituloCartao}>
+                <Users size={17} />
+                Contas administradoras
+              </h2>
+            </div>
+            {administradores.length === 0 ? (
+              <p className={styles.valorEmBreve}>Nenhuma outra conta administradora cadastrada.</p>
+            ) : (
+              <ul className={styles.listaLinhas}>
+                {administradores.map((admin) => {
+                  const nomeAdmin = [admin.first_name, admin.last_name].filter(Boolean).join(' ') || admin.username
+                  const expandido = adminExpandidoId === admin.id
+                  return (
+                    <Fragment key={admin.id}>
+                      <li className={styles.linhaLista}>
+                        <span className={styles.rotuloLinha}>
+                          <User size={15} />
+                          {nomeAdmin}
+                        </span>
+                        <button
+                          type="button"
+                          className={styles.linkAcao}
+                          onClick={() => setAdminExpandidoId(expandido ? null : admin.id)}
+                        >
+                          {expandido ? 'Fechar' : 'Ver dados'}
+                        </button>
+                      </li>
+                      {expandido && (
+                        <li>
+                          <ul className={styles.listaDados}>
+                            <li>
+                              <Mail size={15} />
+                              <span>
+                                <span className={styles.rotuloDado}>E-mail</span>
+                                <span className={styles.valorDado}>{admin.email || '—'}</span>
+                              </span>
+                            </li>
+                            <li>
+                              <Phone size={15} />
+                              <span>
+                                <span className={styles.rotuloDado}>Telefone</span>
+                                <span className={styles.valorDado}>{admin.telefone || '—'}</span>
+                              </span>
+                            </li>
+                            <li>
+                              <MapPin size={15} />
+                              <span>
+                                <span className={styles.rotuloDado}>Endereço</span>
+                                <span className={styles.valorDado}>{formatarEndereco(admin)}</span>
+                              </span>
+                            </li>
+                            <li>
+                              <KeyRound size={15} />
+                              <span>
+                                <span className={styles.rotuloDado}>Login de acesso</span>
+                                <span className={styles.valorDado}>{admin.username}</span>
+                              </span>
+                            </li>
+                          </ul>
+                        </li>
+                      )}
+                    </Fragment>
+                  )
+                })}
+              </ul>
+            )}
           </section>
         </div>
 
