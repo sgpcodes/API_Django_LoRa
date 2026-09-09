@@ -243,7 +243,11 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 0.75rem;
-  align-items: stretch;
+  /* "start", não "stretch": cada painel deve ter a altura do próprio
+     conteúdo (um com só um badge fica baixinho, "Mais ações" com 4
+     itens fica mais alto) — só a LARGURA precisa ser igual entre eles,
+     isso já vem do grid em si (mesmo min-width:0 abaixo). */
+  align-items: start;
 }
 
 .painel {
