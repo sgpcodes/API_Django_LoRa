@@ -145,6 +145,7 @@ function ClimaInmet() {
 
   const [previsao, setPrevisao] = useState(null)
   const [erroPrevisao, setErroPrevisao] = useState(null)
+  const [diaSelecionadoIndice, setDiaSelecionadoIndice] = useState(0)
 
   const [avisos, setAvisos] = useState(null)
   const [erroAvisos, setErroAvisos] = useState(null)
@@ -227,6 +228,7 @@ function ClimaInmet() {
       .then((dados) => {
         setPrevisao(dados)
         setErroPrevisao(null)
+        setDiaSelecionadoIndice(0)
       })
       .catch(() => setErroPrevisao('Não foi possível carregar a previsão agora.'))
   }, [codigoIbge])
@@ -334,7 +336,12 @@ function ClimaInmet() {
                 if (!resumo) return null
                 const Icone = ICONE_CONDICAO[resumo.condicao] ?? Sun
                 return (
-                  <div key={dia.data} className={`${styles.diaCard} ${indice === 0 ? styles.diaCardAtivo : ''}`}>
+                  <button
+                    key={dia.data}
+                    type="button"
+                    className={`${styles.diaCard} ${indice === diaSelecionadoIndice ? styles.diaCardAtivo : ''}`}
+                    onClick={() => setDiaSelecionadoIndice(indice)}
+                  >
                     <span className={styles.diaCardNome}>{indice === 0 ? 'Hoje' : abreviarDiaSemana(dia.dia_semana)}</span>
                     <span className={styles.diaCardData}>{formatarDataCurta(dia.data)}</span>
                     <Icone size={26} className={styles.diaCardIcone} />
@@ -342,20 +349,22 @@ function ClimaInmet() {
                     <span className={styles.diaCardResumo}>{resumo.resumo}</span>
                     <span className={styles.diaCardMetrica}><Droplets size={12} /> {resumo.umidade_min}–{resumo.umidade_max}%</span>
                     <span className={styles.diaCardMetrica}><Wind size={12} /> {resumo.dir_vento} {resumo.int_vento}</span>
-                  </div>
+                  </button>
                 )
               })}
             </div>
 
-            {!previsao.dias[0].dia_inteiro && (
+            {previsao.dias[diaSelecionadoIndice] && !previsao.dias[diaSelecionadoIndice].dia_inteiro && (
               <div className={styles.hojeDetalhe}>
                 <span className={styles.hojeDetalheTitulo}>
-                  Hoje — {previsao.dias[0].dia_semana ?? formatarDataCurta(previsao.dias[0].data)}
+                  {diaSelecionadoIndice === 0 ? 'Hoje' : abreviarDiaSemana(previsao.dias[diaSelecionadoIndice].dia_semana)}
+                  {' — '}
+                  {previsao.dias[diaSelecionadoIndice].dia_semana ?? formatarDataCurta(previsao.dias[diaSelecionadoIndice].data)}
                 </span>
                 <div className={styles.diaPeriodos}>
-                  <PeriodoPrevisao nome={NOMES_DIA.manha} dados={previsao.dias[0].manha} />
-                  <PeriodoPrevisao nome={NOMES_DIA.tarde} dados={previsao.dias[0].tarde} />
-                  <PeriodoPrevisao nome={NOMES_DIA.noite} dados={previsao.dias[0].noite} />
+                  <PeriodoPrevisao nome={NOMES_DIA.manha} dados={previsao.dias[diaSelecionadoIndice].manha} />
+                  <PeriodoPrevisao nome={NOMES_DIA.tarde} dados={previsao.dias[diaSelecionadoIndice].tarde} />
+                  <PeriodoPrevisao nome={NOMES_DIA.noite} dados={previsao.dias[diaSelecionadoIndice].noite} />
                 </div>
               </div>
             )}
