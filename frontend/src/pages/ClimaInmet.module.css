@@ -13,15 +13,16 @@
 
 /* Banner */
 
+/* Diferente do banner das páginas do admin (Estações/Contas): aquele
+   layout não tem sidebar (só barra de topo), então esticar até a borda
+   da janela (100vw + margem negativa) funciona. Aqui (app do Usuário) a
+   sidebar é "sticky" e ocupa espaço de verdade ao lado do conteúdo — o
+   mesmo truque desenharia o banner por cima dela. Por isso este banner
+   fica contido dentro do container da página, como os outros cards. */
 .banner {
   position: relative;
-  left: 50%;
-  right: 50%;
-  width: 100vw;
-  margin-top: -1.75rem;
-  margin-left: -50vw;
-  margin-right: -50vw;
   overflow: hidden;
+  border-radius: 14px;
   padding: 1.4rem 1.75rem;
   background: linear-gradient(115deg, var(--color-accent) 40%, #0891b2 100%);
   color: #ffffff;
