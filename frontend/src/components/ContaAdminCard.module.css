@@ -241,9 +241,9 @@
 /* Linha de 5 painéis: status / estações / dados / ações rápidas / mais ações */
 .linhaPaineis {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 0.75rem;
-  align-items: start;
+  align-items: stretch;
 }
 
 .painel {
@@ -254,6 +254,12 @@
   border-radius: 10px;
   border: 1px solid var(--color-card-border);
   background-color: var(--color-card-bg);
+  /* Sem isso, um painel com conteúdo que não quebra linha direito (ex.:
+     nome de estação) força a própria coluna do grid a ficar mais larga
+     que a divisão igual em 1fr — item de grid, por padrão, não encolhe
+     abaixo do tamanho do próprio conteúdo. Resultado: painéis com
+     larguras bem diferentes entre si, em vez de iguais. */
+  min-width: 0;
 }
 
 .painelTitulo {
@@ -334,7 +340,8 @@
 .itemEstacaoNome {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.4rem;
   font-size: 0.82rem;
   font-weight: 600;
   color: var(--color-text);
