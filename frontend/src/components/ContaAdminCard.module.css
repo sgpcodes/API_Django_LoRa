@@ -413,6 +413,15 @@
   letter-spacing: 0.02em;
   text-transform: uppercase;
   color: var(--color-text-secondary);
+  /* "Vel. do vento" e "Direção do vento" quebram em 2 linhas, mas
+     "Temperatura" e "Umidade" cabem numa só — sem isso, o valor de cada
+     métrica fica numa altura diferente, em vez de todos alinhados na
+     mesma linha de base. Reserva a altura de 2 linhas sempre. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.25;
+  min-height: 2.5em;
 }
 
 .itemDadoValor {
