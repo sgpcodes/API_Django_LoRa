@@ -16,21 +16,15 @@
   margin-left: -50vw;
   margin-right: -50vw;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
   padding: 1.4rem 1.75rem;
   background: linear-gradient(115deg, #101a3d 0%, #1b3a8a 60%, #1e40af 100%);
   color: #ffffff;
   box-shadow: var(--shadow-card);
-}
-
-.bannerRede {
-  position: absolute;
-  inset: 0;
-  opacity: 0.9;
-}
-
-.bannerRede svg {
-  width: 100%;
-  height: 100%;
 }
 
 .bannerConteudo {
@@ -64,6 +58,30 @@
   color: rgba(255, 255, 255, 0.85);
 }
 
+.seletorTendencia {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: 10px;
+  background-color: rgba(255, 255, 255, 0.14);
+}
+
+.seletorTendencia select {
+  background: none;
+  border: none;
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.seletorTendencia select option {
+  color: var(--color-text);
+}
+
+/* Cards de contagem */
+
 .grade {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
@@ -73,19 +91,12 @@
 .cartao {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.5rem;
   padding: 1.25rem 1.4rem;
   border-radius: 12px;
   background-color: var(--color-card-bg);
   border: 1px solid var(--color-card-border);
   box-shadow: var(--shadow-card);
-  text-decoration: none;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.cartao:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 24px rgba(15, 28, 66, 0.1);
 }
 
 .cartaoIcone {
@@ -133,7 +144,44 @@
   color: var(--color-text-secondary);
 }
 
-.blocoPlanos {
+.tendencia {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.tendenciaAlta {
+  color: #16a34a;
+}
+
+.tendenciaBaixa {
+  color: #dc2626;
+}
+
+/* Blocos (donut / crescimento / uso / atividade / status) */
+
+.linha3Colunas {
+  display: grid;
+  grid-template-columns: 1fr 1.6fr 1fr;
+  gap: 0.9rem;
+}
+
+.linha2Colunas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.9rem;
+}
+
+.linha3Colunas > *,
+.linha2Colunas > * {
+  min-width: 0;
+}
+
+.cartaoBloco {
+  display: flex;
+  flex-direction: column;
   padding: 1.25rem 1.4rem;
   border-radius: 12px;
   background-color: var(--color-card-bg);
@@ -141,107 +189,282 @@
   box-shadow: var(--shadow-card);
 }
 
-.blocoPlanosCabecalho {
+.blocoCabecalho {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  margin-bottom: 1rem;
 }
 
 .blocoTitulo {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-weight: 700;
   color: var(--color-text);
+}
+
+.blocoSubtitulo {
+  margin: 0.15rem 0 0.9rem;
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+}
+
+.blocoTag {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background-color: var(--color-pill-bg);
 }
 
 .linkVerTodas {
   display: flex;
   align-items: center;
   gap: 0.3rem;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 600;
   color: var(--color-accent);
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .linkVerTodas:hover {
   text-decoration: underline;
 }
 
-.linhaPlanos {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+.semDados {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+/* Donut de distribuição */
+
+.donutLinha {
+  display: flex;
+  align-items: center;
   gap: 1rem;
 }
 
-.itemPlano {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+.donutContainer {
+  position: relative;
+  width: 160px;
+  flex-shrink: 0;
 }
 
-.itemPlanoCabecalho {
+.donutCentro {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.donutTotal {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.donutRotulo {
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+}
+
+.legendaDonut {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.legendaDonut li {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  font-size: 0.85rem;
 }
 
-.pontoPlano {
+.pontoLegenda {
   width: 9px;
   height: 9px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
-.pontoPlano.corAzul {
-  background-color: #4a6fa5;
-}
-
-.pontoPlano.corRoxa {
-  background-color: #7c3aed;
-}
-
-.pontoPlano.corAmarela {
-  background-color: #b45309;
-}
-
-.itemPlanoNome {
-  font-size: 0.85rem;
-  font-weight: 600;
+.legendaNome {
+  flex: 1;
   color: var(--color-text-secondary);
+  font-weight: 600;
+}
+
+.legendaValor {
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.legendaPercentual {
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  min-width: 2.5em;
+  text-align: right;
+}
+
+/* Uso da plataforma */
+
+.listaUso {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.listaUso li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--color-card-border);
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.listaUso li:first-child {
+  border-top: none;
+}
+
+.listaUso li span {
   flex: 1;
 }
 
-.itemPlanoValor {
-  font-size: 1.05rem;
-  font-weight: 700;
+.listaUso li strong {
   color: var(--color-text);
 }
 
-.barraPlano {
-  width: 100%;
-  height: 6px;
+/* Atividade recente */
+
+.listaAtividade {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.listaAtividade li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--color-card-border);
+}
+
+.listaAtividade li:first-child {
+  border-top: none;
+}
+
+.itemAtividadeTexto {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.itemAtividadeTexto strong {
+  font-size: 0.85rem;
+  color: var(--color-text);
+}
+
+.itemAtividadeTexto small {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.itemAtividadeData {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+/* Status do sistema */
+
+.listaStatus {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.listaStatus li {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.85rem;
+  color: var(--color-text);
+}
+
+.listaStatus li span:first-of-type {
+  flex: 1;
+}
+
+.iconeOnline {
+  color: #16a34a;
+}
+
+.iconeOffline {
+  color: #dc2626;
+}
+
+.pillOnline,
+.pillOffline {
+  padding: 0.2rem 0.6rem;
   border-radius: 999px;
-  background-color: var(--color-pill-bg);
-  overflow: hidden;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
-.barraPlanoPreenchida {
-  height: 100%;
-  border-radius: 999px;
-  transition: width 0.3s ease;
+.pillOnline {
+  background-color: rgba(34, 197, 94, 0.14);
+  color: #16a34a;
 }
 
-.barraPlanoPreenchida.corAzul {
-  background-color: #4a6fa5;
+.pillOffline {
+  background-color: rgba(239, 68, 68, 0.14);
+  color: #dc2626;
 }
 
-.barraPlanoPreenchida.corRoxa {
-  background-color: #7c3aed;
+@media (max-width: 1279px) {
+  .linha3Colunas {
+    grid-template-columns: 1fr 1fr;
+  }
+  .linha3Colunas > *:first-child {
+    grid-column: span 2;
+  }
 }
 
-.barraPlanoPreenchida.corAmarela {
-  background-color: #b45309;
+@media (max-width: 900px) {
+  .linha3Colunas,
+  .linha2Colunas {
+    grid-template-columns: 1fr;
+  }
+  .linha3Colunas > *:first-child {
+    grid-column: span 1;
+  }
 }

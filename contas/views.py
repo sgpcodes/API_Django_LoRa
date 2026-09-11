@@ -73,6 +73,10 @@ class CadastroView(APIView):
         serializer = CadastroSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         usuario = serializer.save()
+        # ator=None: cadastro público, nenhum Gestor envolvido — LogAuditoria
+        # aceita isso (SET_NULL), diferente de quando é o Gestor quem cria a
+        # conta pela tela de Contas (ver UsuarioViewSet.perform_create).
+        LogAuditoria.objects.create(ator=None, acao='usuario.criado', alvo=usuario)
 
         try:
             enviar_email_confirmacao(usuario)
@@ -367,6 +371,12 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         devolvesse só o próprio registro."""
         serializer = self.get_serializer(request.user)
         return Response(serializer.data)
+
+    def perform_create(self, serializer):
+        # Só o Gestor chega aqui (create é Gestor-only, ver get_permissions)
+        # — cadastro público passa por CadastroView, não por este ViewSet.
+        usuario = serializer.save()
+        LogAuditoria.objects.create(ator=self.request.user, acao='usuario.criado', alvo=usuario)
 
     def perform_update(self, serializer):
         # RN08: só o Gestor pode alterar o `role` de uma conta (promover a

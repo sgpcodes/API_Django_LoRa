@@ -230,6 +230,7 @@ class UsuarioViewSetTests(APITestCase):
         resposta = self.client.post('/api/contas/', {'username': 'novo', 'password': 'senha12345'})
         self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
         self.assertTrue(Usuario.objects.filter(username='novo').exists())
+        self.assertTrue(LogAuditoria.objects.filter(acao='usuario.criado', ator=self.gestor).exists())
 
     def test_gestor_pode_suspender_conta_e_isso_vai_para_auditoria(self):
         """RN02 + RN05."""
@@ -414,6 +415,7 @@ class CadastroPublicoTests(APITestCase):
         self.assertFalse(usuario.email_verificado)
         self.assertTrue(usuario.check_password('senha-forte-123'))
         self.assertTrue(Assinatura.objects.filter(usuario=usuario, plano=self.plano, encerrada_em__isnull=True).exists())
+        self.assertTrue(LogAuditoria.objects.filter(acao='usuario.criado', ator=None).exists())
 
     def test_cadastro_permite_login_antes_de_confirmar_por_enquanto(self):
         """Ver test_login_sem_email_confirmado_funciona_por_enquanto —
