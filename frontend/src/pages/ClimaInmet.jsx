@@ -14,6 +14,7 @@ import {
   Droplets,
 } from 'lucide-react'
 import StatusMessage from '../components/StatusMessage'
+import { IndicadorAtualizando } from '../components/Spinner'
 import { buscarMeuPerfil } from '../services/perfilService'
 import { buscarEstacoesInmet, buscarPrevisaoInmet, buscarAvisosInmet } from '../services/inmetService'
 import { buscarMunicipiosPorUf } from '../services/ibgeService'
@@ -154,6 +155,8 @@ function ClimaInmet() {
   const [erroMapa, setErroMapa] = useState(null)
 
   const [carregandoInicial, setCarregandoInicial] = useState(true)
+  const [carregandoSelecao, setCarregandoSelecao] = useState(false)
+  const [carregandoPrevisao, setCarregandoPrevisao] = useState(false)
 
   // Carga inicial: perfil (pra sugerir o estado da conta) + todas as
   // estações do Brasil (usadas só pelo mapa, sem filtro de UF).
@@ -176,30 +179,27 @@ function ClimaInmet() {
     carregar()
   }, [])
 
-  // Troca de UF: recarrega estações do estado, municípios do estado e avisos.
+  // Troca de UF: recarrega estações do estado, municípios do estado e
+  // avisos — as três buscas rodam juntas, então uma única "atualizando"
+  // cobre esse grupo (RN: nunca deixar a tela parada sem sinal durante
+  // o delay real dessas chamadas).
   useEffect(() => {
     if (!uf) return
     setCodigoEstacao('')
     setCodigoIbge('')
     setPrevisao(null)
+    setCarregandoSelecao(true)
 
-    buscarEstacoesInmet(uf)
-      .then(setEstacoesDoEstado)
-      .catch(() => setEstacoesDoEstado([]))
-
-    buscarMunicipiosPorUf(uf)
-      .then((lista) => {
-        setMunicipios(lista)
-        return lista
-      })
-      .catch(() => setMunicipios([]))
-
-    buscarAvisosInmet(uf)
-      .then((dados) => {
-        setAvisos(dados)
-        setErroAvisos(null)
-      })
-      .catch(() => setErroAvisos('Não foi possível carregar os avisos oficiais agora.'))
+    Promise.allSettled([
+      buscarEstacoesInmet(uf).then(setEstacoesDoEstado).catch(() => setEstacoesDoEstado([])),
+      buscarMunicipiosPorUf(uf).then(setMunicipios).catch(() => setMunicipios([])),
+      buscarAvisosInmet(uf)
+        .then((dados) => {
+          setAvisos(dados)
+          setErroAvisos(null)
+        })
+        .catch(() => setErroAvisos('Não foi possível carregar os avisos oficiais agora.')),
+    ]).then(() => setCarregandoSelecao(false))
   }, [uf])
 
   // Assim que os municípios do estado chegam, tenta pré-selecionar o
@@ -224,6 +224,7 @@ function ClimaInmet() {
 
   useEffect(() => {
     if (!codigoIbge) return
+    setCarregandoPrevisao(true)
     buscarPrevisaoInmet(codigoIbge)
       .then((dados) => {
         setPrevisao(dados)
@@ -231,6 +232,7 @@ function ClimaInmet() {
         setDiaSelecionadoIndice(0)
       })
       .catch(() => setErroPrevisao('Não foi possível carregar a previsão agora.'))
+      .finally(() => setCarregandoPrevisao(false))
   }, [codigoIbge])
 
   const estacaoSelecionada = useMemo(
@@ -269,7 +271,8 @@ function ClimaInmet() {
       <section className={styles.card}>
         <div className={styles.seletorCabecalho}>
           <h2 className={styles.tituloSecao}><MapPin size={16} /> Selecionar de referência</h2>
-          {estacaoSelecionada && (
+          {carregandoSelecao && <IndicadorAtualizando />}
+          {!carregandoSelecao && estacaoSelecionada && (
             <div className={styles.chipStatus}>
               <span className={estacaoSelecionada.operante ? styles.pontoOnline : styles.pontoOffline} />
               <div className={styles.chipStatusTexto}>
@@ -323,8 +326,13 @@ function ClimaInmet() {
       </section>
 
       <section className={styles.card}>
-        <h2 className={styles.tituloSecao}><CloudSun size={16} /> Previsão do tempo (5 dias)</h2>
-        {erroPrevisao ? (
+        <div className={styles.seletorCabecalho}>
+          <h2 className={styles.tituloSecao}><CloudSun size={16} /> Previsão do tempo (5 dias)</h2>
+          {carregandoPrevisao && <IndicadorAtualizando />}
+        </div>
+        {carregandoPrevisao ? (
+          <CardVazio texto="Carregando previsão..." />
+        ) : erroPrevisao ? (
           <CardVazio texto={erroPrevisao} />
         ) : !previsao || previsao.dias.length === 0 ? (
           <CardVazio texto="Escolha um município para ver a previsão." />
@@ -375,8 +383,13 @@ function ClimaInmet() {
       </section>
 
       <section className={styles.card}>
-        <h2 className={styles.tituloSecao}><AlertTriangle size={16} /> Avisos oficiais</h2>
-        {erroAvisos ? (
+        <div className={styles.seletorCabecalho}>
+          <h2 className={styles.tituloSecao}><AlertTriangle size={16} /> Avisos oficiais</h2>
+          {carregandoSelecao && <IndicadorAtualizando />}
+        </div>
+        {carregandoSelecao ? (
+          <CardVazio texto="Carregando avisos..." />
+        ) : erroAvisos ? (
           <CardVazio texto={erroAvisos} />
         ) : !avisos || (avisos.hoje.length === 0 && avisos.futuro.length === 0) ? (
           <CardVazio texto="Nenhum aviso oficial ativo para o estado selecionado no momento." />
@@ -392,13 +405,16 @@ function ClimaInmet() {
       <section className={styles.card}>
         <div className={styles.estacaoCabecalho}>
           <h2 className={styles.tituloSecao}><Landmark size={16} /> Estação de referência (INMET)</h2>
-          {estacaoSelecionada && (
+          {carregandoSelecao && <IndicadorAtualizando />}
+          {!carregandoSelecao && estacaoSelecionada && (
             <span className={estacaoSelecionada.operante ? styles.badgeOperante : styles.badgePane}>
               {estacaoSelecionada.operante ? 'Ativa' : 'Com pane'}
             </span>
           )}
         </div>
-        {!estacaoSelecionada ? (
+        {carregandoSelecao ? (
+          <CardVazio texto="Carregando estação..." />
+        ) : !estacaoSelecionada ? (
           <CardVazio texto="Escolha um estado com estação disponível para ver os detalhes." />
         ) : (
           <div className={styles.estacaoGrid}>

@@ -1,0 +1,30 @@
+.spinner {
+  animation: girar 0.8s linear infinite;
+  transform-origin: 50% 50%;
+  flex-shrink: 0;
+}
+
+.trilha {
+  stroke: var(--color-card-border);
+}
+
+.arco {
+  stroke: var(--color-accent);
+  stroke-linecap: round;
+  stroke-dasharray: 44 18;
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.indicador {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}

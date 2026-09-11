@@ -115,6 +115,7 @@ function ManutencaoAdmin() {
   const [resultado, setResultado] = useState(null)
 
   const [diasAntigas, setDiasAntigas] = useState(365)
+  const [carregandoResumoAntigas, setCarregandoResumoAntigas] = useState(false)
   const [resumoAntigas, setResumoAntigas] = useState(null)
   const [fraseAntigas, setFraseAntigas] = useState('')
   const [executandoAntigas, setExecutandoAntigas] = useState(false)
@@ -148,9 +149,12 @@ function ManutencaoAdmin() {
   }, [])
 
   useEffect(() => {
+    setCarregandoResumoAntigas(true)
+    setResumoAntigas(null)
     buscarResumoLimpezaLeiturasAntigas(diasAntigas)
       .then(setResumoAntigas)
       .catch(() => setResumoAntigas(null))
+      .finally(() => setCarregandoResumoAntigas(false))
   }, [diasAntigas])
 
   const dadosDonutBanco = info?.banco_por_categoria
@@ -424,6 +428,7 @@ function ManutencaoAdmin() {
             onChange={(e) => setDiasAntigas(Math.max(Number(e.target.value) || 1, 1))}
           />
           <span>dia(s)</span>
+          {carregandoResumoAntigas && <IndicadorAtualizando />}
         </div>
 
         {resumoAntigas && (
@@ -435,7 +440,7 @@ function ManutencaoAdmin() {
           </div>
         )}
 
-        {resumoAntigas && resumoAntigas.quantidade === 0 ? (
+        {carregandoResumoAntigas ? null : resumoAntigas && resumoAntigas.quantidade === 0 ? (
           <p className={styles.avisoVazio}>
             <AlertTriangle size={15} />
             Não há leituras mais velhas que {diasAntigas} dia(s) agora.
