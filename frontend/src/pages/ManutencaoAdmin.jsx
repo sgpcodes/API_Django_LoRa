@@ -52,6 +52,37 @@ const ROTULOS_TABELA = {
   log_auditoria: 'Eventos de auditoria',
 }
 
+// Todo serviço de terceiro que o sistema realmente chama, e pra que
+// serve — pra não deixar a usuária adivinhando o que é "API externa".
+const INTEGRACOES = [
+  {
+    chave: 'inmet',
+    nome: 'INMET',
+    descricao: 'Estações meteorológicas, previsão do tempo e avisos oficiais — usado na aba "Clima INMET".',
+  },
+  {
+    chave: 'ibge',
+    nome: 'IBGE',
+    descricao: 'Lista de municípios por estado, usada no seletor de cidade da aba "Clima INMET".',
+  },
+  {
+    chave: 'open_meteo',
+    nome: 'Open-Meteo',
+    descricao: 'Clima temporário no Dashboard, usado só até a estação própria da conta estar transmitindo.',
+  },
+  {
+    chave: 'resend',
+    nome: 'Resend',
+    descricao: 'Envio do e-mail de confirmação de cadastro.',
+  },
+]
+
+function statusIntegracao(chave, dados) {
+  if (!dados) return { rotulo: '—', ativo: false }
+  if (chave === 'resend') return { rotulo: dados.configurado ? 'Configurado' : 'Não configurado', ativo: dados.configurado }
+  return { rotulo: dados.online ? 'Online' : 'Fora do ar', ativo: dados.online }
+}
+
 function ItemTendencia({ percentual }) {
   if (percentual == null) return null
   const Icone = percentual >= 0 ? TrendingUp : TrendingDown
@@ -121,10 +152,6 @@ function ManutencaoAdmin() {
       .then(setResumoAntigas)
       .catch(() => setResumoAntigas(null))
   }, [diasAntigas])
-
-  const inmetOnline = info?.integracoes?.inmet?.online ?? false
-  const ibgeOnline = info?.integracoes?.ibge?.online ?? false
-  const integracoesOnline = (inmetOnline ? 1 : 0) + (ibgeOnline ? 1 : 0)
 
   const dadosDonutBanco = info?.banco_por_categoria
     ? Object.entries(info.banco_por_categoria).map(([chave, valor]) => ({
@@ -237,14 +264,6 @@ function ManutencaoAdmin() {
         </div>
 
         <div className={styles.cartao}>
-          <span className={`${styles.cartaoIcone} ${integracoesOnline === 2 ? styles.corVerde : styles.corAmarela}`}>
-            <Globe size={20} />
-          </span>
-          <span className={styles.cartaoValor}>{integracoesOnline}/2</span>
-          <span className={styles.cartaoRotulo}>APIs externas online</span>
-        </div>
-
-        <div className={styles.cartao}>
           <span className={`${styles.cartaoIcone} ${styles.corAzul}`}><Cpu size={20} /></span>
           <span className={styles.cartaoValor}>Django {info?.ambiente?.django_versao ?? '—'}</span>
           <span className={styles.cartaoRotulo}>Backend (1 processo)</span>
@@ -312,6 +331,31 @@ function ManutencaoAdmin() {
               ))}
             </ul>
           </div>
+        )}
+      </div>
+
+      <div className={styles.cartaoBloco}>
+        <div className={styles.blocoCabecalho}>
+          <h2 className={styles.blocoTitulo}><Globe size={16} /> APIs externas</h2>
+        </div>
+        <p className={styles.blocoSubtitulo}>Serviços de terceiros que o sistema usa e pra que servem</p>
+        {erroInfo ? (
+          <p className={styles.semDados}>{erroInfo}</p>
+        ) : (
+          <ul className={styles.listaIntegracoes}>
+            {INTEGRACOES.map((item) => {
+              const { rotulo, ativo } = statusIntegracao(item.chave, info?.integracoes?.[item.chave])
+              return (
+                <li key={item.chave}>
+                  <div className={styles.integracaoInfo}>
+                    <span className={styles.integracaoNome}>{item.nome}</span>
+                    <span className={styles.integracaoDescricao}>{item.descricao}</span>
+                  </div>
+                  <span className={ativo ? styles.pillOnline : styles.pillOffline}>{rotulo}</span>
+                </li>
+              )
+            })}
+          </ul>
         )}
       </div>
 

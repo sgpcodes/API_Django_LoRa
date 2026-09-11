@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  Activity,
   AlertTriangle,
   ArrowRight,
   BarChart3,
-  CheckCircle2,
   Clock,
   Radio,
   TrendingDown,
@@ -13,7 +11,6 @@ import {
   UserCheck,
   Users,
   Wifi,
-  XCircle,
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import StatusMessage from '../components/StatusMessage'
@@ -93,7 +90,7 @@ function AdminDashboard() {
 
     buscarInfoSistema()
       .then(setInfo)
-      .catch(() => setErroInfo('Não foi possível carregar atividade recente e status do sistema agora.'))
+      .catch(() => setErroInfo('Não foi possível carregar a atividade recente agora.'))
   }, [])
 
   const totalOnline = estacoes.filter((estacao) => !estacao.esta_offline).length
@@ -107,11 +104,6 @@ function AdminDashboard() {
     () => calcularCrescimentoMensal(contas, estacoes, info?.leituras_por_mes),
     [contas, estacoes, info],
   )
-
-  const bancoOnline = info != null
-  const inmetOnline = info?.integracoes?.inmet?.online ?? false
-  const ibgeOnline = info?.integracoes?.ibge?.online ?? false
-  const sistemaOperacional = bancoOnline && inmetOnline && ibgeOnline
 
   const banner = (
     <div className={styles.banner}>
@@ -205,37 +197,6 @@ function AdminDashboard() {
               )}
             </LineChart>
           </ResponsiveContainer>
-        </div>
-
-        <div className={styles.cartaoBloco}>
-          <div className={styles.blocoCabecalho}>
-            <h2 className={styles.blocoTitulo}><Activity size={16} /> Status do sistema</h2>
-            {!erroInfo && (
-              <span className={sistemaOperacional ? styles.pillOnline : styles.pillOffline}>
-                {sistemaOperacional ? 'Operacional' : 'Atenção'}
-              </span>
-            )}
-          </div>
-          <p className={styles.blocoSubtitulo}>Conectividade com o banco e as integrações externas</p>
-          {erroInfo ? (
-            <p className={styles.semDados}>{erroInfo}</p>
-          ) : (
-            <ul className={styles.listaStatus}>
-              {[
-                { nome: 'Banco de dados', online: bancoOnline },
-                { nome: 'INMET (clima)', online: inmetOnline },
-                { nome: 'IBGE (municípios)', online: ibgeOnline },
-              ].map((servico) => (
-                <li key={servico.nome}>
-                  {servico.online ? <CheckCircle2 size={15} className={styles.iconeOnline} /> : <XCircle size={15} className={styles.iconeOffline} />}
-                  <span>{servico.nome}</span>
-                  <span className={servico.online ? styles.pillOnline : styles.pillOffline}>
-                    {servico.online ? 'Online' : 'Fora do ar'}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
         </div>
       </div>
 

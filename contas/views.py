@@ -371,7 +371,7 @@ class InfoSistemaView(APIView):
     """GET /api/manutencao/info-sistema/ — painel de "entranhas do
     sistema" na tela de Manutenção: tamanho real do banco, contagem por
     tabela, atividade recente (mesmo LogAuditoria da tela de
-    Notificações), status das integrações externas (INMET/IBGE) e
+    Notificações), status das integrações externas (INMET/IBGE/Open-Meteo/Resend) e
     versão do ambiente. Só leitura, Gestor-only — nada aqui é inventado,
     só reúne números que já existem em outros lugares do sistema."""
 
@@ -431,6 +431,14 @@ class InfoSistemaView(APIView):
                 'ibge': _checar_integracao(
                     'ibge', 'https://servicodados.ibge.gov.br/api/v1/localidades/estados/RJ/municipios',
                 ),
+                'open_meteo': _checar_integracao(
+                    'open_meteo', 'https://api.open-meteo.com/v1/forecast',
+                    params={'latitude': -22.92, 'longitude': -42.82, 'current_weather': 'true'},
+                ),
+                # Resend não tem um jeito de "pingar" a entrega de e-mail em
+                # si — aqui só reporta se a chave está configurada no
+                # ambiente (produção) ou se caiu no backend de console (dev).
+                'resend': {'configurado': bool(os.environ.get('RESEND_API_KEY'))},
             },
             'ambiente': {
                 'django_versao': django.get_version(),

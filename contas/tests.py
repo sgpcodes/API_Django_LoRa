@@ -968,6 +968,8 @@ class InfoSistemaTests(APITestCase):
         self.assertIn('motor', resposta.data['banco'])
         self.assertTrue(resposta.data['integracoes']['inmet']['online'])
         self.assertTrue(resposta.data['integracoes']['ibge']['online'])
+        self.assertTrue(resposta.data['integracoes']['open_meteo']['online'])
+        self.assertIn('configurado', resposta.data['integracoes']['resend'])
         self.assertIn('django_versao', resposta.data['ambiente'])
         self.assertIn('python_versao', resposta.data['ambiente'])
 
@@ -1055,7 +1057,31 @@ class InfoSistemaTests(APITestCase):
             mock_get.return_value = Mock(status_code=200)
             self.client.get('/api/manutencao/info-sistema/')
             self.client.get('/api/manutencao/info-sistema/')
-        self.assertEqual(mock_get.call_count, 2)  # 2 integrações, não 4 (não repetiu na 2ª chamada)
+        self.assertEqual(mock_get.call_count, 3)  # 3 integrações com ping, não 6 (não repetiu na 2ª chamada)
+
+    def test_resend_configurado_reflete_variavel_de_ambiente(self):
+        from unittest.mock import Mock, patch
+
+        from django.core.cache import cache
+
+        cache.clear()
+        self.client.force_authenticate(self.gestor)
+        with patch('contas.views.requests.get') as mock_get, patch.dict(
+            'contas.views.os.environ', {'RESEND_API_KEY': 'chave-teste'},
+        ):
+            mock_get.return_value = Mock(status_code=200)
+            resposta = self.client.get('/api/manutencao/info-sistema/')
+        self.assertTrue(resposta.data['integracoes']['resend']['configurado'])
+
+        cache.clear()
+        with patch('contas.views.requests.get') as mock_get, patch.dict(
+            'contas.views.os.environ', {}, clear=False,
+        ):
+            os_environ = __import__('os').environ
+            os_environ.pop('RESEND_API_KEY', None)
+            mock_get.return_value = Mock(status_code=200)
+            resposta = self.client.get('/api/manutencao/info-sistema/')
+        self.assertFalse(resposta.data['integracoes']['resend']['configurado'])
 
 
 class AuditoriaRecenteTests(APITestCase):

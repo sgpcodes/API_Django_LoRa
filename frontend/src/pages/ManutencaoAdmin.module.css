@@ -60,7 +60,7 @@
 
 .grade {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 0.9rem;
 }
 
@@ -376,6 +376,48 @@
 
 .listaUso li strong {
   color: var(--color-text);
+}
+
+/* APIs externas */
+
+.listaIntegracoes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.listaIntegracoes li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--color-card-border);
+}
+
+.listaIntegracoes li:first-child {
+  border-top: none;
+}
+
+.integracaoInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.integracaoNome {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.integracaoDescricao {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
 }
 
 /* Atividade recente — tabela */
