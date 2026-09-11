@@ -1,18 +1,27 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Bell, ChevronDown, Database, LayoutDashboard, LogOut, Radio, Settings, ShieldCheck, User, Users } from 'lucide-react'
 import { logout } from '../services/authService'
 import { buscarMeuPerfil } from '../services/perfilService'
-import { obterCorPrincipal, obterTema, salvarCorPrincipal, salvarTema, variaveisCssDaCor } from '../services/aparenciaService'
+import {
+  obterCorPrincipal,
+  obterIdioma,
+  obterTema,
+  salvarCorPrincipal,
+  salvarIdioma,
+  salvarTema,
+  variaveisCssDaCor,
+} from '../services/aparenciaService'
 import styles from './PainelAdministrativo.module.css'
 
 const ABAS = [
-  { to: '/app/adm/dashboard', rotulo: 'Dashboard', icone: LayoutDashboard },
-  { to: '/app/adm/estacoes', rotulo: 'Estações', icone: Radio },
-  { to: '/app/adm/contas', rotulo: 'Contas', icone: Users },
-  { to: '/app/adm/manutencao', rotulo: 'Manutenção', icone: Database },
-  { to: '/app/adm/notificacoes', rotulo: 'Notificações', icone: Bell },
-  { to: '/app/adm/configuracoes', rotulo: 'Configurações', icone: Settings },
+  { to: '/app/adm/dashboard', chave: 'dashboard', icone: LayoutDashboard },
+  { to: '/app/adm/estacoes', chave: 'estacoes', icone: Radio },
+  { to: '/app/adm/contas', chave: 'contas', icone: Users },
+  { to: '/app/adm/manutencao', chave: 'manutencao', icone: Database },
+  { to: '/app/adm/notificacoes', chave: 'notificacoes', icone: Bell },
+  { to: '/app/adm/configuracoes', chave: 'configuracoes', icone: Settings },
 ]
 
 // Casca do Painel Administrativo (destino de quem loga como Gestor):
@@ -28,12 +37,25 @@ const ABAS = [
 // era redundante.
 function PainelAdministrativo() {
   const navigate = useNavigate()
+  const { t, i18n } = useTranslation()
 
   const [perfil, setPerfil] = useState(null)
   const [menuContaAberto, setMenuContaAberto] = useState(false)
   const [tema, setTema] = useState(obterTema)
   const [corPrincipal, setCorPrincipal] = useState(obterCorPrincipal)
+  const [idioma, setIdioma] = useState(obterIdioma)
   const contaRef = useRef(null)
+
+  useEffect(() => {
+    i18n.changeLanguage(idioma)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function mudarIdioma(valor) {
+    salvarIdioma(valor)
+    setIdioma(valor)
+    i18n.changeLanguage(valor)
+  }
 
   useEffect(() => {
     buscarMeuPerfil()
@@ -88,8 +110,8 @@ function PainelAdministrativo() {
             <ShieldCheck size={20} />
           </span>
           <div>
-            <span className={styles.titulo}>Painel administrativo</span>
-            <span className={styles.subtitulo}>LACOP UFF · Monitoramento Agroclimático</span>
+            <span className={styles.titulo}>{t('nav.painelAdministrativo')}</span>
+            <span className={styles.subtitulo}>{t('nav.lacopSubtitulo')}</span>
           </div>
         </div>
 
@@ -101,7 +123,7 @@ function PainelAdministrativo() {
               className={({ isActive }) => `${styles.aba} ${isActive ? styles.abaAtiva : ''}`}
             >
               <aba.icone size={16} />
-              {aba.rotulo}
+              {t(`nav.${aba.chave}`)}
             </NavLink>
           ))}
         </nav>
@@ -112,7 +134,7 @@ function PainelAdministrativo() {
               <span className={styles.avatar}>{iniciais || <ShieldCheck size={16} />}</span>
               <span className={styles.contaTextos}>
                 <span className={styles.contaNome}>{nome || '—'}</span>
-                <span className={styles.contaPapel}>Administrador</span>
+                <span className={styles.contaPapel}>{t('nav.administrador')}</span>
               </span>
               <ChevronDown size={15} className={styles.contaChevron} />
             </button>
@@ -127,11 +149,11 @@ function PainelAdministrativo() {
                   }}
                 >
                   <User size={14} />
-                  Perfil
+                  {t('nav.perfil')}
                 </button>
                 <button type="button" className={styles.dropdownItem} onClick={aoSair}>
                   <LogOut size={14} />
-                  Sair
+                  {t('nav.sair')}
                 </button>
               </div>
             )}
@@ -140,7 +162,16 @@ function PainelAdministrativo() {
       </header>
 
       <main className={styles.conteudo}>
-        <Outlet context={{ tema, onAlternarTema: alternarTema, corPrincipal, onMudarCorPrincipal: mudarCorPrincipal }} />
+        <Outlet
+          context={{
+            tema,
+            onAlternarTema: alternarTema,
+            corPrincipal,
+            onMudarCorPrincipal: mudarCorPrincipal,
+            idioma,
+            onMudarIdioma: mudarIdioma,
+          }}
+        />
       </main>
     </div>
   )

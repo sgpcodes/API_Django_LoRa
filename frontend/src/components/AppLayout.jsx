@@ -1,18 +1,46 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Outlet } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Menu } from 'lucide-react'
 import Sidebar from './Sidebar'
-import { obterCorPrincipal, obterTema, salvarCorPrincipal, salvarTema, variaveisCssDaCor } from '../services/aparenciaService'
+import {
+  obterCorPrincipal,
+  obterIdioma,
+  obterTema,
+  salvarCorPrincipal,
+  salvarIdioma,
+  salvarTema,
+  variaveisCssDaCor,
+} from '../services/aparenciaService'
 import styles from './AppLayout.module.css'
 
 // Casca fixa do app: menu lateral + área de conteúdo, onde cada página
 // (Dashboard, Dados do LoRa, Perfil) é renderizada via <Outlet />.
-// Tema e cor principal são controlados aqui (não em cada página) porque a
-// sidebar e o cabeçalho de qualquer página precisam dos dois.
+// Tema, cor principal e idioma são controlados aqui (não em cada página)
+// porque a sidebar e o cabeçalho de qualquer página precisam dos três.
 function AppLayout() {
+  const { i18n } = useTranslation()
   const [tema, setTema] = useState(obterTema)
   const [corPrincipal, setCorPrincipal] = useState(obterCorPrincipal)
+  const [idioma, setIdioma] = useState(obterIdioma)
   const [menuMobileAberto, setMenuMobileAberto] = useState(false)
+
+  // Aplica a preferência salva dessa conta assim que o layout monta —
+  // cobre login/troca de conta sem reload de página inteira (o `lng`
+  // inicial do i18next só pega o valor certo num F5, ver i18n/index.js).
+  useEffect(() => {
+    i18n.changeLanguage(idioma)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Só muda quando a pessoa escolhe de novo em Configurações — nunca
+  // sozinho. Salva na hora (mesma conta) e troca o idioma de toda a
+  // interface imediatamente.
+  function mudarIdioma(valor) {
+    salvarIdioma(valor)
+    setIdioma(valor)
+    i18n.changeLanguage(valor)
+  }
 
   // Só muda quando a pessoa clica no botão — nunca sozinho por horário.
   // Salva na hora (mesma conta, mesmo navegador), então fica assim até
@@ -60,6 +88,8 @@ function AppLayout() {
             onAlternarTema: alternarTema,
             corPrincipal,
             onMudarCorPrincipal: mudarCorPrincipal,
+            idioma,
+            onMudarIdioma: mudarIdioma,
           }}
         />
       </main>

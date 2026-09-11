@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   LayoutGrid,
   Bell,
@@ -29,11 +30,11 @@ import styles from './Sidebar.module.css'
 // dentro do fluxo de upgrade (Gerenciamento de Plano → "Fazer upgrade"),
 // não faz sentido como link permanente no menu.
 const ITENS_NAV = [
-  { to: '/app', rotulo: 'Dashboard', icone: LayoutGrid, fim: true },
-  { to: '/app/notificacoes', rotulo: 'Notificações', icone: Bell },
-  { to: '/app/inmet', rotulo: 'Clima INMET', icone: CloudSun },
-  { to: '/app/configuracoes', rotulo: 'Configurações', icone: Settings },
-  { to: '/app/plano', rotulo: 'Gerenciamento de Plano', icone: CreditCard },
+  { to: '/app', chave: 'dashboard', icone: LayoutGrid, fim: true },
+  { to: '/app/notificacoes', chave: 'notificacoes', icone: Bell },
+  { to: '/app/inmet', chave: 'climaInmet', icone: CloudSun },
+  { to: '/app/configuracoes', chave: 'configuracoes', icone: Settings },
+  { to: '/app/plano', chave: 'gerenciamentoPlano', icone: CreditCard },
 ]
 
 // Primeiro e segundo nome dão as iniciais do avatar ("SG"); o resto do
@@ -61,6 +62,7 @@ function nomeEIniciais(username) {
 // AppLayout) trazem ela de volta por cima do conteúdo, com um fundo
 // escurecido atrás que fecha ao ser clicado.
 function Sidebar({ tema, onAlternarTema, abertaMobile, onFecharMobile }) {
+  const { t } = useTranslation()
   const [recolhida, setRecolhida] = useState(false)
   const navigate = useNavigate()
   const { estacao } = useMinhaEstacao()
@@ -121,14 +123,14 @@ function Sidebar({ tema, onAlternarTema, abertaMobile, onFecharMobile }) {
               key={item.to}
               to={item.to}
               end={item.fim}
-              title={item.rotulo}
+              title={t(`nav.${item.chave}`)}
               onClick={aoClicarAba}
               className={({ isActive }) => `${styles.link} ${isActive ? styles.linkAtivo : ''}`}
             >
               <span className={styles.iconeLink}>
                 <item.icone size={18} />
               </span>
-              <span className={styles.rotuloLink}>{item.rotulo}</span>
+              <span className={styles.rotuloLink}>{t(`nav.${item.chave}`)}</span>
               {item.badge && <span className={styles.badgeOff}>{item.badge}</span>}
             </NavLink>
           ))}
@@ -137,13 +139,13 @@ function Sidebar({ tema, onAlternarTema, abertaMobile, onFecharMobile }) {
         {estacao && (
           <NavLink
             to="/app/estacao"
-            title={`Estação conectada: ${estacao.identificador}`}
+            title={`${t('nav.estacaoConectada')}: ${estacao.identificador}`}
             onClick={aoClicarAba}
             className={({ isActive }) => `${styles.cardEstacao} ${isActive ? styles.cardEstacaoAtiva : ''}`}
           >
             <span className={styles.pontoOnline} />
             <div className={styles.cardEstacaoTexto}>
-              <span className={styles.cardEstacaoTitulo}>Estação conectada</span>
+              <span className={styles.cardEstacaoTitulo}>{t('nav.estacaoConectada')}</span>
               <span className={styles.cardEstacaoId}>
                 <Radio size={12} />
                 {estacao.identificador}
@@ -154,26 +156,26 @@ function Sidebar({ tema, onAlternarTema, abertaMobile, onFecharMobile }) {
 
         <NavLink
           to="/app/perfil"
-          title={`Perfil de ${nome}`}
+          title={`${t('nav.perfil')}: ${nome}`}
           onClick={aoClicarAba}
           className={({ isActive }) => `${styles.contaChip} ${isActive ? styles.contaChipAtiva : ''}`}
         >
           <span className={styles.avatar}>{iniciais}</span>
           <span className={styles.contaTexto}>
             <span className={styles.contaNome}>{nome}</span>
-            <span className={styles.contaPlano}>Conta Standard</span>
+            <span className={styles.contaPlano}>{t('nav.contaStandard')}</span>
           </span>
           <ChevronDown size={14} className={styles.contaChevron} />
         </NavLink>
 
         <div className={styles.rodape}>
-          <button type="button" className={styles.link} title="Ajuda">
+          <button type="button" className={styles.link} title={t('nav.ajuda')}>
             <HelpCircle size={18} />
-            <span className={styles.rotuloLink}>Ajuda</span>
+            <span className={styles.rotuloLink}>{t('nav.ajuda')}</span>
           </button>
-          <button type="button" className={styles.link} title="Sair" onClick={aoClicarSair}>
+          <button type="button" className={styles.link} title={t('nav.sair')} onClick={aoClicarSair}>
             <LogOut size={18} />
-            <span className={styles.rotuloLink}>Sair</span>
+            <span className={styles.rotuloLink}>{t('nav.sair')}</span>
           </button>
 
           <div className={styles.temaBloco}>
@@ -182,7 +184,7 @@ function Sidebar({ tema, onAlternarTema, abertaMobile, onFecharMobile }) {
                 type="button"
                 className={`${styles.temaBotao} ${tema === 'dia' ? styles.temaBotaoAtivo : ''}`}
                 onClick={() => tema !== 'dia' && onAlternarTema()}
-                aria-label="Tema claro"
+                aria-label={t('nav.temaClaro')}
               >
                 <Sun size={16} />
               </button>
@@ -190,12 +192,12 @@ function Sidebar({ tema, onAlternarTema, abertaMobile, onFecharMobile }) {
                 type="button"
                 className={`${styles.temaBotao} ${tema === 'noite' ? styles.temaBotaoAtivo : ''}`}
                 onClick={() => tema !== 'noite' && onAlternarTema()}
-                aria-label="Tema escuro"
+                aria-label={t('nav.temaEscuro')}
               >
                 <Moon size={16} />
               </button>
             </div>
-            <span className={styles.temaRotulo}>{tema === 'dia' ? 'Tema claro' : 'Tema escuro'}</span>
+            <span className={styles.temaRotulo}>{tema === 'dia' ? t('nav.temaClaro') : t('nav.temaEscuro')}</span>
           </div>
         </div>
       </aside>

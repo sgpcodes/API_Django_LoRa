@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   Settings,
   SlidersHorizontal,
@@ -40,7 +41,8 @@ function Toggle({ ativo, onClick }) {
 // backend ainda — não existe endpoint de preferências); exceções reais:
 // tema (compartilhado com o resto do app) e troca de senha.
 function Configuracoes() {
-  const { tema, onAlternarTema, corPrincipal, onMudarCorPrincipal } = useOutletContext()
+  const { t } = useTranslation()
+  const { tema, onAlternarTema, corPrincipal, onMudarCorPrincipal, idioma, onMudarIdioma } = useOutletContext()
   const { estacao } = useMinhaEstacao()
   const [perfil, setPerfil] = useState(null)
 
@@ -50,7 +52,6 @@ function Configuracoes() {
   const [fusoHorario, setFusoHorario] = useState('gmt-3')
   const [formatoData, setFormatoData] = useState('dd/mm/aaaa')
   const [formatoHora, setFormatoHora] = useState('24h')
-  const [idioma, setIdioma] = useState('pt-br')
 
   // Notificações
   const [emailAtivo, setEmailAtivo] = useState(true)
@@ -106,7 +107,7 @@ function Configuracoes() {
       setTimeout(() => setSenhaTrocada(false), 2500)
     } catch (erroRequisicao) {
       const dados = erroRequisicao.response?.data
-      setErroSenha(dados?.senha_atual?.[0] || dados?.password?.[0] || 'Não foi possível trocar a senha.')
+      setErroSenha(dados?.senha_atual?.[0] || dados?.password?.[0] || t('configuracoes.erroSenhaPadrao'))
     } finally {
       setTrocandoSenha(false)
     }
@@ -121,7 +122,7 @@ function Configuracoes() {
     setFusoHorario('gmt-3')
     setFormatoData('dd/mm/aaaa')
     setFormatoHora('24h')
-    setIdioma('pt-br')
+    onMudarIdioma('pt')
     setEmailAtivo(true)
     setDashboardAtivo(true)
     setResumoDiario(false)
@@ -137,7 +138,7 @@ function Configuracoes() {
   }
 
   function aoConfirmarExclusao() {
-    setAvisoExclusao('Exclusão de conta ainda não está disponível por autoatendimento — fale com um administrador.')
+    setAvisoExclusao(t('configuracoes.exclusaoIndisponivel'))
     setConfirmandoExclusao(false)
   }
 
@@ -147,21 +148,21 @@ function Configuracoes() {
         <div>
           <h1 className={styles.titulo}>
             <Settings size={22} />
-            Configurações
+            {t('configuracoes.titulo')}
           </h1>
-          <p className={styles.subtitulo}>Personalize sua experiência e gerencie as preferências do sistema.</p>
+          <p className={styles.subtitulo}>{t('configuracoes.subtitulo')}</p>
         </div>
         {estacao && (
           <div className={styles.chipEstacao}>
             <div>
-              <span className={styles.chipEstacaoTitulo}>Estação ativa</span>
+              <span className={styles.chipEstacaoTitulo}>{t('configuracoes.estacaoAtiva')}</span>
               <span className={styles.chipEstacaoValor}>
                 <span className={styles.pontoOnline} />
                 {estacao.identificador}
               </span>
             </div>
             <button type="button" className={styles.botaoContorno} onClick={() => irParaSecao('estacao')}>
-              Ver detalhes
+              {t('configuracoes.verDetalhes')}
               <ChevronRight size={14} />
             </button>
           </div>
@@ -177,19 +178,19 @@ function Configuracoes() {
           >
             <h2 className={styles.tituloCartao}>
               <SlidersHorizontal size={17} />
-              Preferências gerais
+              {t('configuracoes.geralTitulo')}
             </h2>
             <div className={styles.gradeCampos4}>
               <div>
-                <label className={styles.rotuloCampo}>Fuso horário</label>
+                <label className={styles.rotuloCampo}>{t('configuracoes.fusoHorario')}</label>
                 <select className={styles.select} value={fusoHorario} onChange={(e) => setFusoHorario(e.target.value)}>
-                  <option value="gmt-3">(GMT-03:00) Brasília</option>
-                  <option value="gmt-4">(GMT-04:00) Manaus</option>
-                  <option value="gmt-5">(GMT-05:00) Rio Branco</option>
+                  <option value="gmt-3">{t('configuracoes.fusoBrasilia')}</option>
+                  <option value="gmt-4">{t('configuracoes.fusoManaus')}</option>
+                  <option value="gmt-5">{t('configuracoes.fusoRioBranco')}</option>
                 </select>
               </div>
               <div>
-                <label className={styles.rotuloCampo}>Formato de data</label>
+                <label className={styles.rotuloCampo}>{t('configuracoes.formatoData')}</label>
                 <select className={styles.select} value={formatoData} onChange={(e) => setFormatoData(e.target.value)}>
                   <option value="dd/mm/aaaa">31/12/2026</option>
                   <option value="mm/dd/aaaa">12/31/2026</option>
@@ -197,17 +198,17 @@ function Configuracoes() {
                 </select>
               </div>
               <div>
-                <label className={styles.rotuloCampo}>Formato de hora</label>
+                <label className={styles.rotuloCampo}>{t('configuracoes.formatoHora')}</label>
                 <select className={styles.select} value={formatoHora} onChange={(e) => setFormatoHora(e.target.value)}>
-                  <option value="24h">24 horas (14:30)</option>
-                  <option value="12h">12 horas (2:30 PM)</option>
+                  <option value="24h">{t('configuracoes.hora24')}</option>
+                  <option value="12h">{t('configuracoes.hora12')}</option>
                 </select>
               </div>
               <div>
-                <label className={styles.rotuloCampo}>Idioma do sistema</label>
-                <select className={styles.select} value={idioma} onChange={(e) => setIdioma(e.target.value)}>
-                  <option value="pt-br">Português (Brasil)</option>
-                  <option value="en-us">English (US)</option>
+                <label className={styles.rotuloCampo}>{t('configuracoes.idioma')}</label>
+                <select className={styles.select} value={idioma} onChange={(e) => onMudarIdioma(e.target.value)}>
+                  <option value="pt">Português (Brasil)</option>
+                  <option value="en">English (US)</option>
                 </select>
               </div>
             </div>
@@ -222,34 +223,34 @@ function Configuracoes() {
             >
               <h2 className={styles.tituloCartao}>
                 <Bell size={17} />
-                Notificações
+                {t('configuracoes.notificacoesTitulo')}
               </h2>
               <ul className={styles.listaToggles}>
                 <li>
                   <span>
-                    <strong>Alertas por e-mail</strong>
-                    <small>Receba alertas críticos e avisos importantes por e-mail.</small>
+                    <strong>{t('configuracoes.emailTitulo')}</strong>
+                    <small>{t('configuracoes.emailDesc')}</small>
                   </span>
                   <Toggle ativo={emailAtivo} onClick={() => setEmailAtivo((v) => !v)} />
                 </li>
                 <li>
                   <span>
-                    <strong>Alertas no dashboard</strong>
-                    <small>Exibir alertas e avisos em tempo real no dashboard.</small>
+                    <strong>{t('configuracoes.dashboardTitulo')}</strong>
+                    <small>{t('configuracoes.dashboardDesc')}</small>
                   </span>
                   <Toggle ativo={dashboardAtivo} onClick={() => setDashboardAtivo((v) => !v)} />
                 </li>
                 <li>
                   <span>
-                    <strong>Resumo diário</strong>
-                    <small>Receba um resumo diário das condições meteorológicas.</small>
+                    <strong>{t('configuracoes.resumoTitulo')}</strong>
+                    <small>{t('configuracoes.resumoDesc')}</small>
                   </span>
                   <Toggle ativo={resumoDiario} onClick={() => setResumoDiario((v) => !v)} />
                 </li>
                 <li>
                   <span>
-                    <strong>Som de alerta</strong>
-                    <small>Reproduzir som ao receber alertas críticos.</small>
+                    <strong>{t('configuracoes.somTitulo')}</strong>
+                    <small>{t('configuracoes.somDesc')}</small>
                   </span>
                   <Toggle ativo={somAlerta} onClick={() => setSomAlerta((v) => !v)} />
                 </li>
@@ -264,17 +265,17 @@ function Configuracoes() {
             >
               <h2 className={styles.tituloCartao}>
                 <Palette size={17} />
-                Aparência
+                {t('configuracoes.aparenciaTitulo')}
               </h2>
               <div className={styles.blocoAparencia}>
-                <label className={styles.rotuloCampo}>Tema do sistema</label>
-                <p className={styles.descricaoCampo}>Escolha entre o tema claro ou escuro.</p>
+                <label className={styles.rotuloCampo}>{t('configuracoes.temaTitulo')}</label>
+                <p className={styles.descricaoCampo}>{t('configuracoes.temaDesc')}</p>
                 <div className={styles.segmentado}>
                   <button
                     type="button"
                     className={`${styles.opcaoSegmentadaIcone} ${tema === 'dia' ? styles.opcaoSegmentadaAtiva : ''}`}
                     onClick={() => tema !== 'dia' && onAlternarTema()}
-                    aria-label="Tema claro"
+                    aria-label={t('nav.temaClaro')}
                   >
                     <Sun size={16} />
                   </button>
@@ -282,15 +283,15 @@ function Configuracoes() {
                     type="button"
                     className={`${styles.opcaoSegmentadaIcone} ${tema === 'noite' ? styles.opcaoSegmentadaAtiva : ''}`}
                     onClick={() => tema !== 'noite' && onAlternarTema()}
-                    aria-label="Tema escuro"
+                    aria-label={t('nav.temaEscuro')}
                   >
                     <Moon size={16} />
                   </button>
                 </div>
               </div>
               <div className={styles.blocoAparencia}>
-                <label className={styles.rotuloCampo}>Cor principal</label>
-                <p className={styles.descricaoCampo}>Personalize a cor de destaque do sistema.</p>
+                <label className={styles.rotuloCampo}>{t('configuracoes.corTitulo')}</label>
+                <p className={styles.descricaoCampo}>{t('configuracoes.corDesc')}</p>
                 <div className={styles.swatches}>
                   {CORES_PRINCIPAIS.map((cor) => (
                     <button
@@ -313,40 +314,40 @@ function Configuracoes() {
           <section className={styles.cartao}>
             <h2 className={styles.tituloCartao}>
               <RefreshCw size={17} />
-              Atualização de dados
+              {t('configuracoes.atualizacaoTitulo')}
             </h2>
             <div className={styles.gradeCampos3}>
               <div>
-                <label className={styles.rotuloCampo}>Intervalo de atualização</label>
-                <p className={styles.descricaoCampo}>Defina a frequência de atualização dos dados no sistema.</p>
+                <label className={styles.rotuloCampo}>{t('configuracoes.intervaloTitulo')}</label>
+                <p className={styles.descricaoCampo}>{t('configuracoes.intervaloDesc')}</p>
                 <select
                   className={styles.select}
                   value={intervaloAtualizacao}
                   onChange={(e) => setIntervaloAtualizacao(e.target.value)}
                 >
-                  <option value="1min">1 minuto</option>
-                  <option value="5min">5 minutos</option>
-                  <option value="15min">15 minutos</option>
+                  <option value="1min">{t('configuracoes.min1')}</option>
+                  <option value="5min">{t('configuracoes.min5')}</option>
+                  <option value="15min">{t('configuracoes.min15')}</option>
                 </select>
               </div>
               <div>
-                <label className={styles.rotuloCampo}>Unidade de tempo para gráficos</label>
-                <p className={styles.descricaoCampo}>Agrupar dados por:</p>
+                <label className={styles.rotuloCampo}>{t('configuracoes.unidadeGraficosTitulo')}</label>
+                <p className={styles.descricaoCampo}>{t('configuracoes.agruparPor')}</p>
                 <select
                   className={styles.select}
                   value={unidadeTempoGraficos}
                   onChange={(e) => setUnidadeTempoGraficos(e.target.value)}
                 >
-                  <option value="1h">1 hora</option>
-                  <option value="1dia">1 dia</option>
+                  <option value="1h">{t('configuracoes.hora1')}</option>
+                  <option value="1dia">{t('configuracoes.dia1')}</option>
                 </select>
               </div>
               <div>
-                <label className={styles.rotuloCampo}>Retenção de dados</label>
-                <p className={styles.descricaoCampo}>Tempo que os dados serão mantidos no sistema.</p>
+                <label className={styles.rotuloCampo}>{t('configuracoes.retencaoTitulo')}</label>
+                <p className={styles.descricaoCampo}>{t('configuracoes.retencaoDesc')}</p>
                 <select className={styles.select} value={retencaoDados} onChange={(e) => setRetencaoDados(e.target.value)}>
-                  <option value="30dias">30 dias</option>
-                  <option value="90dias">90 dias</option>
+                  <option value="30dias">{t('configuracoes.dias30')}</option>
+                  <option value="90dias">{t('configuracoes.dias90')}</option>
                 </select>
               </div>
             </div>
@@ -360,11 +361,11 @@ function Configuracoes() {
           >
             <h2 className={styles.tituloCartao}>
               <Ruler size={17} />
-              Unidades de medida
+              {t('configuracoes.unidadesTitulo')}
             </h2>
             <ul className={styles.listaUnidades}>
               <li>
-                <span>Temperatura</span>
+                <span>{t('configuracoes.temperatura')}</span>
                 <div className={styles.segmentado}>
                   <button
                     type="button"
@@ -383,7 +384,7 @@ function Configuracoes() {
                 </div>
               </li>
               <li>
-                <span>Velocidade do vento</span>
+                <span>{t('configuracoes.vento')}</span>
                 <div className={styles.segmentado}>
                   <button
                     type="button"
@@ -402,7 +403,7 @@ function Configuracoes() {
                 </div>
               </li>
               <li>
-                <span>Precipitação</span>
+                <span>{t('configuracoes.precipitacao')}</span>
                 <div className={styles.segmentado}>
                   <button
                     type="button"
@@ -416,7 +417,7 @@ function Configuracoes() {
                     className={`${styles.opcaoSegmentada} ${unidadePrecipitacao === 'pol' ? styles.opcaoSegmentadaAtiva : ''}`}
                     onClick={() => setUnidadePrecipitacao('pol')}
                   >
-                    pol
+                    {idioma === 'en' ? 'in' : 'pol'}
                   </button>
                 </div>
               </li>
@@ -432,15 +433,15 @@ function Configuracoes() {
             >
               <h2 className={styles.tituloCartao}>
                 <Lock size={17} />
-                Privacidade e segurança
+                {t('configuracoes.privacidadeTitulo')}
               </h2>
               <ul className={styles.listaLinhas}>
                 <li>
                   <span>
                     <KeyRound size={15} />
                     <span>
-                      <strong>Alterar senha</strong>
-                      <small>Atualize sua senha de acesso.</small>
+                      <strong>{t('configuracoes.alterarSenha')}</strong>
+                      <small>{t('configuracoes.alterarSenhaDesc')}</small>
                     </span>
                   </span>
                   <button
@@ -448,14 +449,14 @@ function Configuracoes() {
                     className={styles.botaoContorno}
                     onClick={() => setTrocandoSenhaAberto((v) => !v)}
                   >
-                    {trocandoSenhaAberto ? 'Cancelar' : 'Alterar senha'}
+                    {trocandoSenhaAberto ? t('configuracoes.cancelar') : t('configuracoes.alterarSenha')}
                     <ChevronRight size={14} />
                   </button>
                 </li>
 
                 {trocandoSenhaAberto && (
                   <form className={styles.formSenha} onSubmit={aoTrocarSenha}>
-                    <label className={styles.rotuloCampo}>Senha atual</label>
+                    <label className={styles.rotuloCampo}>{t('configuracoes.senhaAtual')}</label>
                     <input
                       className={styles.campo}
                       type="password"
@@ -463,7 +464,7 @@ function Configuracoes() {
                       onChange={(e) => setSenhaAtual(e.target.value)}
                       required
                     />
-                    <label className={styles.rotuloCampo}>Nova senha</label>
+                    <label className={styles.rotuloCampo}>{t('configuracoes.novaSenha')}</label>
                     <input
                       className={styles.campo}
                       type="password"
@@ -474,7 +475,7 @@ function Configuracoes() {
                     />
                     {erroSenha && <p className={styles.erro}>{erroSenha}</p>}
                     <button type="submit" className={styles.botaoPrimario} disabled={trocandoSenha}>
-                      {trocandoSenha ? 'Alterando...' : 'Confirmar nova senha'}
+                      {trocandoSenha ? t('configuracoes.alterando') : t('configuracoes.confirmarNovaSenha')}
                     </button>
                   </form>
                 )}
@@ -483,63 +484,63 @@ function Configuracoes() {
                   <span>
                     <Monitor size={15} />
                     <span>
-                      <strong>Sessões ativas</strong>
-                      <small>Gerencie dispositivos conectados à sua conta.</small>
+                      <strong>{t('configuracoes.sessoesAtivas')}</strong>
+                      <small>{t('configuracoes.sessoesDesc')}</small>
                     </span>
                   </span>
-                  <span className={styles.valorEmBreve}>Em breve</span>
+                  <span className={styles.valorEmBreve}>{t('configuracoes.emBreve')}</span>
                 </li>
                 <li>
                   <span>
                     <Smartphone size={15} />
                     <span>
-                      <strong>Autenticação em duas etapas</strong>
-                      <small>Adicione uma camada extra de segurança à sua conta.</small>
+                      <strong>{t('configuracoes.doisFatores')}</strong>
+                      <small>{t('configuracoes.doisFatoresDesc')}</small>
                     </span>
                   </span>
-                  <span className={styles.valorEmBreve}>Em breve</span>
+                  <span className={styles.valorEmBreve}>{t('configuracoes.emBreve')}</span>
                 </li>
               </ul>
-              {senhaTrocada && <p className={styles.avisoSalvo}>Senha alterada com sucesso.</p>}
+              {senhaTrocada && <p className={styles.avisoSalvo}>{t('configuracoes.senhaAlterada')}</p>}
             </section>
 
             {/* Ações do sistema */}
             <section className={styles.cartao}>
               <h2 className={styles.tituloCartao}>
                 <Settings size={17} />
-                Ações do sistema
+                {t('configuracoes.acoesTitulo')}
               </h2>
               <ul className={styles.listaLinhas}>
                 <li>
                   <span>
                     <RefreshCw size={15} />
                     <span>
-                      <strong>Limpar cache</strong>
-                      <small>Limpa os dados temporários do sistema.</small>
+                      <strong>{t('configuracoes.limparCache')}</strong>
+                      <small>{t('configuracoes.limparCacheDesc')}</small>
                     </span>
                   </span>
                   <button type="button" className={styles.botaoContorno} onClick={aoLimparCache}>
-                    {cacheLimpo ? 'Limpo!' : 'Limpar'}
+                    {cacheLimpo ? t('configuracoes.limpo') : t('configuracoes.limpar')}
                   </button>
                 </li>
                 <li>
                   <span>
                     <RotateCcw size={15} />
                     <span>
-                      <strong>Restaurar padrões</strong>
-                      <small>Redefine todas as configurações para o padrão.</small>
+                      <strong>{t('configuracoes.restaurarPadroes')}</strong>
+                      <small>{t('configuracoes.restaurarDesc')}</small>
                     </span>
                   </span>
                   <button type="button" className={styles.botaoContorno} onClick={aoRestaurarPadroes}>
-                    Restaurar
+                    {t('configuracoes.restaurar')}
                   </button>
                 </li>
                 <li>
                   <span>
                     <Trash2 size={15} />
                     <span>
-                      <strong>Excluir conta</strong>
-                      <small>Esta ação é permanente e não pode ser desfeita.</small>
+                      <strong>{t('configuracoes.excluirConta')}</strong>
+                      <small>{t('configuracoes.excluirDesc')}</small>
                     </span>
                   </span>
                   <button
@@ -547,19 +548,19 @@ function Configuracoes() {
                     className={styles.botaoPerigo}
                     onClick={() => setConfirmandoExclusao(true)}
                   >
-                    Excluir conta
+                    {t('configuracoes.excluirConta')}
                   </button>
                 </li>
               </ul>
               {confirmandoExclusao && (
                 <div className={styles.avisoPerigo}>
-                  <p>Tem certeza? Essa ação não pode ser desfeita.</p>
+                  <p>{t('configuracoes.confirmarExclusaoTexto')}</p>
                   <div className={styles.acoesAvisoPerigo}>
                     <button type="button" className={styles.botaoContorno} onClick={() => setConfirmandoExclusao(false)}>
-                      Cancelar
+                      {t('configuracoes.cancelar')}
                     </button>
                     <button type="button" className={styles.botaoPerigo} onClick={aoConfirmarExclusao}>
-                      Sim, excluir
+                      {t('configuracoes.simExcluir')}
                     </button>
                   </div>
                 </div>
@@ -576,7 +577,7 @@ function Configuracoes() {
           >
             <h2 className={styles.tituloCartao}>
               <Radio size={17} />
-              Estação e dados
+              {t('configuracoes.estacaoTitulo')}
             </h2>
             {estacao ? (
               <ul className={styles.listaLinhas}>
@@ -586,20 +587,18 @@ function Configuracoes() {
                     <span>
                       <strong>{estacao.identificador}</strong>
                       <small>
-                        {estacao.esta_offline ? 'Offline' : 'Online'} · Vinculada em{' '}
-                        {new Date(estacao.criado_em).toLocaleDateString('pt-BR')}
+                        {estacao.esta_offline ? t('configuracoes.offline') : t('configuracoes.online')} ·{' '}
+                        {t('configuracoes.vinculadaEm')}{' '}
+                        {new Date(estacao.criado_em).toLocaleDateString(idioma === 'en' ? 'en-US' : 'pt-BR')}
                       </small>
                     </span>
                   </span>
                 </li>
               </ul>
             ) : (
-              <p className={styles.descricaoCampo}>Nenhuma estação vinculada.</p>
+              <p className={styles.descricaoCampo}>{t('configuracoes.nenhumaEstacao')}</p>
             )}
-            <p className={styles.descricaoCampo}>
-              O vínculo entre sua conta e uma estação é feito pelo administrador. Fale com o suporte se precisar
-              desvincular ou trocar de estação.
-            </p>
+            <p className={styles.descricaoCampo}>{t('configuracoes.estacaoTexto')}</p>
           </section>
 
           {/* Exportação de dados */}
@@ -610,13 +609,13 @@ function Configuracoes() {
           >
             <h2 className={styles.tituloCartao}>
               <Download size={17} />
-              Exportação de dados
+              {t('configuracoes.exportacaoTitulo')}
             </h2>
-            <label className={styles.rotuloCampo}>Formato padrão de exportação</label>
+            <label className={styles.rotuloCampo}>{t('configuracoes.formatoPadrao')}</label>
             <select className={styles.select} value={formatoExportacao} onChange={(e) => setFormatoExportacao(e.target.value)}>
               <option value="pdf">PDF</option>
-              <option value="csv">Planilha (CSV)</option>
-              <option value="txt">Dados brutos (TXT)</option>
+              <option value="csv">{t('configuracoes.csv')}</option>
+              <option value="txt">{t('configuracoes.txt')}</option>
             </select>
           </section>
 
@@ -628,13 +627,13 @@ function Configuracoes() {
           >
             <h2 className={styles.tituloCartao}>
               <Info size={17} />
-              Sobre o sistema
+              {t('configuracoes.sobreTitulo')}
             </h2>
             <ul className={styles.listaLinhas}>
               <li>
                 <span>
                   <span>
-                    <strong>Sistema de Monitoramento Agroclimático</strong>
+                    <strong>{t('configuracoes.nomeSistema')}</strong>
                     <small>LACOP/UFF</small>
                   </span>
                 </span>
@@ -644,7 +643,7 @@ function Configuracoes() {
                 <li>
                   <span>
                     <span>
-                      <strong>Conta</strong>
+                      <strong>{t('configuracoes.conta')}</strong>
                       <small>{perfil.email || perfil.username}</small>
                     </span>
                   </span>

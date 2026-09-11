@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { ArrowUp, ArrowDown, Clock } from 'lucide-react'
 import styles from './SummaryStatCard.module.css'
 
@@ -11,6 +12,7 @@ const COR_TENDENCIA = { alta: '#16a34a', baixa: '#dc2626' }
 // desenha uma barrinha embaixo — usado no card "Sensores ativos" da Visão
 // Geral.
 function SummaryStatCard({ icone: Icone, cor, rotulo, valor, legenda, tendencia, horarioAtualizacao, progresso }) {
+  const { t } = useTranslation()
   const IconeTendencia = tendencia === 'alta' ? ArrowUp : tendencia === 'baixa' ? ArrowDown : null
 
   return (
@@ -31,7 +33,7 @@ function SummaryStatCard({ icone: Icone, cor, rotulo, valor, legenda, tendencia,
       {horarioAtualizacao && (
         <span className={styles.horario}>
           <Clock size={11} />
-          Última leitura às {horarioAtualizacao}
+          {t('comum.ultimaLeitura', { horario: horarioAtualizacao })}
         </span>
       )}
       {progresso != null && (

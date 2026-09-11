@@ -1,12 +1,17 @@
-// Cor de destaque personalizável (tela Configurações → Aparência) e tema
-// dia/noite (alternado pelo botão na sidebar). Os dois ficam salvos por
-// conta (mesmo padrão de estacaoService.js) até a pessoa escolher outro —
-// só mudam quando ela clica de novo, nunca sozinhos (nem por horário).
+// Cor de destaque personalizável (tela Configurações → Aparência), tema
+// dia/noite (alternado pelo botão na sidebar) e idioma do sistema. Os três
+// ficam salvos por conta (mesmo padrão de estacaoService.js) até a pessoa
+// escolher outro — só mudam quando ela clica de novo, nunca sozinhos (nem
+// por horário). Chave por username (não por role): como Gestor e Usuário
+// nunca compartilham username (unicidade global do Django), uma pessoa
+// com as duas contas no mesmo navegador tem preferências independentes
+// pra cada uma automaticamente.
 import { obterClaimsDoToken } from './authService'
 import { obterTemaPorHorario } from './climaService'
 
 const CHAVE_BASE = 'agroclimatico_cor_principal'
 const CHAVE_TEMA_BASE = 'agroclimatico_tema'
+const CHAVE_IDIOMA_BASE = 'agroclimatico_idioma'
 
 export const CORES_PRINCIPAIS = [
   { valor: 'azul', hex: '#2f6fed' },
@@ -44,6 +49,20 @@ export function obterTema() {
 
 export function salvarTema(valor) {
   localStorage.setItem(chaveTemaDoUsuario(), valor)
+}
+
+function chaveIdiomaDoUsuario() {
+  const username = obterClaimsDoToken()?.username ?? 'anonimo'
+  return `${CHAVE_IDIOMA_BASE}:${username}`
+}
+
+// 'pt' ou 'en' — sem escolha salva ainda, o sistema fica em português.
+export function obterIdioma() {
+  return localStorage.getItem(chaveIdiomaDoUsuario()) ?? 'pt'
+}
+
+export function salvarIdioma(valor) {
+  localStorage.setItem(chaveIdiomaDoUsuario(), valor)
 }
 
 function hexDaCor(valor) {

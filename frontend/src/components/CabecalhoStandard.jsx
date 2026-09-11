@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Clock, Download, ChevronDown } from 'lucide-react'
 import { obterClaimsDoToken } from '../services/authService'
 import styles from './CabecalhoStandard.module.css'
@@ -14,9 +15,9 @@ function primeiroNome(username) {
   return primeiraPalavra.charAt(0).toUpperCase() + primeiraPalavra.slice(1)
 }
 
-function formatarDataHora(data) {
-  const hora = data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-  const dataFormatada = data.toLocaleDateString('pt-BR', {
+function formatarDataHora(data, locale) {
+  const hora = data.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
+  const dataFormatada = data.toLocaleDateString(locale, {
     weekday: 'long',
     day: '2-digit',
     month: 'long',
@@ -27,14 +28,17 @@ function formatarDataHora(data) {
 
 // Cabeçalho de saudação, reutilizado pelo Dashboard e pelo Perfil: nome do
 // usuário, relógio, selo de estação ativa e (opcional) atalho de
-// exportação.
+// exportação. `subtitulo` continua aceitando um texto pronto de quem
+// chama (Perfil.jsx manda o próprio) — só cai no padrão traduzido quando
+// ninguém passa nada.
 function CabecalhoStandard({
   identificadorEstacao,
   estacaoOnline = true,
-  subtitulo = 'Acompanhe em tempo real os dados da sua estação.',
+  subtitulo,
   mostrarExportar = true,
   mostrarChips = true,
 }) {
+  const { t, i18n } = useTranslation()
   const [agora, setAgora] = useState(new Date())
   const [menuAberto, setMenuAberto] = useState(false)
   const username = obterClaimsDoToken()?.username
@@ -44,13 +48,14 @@ function CabecalhoStandard({
     return () => clearInterval(intervalo)
   }, [])
 
-  const { hora, dataCapitalizada } = formatarDataHora(agora)
+  const locale = i18n.language === 'en' ? 'en-US' : 'pt-BR'
+  const { hora, dataCapitalizada } = formatarDataHora(agora, locale)
 
   return (
     <header className={styles.cabecalho}>
       <div className={styles.saudacao}>
-        <h1 className={styles.titulo}>Olá, {primeiroNome(username)}! 👋</h1>
-        <p className={styles.subtitulo}>{subtitulo}</p>
+        <h1 className={styles.titulo}>{t('cabecalho.ola', { nome: primeiroNome(username) })}</h1>
+        <p className={styles.subtitulo}>{subtitulo ?? t('cabecalho.subtituloPadrao')}</p>
       </div>
 
       <div className={styles.chips}>
@@ -68,7 +73,9 @@ function CabecalhoStandard({
               <span className={`${styles.pontoAtivo} ${estacaoOnline ? '' : styles.pontoInativo}`} />
               <div className={styles.chipTexto}>
                 <span className={styles.chipHora}>{identificadorEstacao}</span>
-                <span className={styles.chipData}>{estacaoOnline ? 'Estação online' : 'Estação offline'}</span>
+                <span className={styles.chipData}>
+                  {estacaoOnline ? t('cabecalho.estacaoOnline') : t('cabecalho.estacaoOffline')}
+                </span>
               </div>
             </div>
           </>
@@ -82,19 +89,19 @@ function CabecalhoStandard({
               onClick={() => setMenuAberto((atual) => !atual)}
             >
               <Download size={16} />
-              Exportar relatório
+              {t('cabecalho.exportarRelatorio')}
               <ChevronDown size={14} />
             </button>
             {menuAberto && (
               <div className={styles.dropdown}>
                 <button type="button" className={styles.itemDropdown}>
-                  Relatório completo (PDF)
+                  {t('cabecalho.relatorioCompleto')}
                 </button>
                 <button type="button" className={styles.itemDropdown}>
-                  Dados brutos (TXT)
+                  {t('cabecalho.dadosBrutos')}
                 </button>
                 <button type="button" className={styles.itemDropdown}>
-                  Planilha (CSV)
+                  {t('cabecalho.planilha')}
                 </button>
               </div>
             )}
