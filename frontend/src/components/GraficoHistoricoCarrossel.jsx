@@ -8,22 +8,76 @@ import {
   CartesianGrid,
   Tooltip,
 } from 'recharts'
-import { ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
-import { METRICAS_CLIMA, OPCOES_PERIODO } from '../services/metricasClima'
+import { ChevronLeft, ChevronRight, Maximize2 } from 'lucide-react'
+import { METRICAS_CLIMA } from '../services/metricasClima'
+import Modal from './Modal'
 import styles from './GraficoHistoricoCarrossel.module.css'
+
+// Um gráfico de área só, reaproveitado tanto pelo carrossel (um de cada
+// vez) quanto pelo modal "ver todas as métricas" (os 4 empilhados).
+function GraficoMetrica({ metrica, dados, altura = 280 }) {
+  return (
+    <ResponsiveContainer width="100%" height={altura}>
+      <AreaChart data={dados} margin={{ top: 10, right: 20, bottom: 0, left: -10 }}>
+        <defs>
+          <linearGradient id={`corArea-${metrica.chave}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--chart-area-inicio)" />
+            <stop offset="100%" stopColor="var(--chart-area-fim)" />
+          </linearGradient>
+        </defs>
+
+        <CartesianGrid strokeDasharray="4 8" vertical={false} stroke="var(--color-grid)" />
+        <XAxis
+          dataKey="rotulo"
+          tick={{ fontSize: 12, fill: 'var(--color-text-secondary)' }}
+          axisLine={false}
+          tickLine={false}
+        />
+        <YAxis
+          unit={metrica.unidade}
+          tick={{ fontSize: 12, fill: 'var(--color-text-secondary)' }}
+          axisLine={false}
+          tickLine={false}
+          width={52}
+        />
+        <Tooltip
+          formatter={(valor) => [`${valor}${metrica.unidade}`, metrica.titulo]}
+          contentStyle={{
+            borderRadius: 12,
+            border: 'none',
+            boxShadow: 'var(--shadow-card)',
+          }}
+        />
+        <Area
+          type="monotone"
+          dataKey="valor"
+          stroke="var(--chart-line)"
+          strokeWidth={3}
+          fill={`url(#corArea-${metrica.chave})`}
+          dot={{ r: 4, strokeWidth: 0, fill: 'var(--chart-line)' }}
+          activeDot={{ r: 6 }}
+          animationDuration={500}
+          isAnimationActive
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+  )
+}
 
 // Gráfico histórico do Dashboard, com setinhas pra passar entre as
 // métricas (temperatura, umidade, pressão, vento) sem ocupar mais espaço
-// na tela — só um gráfico por vez, igual um carrossel. Controlado de fora
-// (índice/período vêm do Dashboard) porque a tabela de histórico logo
-// abaixo (HistoricoDiarioTable) navega em conjunto, sincronizada com o
-// mesmo índice e período — trocar aqui troca a tabela também.
-function GraficoHistoricoCarrossel({ grafico, indice, onMudarIndice, periodo, onMudarPeriodo }) {
-  const [seletorPeriodoAberto, setSeletorPeriodoAberto] = useState(false)
+// na tela — só um gráfico por vez, igual um carrossel. O período (Hoje/
+// Ontem/7/30 dias) não é mais escolhido aqui — vem de um seletor único lá
+// em cima do Dashboard, compartilhado com a tabela de histórico (só a
+// navegação por métrica é independente entre gráfico e tabela).
+//
+// Botão "expandir" abre uma janela grande com as 4 métricas de uma vez,
+// pra quem quer comparar sem ficar clicando na seta.
+function GraficoHistoricoCarrossel({ grafico, indice, onMudarIndice }) {
+  const [modalAberto, setModalAberto] = useState(false)
   const metrica = METRICAS_CLIMA[indice]
   const Icone = metrica.icone
   const dados = grafico[metrica.chave] ?? []
-  const rotuloPeriodo = OPCOES_PERIODO.find((opcao) => opcao.valor === periodo)?.rotulo
 
   function irPara(delta) {
     onMudarIndice((METRICAS_CLIMA.length + indice + delta) % METRICAS_CLIMA.length)
@@ -38,34 +92,15 @@ function GraficoHistoricoCarrossel({ grafico, indice, onMudarIndice, periodo, on
         </h2>
 
         <div className={styles.navegacao}>
-          <div className={styles.seletorPeriodo}>
-            <button
-              type="button"
-              className={styles.botaoPeriodo}
-              onClick={() => setSeletorPeriodoAberto((atual) => !atual)}
-            >
-              {rotuloPeriodo}
-              <ChevronDown size={13} />
-            </button>
-            {seletorPeriodoAberto && (
-              <div className={styles.dropdownPeriodo}>
-                {OPCOES_PERIODO.map((opcao) => (
-                  <button
-                    key={opcao.valor}
-                    type="button"
-                    className={styles.itemDropdownPeriodo}
-                    onClick={() => {
-                      onMudarPeriodo(opcao.valor)
-                      setSeletorPeriodoAberto(false)
-                    }}
-                  >
-                    {opcao.rotulo}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
+          <button
+            type="button"
+            className={styles.botaoSeta}
+            onClick={() => setModalAberto(true)}
+            aria-label="Expandir — ver todas as métricas"
+            title="Ver todas as métricas"
+          >
+            <Maximize2 size={15} />
+          </button>
           <button type="button" className={styles.botaoSeta} onClick={() => irPara(-1)} aria-label="Métrica anterior">
             <ChevronLeft size={16} />
           </button>
@@ -80,50 +115,21 @@ function GraficoHistoricoCarrossel({ grafico, indice, onMudarIndice, periodo, on
         </div>
       </div>
 
-      <ResponsiveContainer width="100%" height={280}>
-        <AreaChart data={dados} margin={{ top: 10, right: 20, bottom: 0, left: -10 }}>
-          <defs>
-            <linearGradient id="corAreaCarrossel" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--chart-area-inicio)" />
-              <stop offset="100%" stopColor="var(--chart-area-fim)" />
-            </linearGradient>
-          </defs>
+      <GraficoMetrica metrica={metrica} dados={dados} />
 
-          <CartesianGrid strokeDasharray="4 8" vertical={false} stroke="var(--color-grid)" />
-          <XAxis
-            dataKey="rotulo"
-            tick={{ fontSize: 12, fill: 'var(--color-text-secondary)' }}
-            axisLine={false}
-            tickLine={false}
-          />
-          <YAxis
-            unit={metrica.unidade}
-            tick={{ fontSize: 12, fill: 'var(--color-text-secondary)' }}
-            axisLine={false}
-            tickLine={false}
-            width={52}
-          />
-          <Tooltip
-            formatter={(valor) => [`${valor}${metrica.unidade}`, metrica.titulo]}
-            contentStyle={{
-              borderRadius: 12,
-              border: 'none',
-              boxShadow: 'var(--shadow-card)',
-            }}
-          />
-          <Area
-            type="monotone"
-            dataKey="valor"
-            stroke="var(--chart-line)"
-            strokeWidth={3}
-            fill="url(#corAreaCarrossel)"
-            dot={{ r: 4, strokeWidth: 0, fill: 'var(--chart-line)' }}
-            activeDot={{ r: 6 }}
-            animationDuration={500}
-            isAnimationActive
-          />
-        </AreaChart>
-      </ResponsiveContainer>
+      <Modal aberto={modalAberto} onFechar={() => setModalAberto(false)} titulo="Todas as métricas" icone={Maximize2}>
+        <div className={styles.grademodal}>
+          {METRICAS_CLIMA.map((item) => (
+            <div key={item.chave} className={styles.itemModal}>
+              <h3 className={styles.tituloModal}>
+                <item.icone size={16} />
+                {item.titulo}
+              </h3>
+              <GraficoMetrica metrica={item} dados={grafico[item.chave] ?? []} altura={220} />
+            </div>
+          ))}
+        </div>
+      </Modal>
     </div>
   )
 }

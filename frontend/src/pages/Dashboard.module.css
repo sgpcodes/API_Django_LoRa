@@ -15,6 +15,61 @@
   min-width: 0;
 }
 
+/* Seletor de período — único, no topo da página: controla tanto o
+   gráfico quanto a tabela de histórico logo abaixo (a navegação entre
+   métricas de cada um, essa sim, é independente — ver GraficoHistorico
+   Carrossel.jsx / HistoricoDiarioTable.jsx). */
+.seletorPeriodoTopo {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+  padding: 0.7rem 1rem;
+  border-radius: 12px;
+  background-color: var(--color-card-bg);
+  border: 1px solid var(--color-card-border);
+  box-shadow: var(--shadow-card);
+}
+
+.seletorPeriodoRotulo {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.seletorPeriodoOpcoes {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.botaoPeriodoTopo {
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-card-border);
+  background-color: var(--color-input-bg);
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-theme), border-color 0.15s ease;
+}
+
+.botaoPeriodoTopo:hover {
+  border-color: var(--color-accent);
+  color: var(--color-text);
+}
+
+.botaoPeriodoTopoAtivo,
+.botaoPeriodoTopoAtivo:hover {
+  background-color: var(--color-pill-ativo-bg);
+  border-color: var(--color-pill-ativo-bg);
+  color: var(--color-pill-ativo-texto);
+}
+
 .cardsPrincipais {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

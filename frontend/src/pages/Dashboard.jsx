@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Radio, Thermometer, Droplets, Gauge, Wind } from 'lucide-react'
+import { Radio, Thermometer, Droplets, Gauge, Wind, Calendar } from 'lucide-react'
 import CabecalhoStandard from '../components/CabecalhoStandard'
 import SummaryStatCard from '../components/SummaryStatCard'
 import GraficoHistoricoCarrossel from '../components/GraficoHistoricoCarrossel'
@@ -11,6 +11,7 @@ import StatusMessage from '../components/StatusMessage'
 import { derivarVisaoPeriodo } from '../services/climaExternoService'
 import { buscarClimaDaEstacao } from '../services/climaEstacaoService'
 import { buscarMinhaEstacaoPrincipal } from '../services/estacaoService'
+import { OPCOES_PERIODO } from '../services/metricasClima'
 import styles from './Dashboard.module.css'
 
 // Dashboard da conta Standard (Tela 4 da especificação de fluxo). Os dados
@@ -25,7 +26,11 @@ function Dashboard() {
   const [clima, setClima] = useState(null)
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState(null)
-  const [indiceMetrica, setIndiceMetrica] = useState(0)
+  // Gráfico e tabela navegam entre métricas (temperatura/umidade/pressão/
+  // vento) de forma independente um do outro — só o período é
+  // compartilhado (ver seletor logo abaixo do cabeçalho).
+  const [indiceGrafico, setIndiceGrafico] = useState(0)
+  const [indiceTabela, setIndiceTabela] = useState(0)
   const [periodo, setPeriodo] = useState('hoje')
 
   // Busca a cada 1 min — a estação atribuída (se mudar, o dashboard troca
@@ -111,6 +116,25 @@ function Dashboard() {
     <div className={styles.pagina}>
       {cabecalho}
 
+      <div className={styles.seletorPeriodoTopo}>
+        <span className={styles.seletorPeriodoRotulo}>
+          <Calendar size={14} />
+          Período
+        </span>
+        <div className={styles.seletorPeriodoOpcoes}>
+          {OPCOES_PERIODO.map((opcao) => (
+            <button
+              key={opcao.valor}
+              type="button"
+              className={`${styles.botaoPeriodoTopo} ${periodo === opcao.valor ? styles.botaoPeriodoTopoAtivo : ''}`}
+              onClick={() => setPeriodo(opcao.valor)}
+            >
+              {opcao.rotulo}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className={styles.cardsPrincipais}>
         <SummaryStatCard
           icone={Thermometer}
@@ -168,20 +192,15 @@ function Dashboard() {
       </div>
 
       <section className={styles.grid2Colunas}>
-        <GraficoHistoricoCarrossel
-          grafico={visao.grafico}
-          indice={indiceMetrica}
-          onMudarIndice={setIndiceMetrica}
-          periodo={periodo}
-          onMudarPeriodo={setPeriodo}
-        />
+        <GraficoHistoricoCarrossel grafico={visao.grafico} indice={indiceGrafico} onMudarIndice={setIndiceGrafico} />
         <CondicoesAtuaisCard clima={clima} />
       </section>
 
       <section className={styles.grid2Colunas}>
         <HistoricoDiarioTable
           tabela={visao.tabela}
-          indice={indiceMetrica}
+          indice={indiceTabela}
+          onMudarIndice={setIndiceTabela}
           periodo={periodo}
           granularidade={visao.granularidade}
         />
