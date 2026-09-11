@@ -11,6 +11,7 @@ from .views import (
     FuncionalidadeViewSet,
     InfoSistemaView,
     LimparDadosOperacionaisView,
+    LimparLeiturasAntigasView,
     PlanoViewSet,
     RecredenciarView,
     ReenviarConfirmacaoPublicoView,
@@ -57,5 +58,12 @@ urlpatterns = [
     # GET -> tamanho do banco, contagem por tabela, atividade recente e
     # status das integrações externas. Gestor only.
     path('manutencao/info-sistema/', InfoSistemaView.as_view(), name='manutencao-info-sistema'),
+    # GET ?dias= -> prévia de quantas leituras mais velhas que `dias` seriam
+    # apagadas. POST {"dias":, "confirmar": true} -> apaga de verdade.
+    path(
+        'manutencao/limpar-leituras-antigas/',
+        LimparLeiturasAntigasView.as_view(),
+        name='limpar-leituras-antigas',
+    ),
     path('', include(router.urls)),
 ]

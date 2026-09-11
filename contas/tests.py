@@ -878,6 +878,62 @@ class LimparDadosOperacionaisTests(APITestCase):
         self.assertTrue(LogAuditoria.objects.filter(acao='manutencao.limpeza_operacional').exists())
 
 
+class LimparLeiturasAntigasTests(APITestCase):
+    """Zona de risco menor: apaga só leituras mais velhas que N dias, sem
+    tocar em contas/estações nem no restante do histórico."""
+
+    def setUp(self):
+        from api_rest.models import Estacao, Leitura
+        from django.utils import timezone
+
+        self.gestor = Usuario.objects.create_user(username='gestor1', password='x', role=Usuario.Role.GESTOR)
+        self.usuario1 = Usuario.objects.create_user(username='usuario1', password='x')
+        self.estacao = Estacao.objects.create(identificador='ESP32_ANTIGA')
+        agora = timezone.now()
+        self.leitura_antiga = Leitura.objects.create(
+            sensor_id='ESP32_ANTIGA', estacao=self.estacao, temperatura=20, umidade=50,
+            data_hora=agora - timezone.timedelta(days=400),
+        )
+        self.leitura_recente = Leitura.objects.create(
+            sensor_id='ESP32_ANTIGA', estacao=self.estacao, temperatura=20, umidade=50, data_hora=agora,
+        )
+
+    def test_usuario_comum_nao_acessa(self):
+        self.client.force_authenticate(self.usuario1)
+        resposta = self.client.get('/api/manutencao/limpar-leituras-antigas/')
+        self.assertEqual(resposta.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_dry_run_conta_so_as_mais_velhas_que_dias_sem_apagar_nada(self):
+        from api_rest.models import Leitura
+
+        self.client.force_authenticate(self.gestor)
+        resposta = self.client.get('/api/manutencao/limpar-leituras-antigas/?dias=365')
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(resposta.data['quantidade'], 1)
+        self.assertEqual(Leitura.objects.count(), 2)  # GET nunca apaga
+
+    def test_post_sem_confirmar_nao_apaga(self):
+        from api_rest.models import Leitura
+
+        self.client.force_authenticate(self.gestor)
+        resposta = self.client.post('/api/manutencao/limpar-leituras-antigas/', {'dias': 365}, format='json')
+        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(Leitura.objects.count(), 2)
+
+    def test_post_com_confirmar_apaga_so_as_antigas_e_registra_auditoria(self):
+        from api_rest.models import Leitura
+
+        self.client.force_authenticate(self.gestor)
+        resposta = self.client.post(
+            '/api/manutencao/limpar-leituras-antigas/', {'dias': 365, 'confirmar': True}, format='json',
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_200_OK)
+        self.assertEqual(resposta.data['quantidade'], 1)
+        self.assertFalse(Leitura.objects.filter(pk=self.leitura_antiga.pk).exists())
+        self.assertTrue(Leitura.objects.filter(pk=self.leitura_recente.pk).exists())
+        self.assertTrue(LogAuditoria.objects.filter(acao='manutencao.leituras_antigas_removidas').exists())
+
+
 class InfoSistemaTests(APITestCase):
     """GET /api/manutencao/info-sistema/ — painel de "entranhas do
     sistema" na tela de Manutenção. Gestor only; integrações externas são
@@ -914,6 +970,66 @@ class InfoSistemaTests(APITestCase):
         self.assertTrue(resposta.data['integracoes']['ibge']['online'])
         self.assertIn('django_versao', resposta.data['ambiente'])
         self.assertIn('python_versao', resposta.data['ambiente'])
+
+    def test_leituras_periodo_e_por_mes_aparecem_com_dado_real(self):
+        from unittest.mock import Mock, patch
+
+        from django.core.cache import cache
+        from django.utils import timezone
+
+        from api_rest.models import Estacao, Leitura
+
+        cache.clear()
+        estacao = Estacao.objects.create(identificador='ESP32_INFO')
+        agora = timezone.now()
+        Leitura.objects.create(sensor_id='ESP32_INFO', estacao=estacao, temperatura=20, umidade=50, data_hora=agora)
+        Leitura.objects.create(
+            sensor_id='ESP32_INFO', estacao=estacao, temperatura=20, umidade=50,
+            data_hora=agora - timezone.timedelta(days=200),
+        )
+
+        self.client.force_authenticate(self.gestor)
+        with patch('contas.views.requests.get') as mock_get:
+            mock_get.return_value = Mock(status_code=200)
+            resposta = self.client.get('/api/manutencao/info-sistema/?dias=30')
+
+        self.assertEqual(resposta.data['leituras_periodo']['dias'], 30)
+        self.assertEqual(resposta.data['leituras_periodo']['total'], 1)  # só a de agora, não a de 200 dias atrás
+        self.assertIn('leituras_por_mes', resposta.data)
+        self.assertTrue(any(item['total'] >= 1 for item in resposta.data['leituras_por_mes']))
+
+    def test_banco_por_categoria_e_none_fora_do_postgres(self):
+        from unittest.mock import Mock, patch
+
+        from django.core.cache import cache
+
+        cache.clear()
+        self.client.force_authenticate(self.gestor)
+        with patch('contas.views.requests.get') as mock_get:
+            mock_get.return_value = Mock(status_code=200)
+            resposta = self.client.get('/api/manutencao/info-sistema/')
+
+        # Testes rodam em sqlite — sem o catálogo do Postgres, não dá pra
+        # descobrir tamanho por tabela, então o campo é None, nunca um
+        # número estimado.
+        self.assertIsNone(resposta.data['banco_por_categoria'])
+
+    def test_quota_do_banco_calcula_percentual_quando_configurada(self):
+        from unittest.mock import Mock, patch
+
+        from django.core.cache import cache
+        from django.test import override_settings
+
+        cache.clear()
+        self.client.force_authenticate(self.gestor)
+        with patch('contas.views.requests.get') as mock_get, patch(
+            'contas.views._tamanho_do_banco', return_value=1024 ** 3,  # 1 GB
+        ), override_settings(DATABASE_QUOTA_GB=10):
+            mock_get.return_value = Mock(status_code=200)
+            resposta = self.client.get('/api/manutencao/info-sistema/')
+
+        self.assertEqual(resposta.data['banco']['quota_gb'], 10)
+        self.assertEqual(resposta.data['banco']['percentual_uso'], 10.0)
 
     def test_integracao_fora_do_ar_aparece_como_offline(self):
         from unittest.mock import patch

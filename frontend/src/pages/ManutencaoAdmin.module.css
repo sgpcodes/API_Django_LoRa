@@ -4,9 +4,7 @@
   gap: 1.25rem;
 }
 
-/* Banner — mesmo padrão "full-bleed" das outras telas do admin
-   (Dashboard/Estações/Contas): esse layout não tem sidebar, só barra de
-   topo, então esticar até a borda da janela não sobrepõe nada. */
+/* Banner — mesmo padrão "full-bleed" das outras telas do admin. */
 .banner {
   position: relative;
   left: 50%;
@@ -16,6 +14,11 @@
   margin-left: -50vw;
   margin-right: -50vw;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
   padding: 1.4rem 1.75rem;
   background: linear-gradient(115deg, #101a3d 0%, #1b3a8a 60%, #1e40af 100%);
   color: #ffffff;
@@ -23,6 +26,7 @@
 }
 
 .bannerConteudo {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -52,73 +56,410 @@
   color: rgba(255, 255, 255, 0.85);
 }
 
-/* Painel de informações do sistema */
+.seletorPeriodo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: 10px;
+  background-color: rgba(255, 255, 255, 0.14);
+}
 
-.gradeInfo {
+.seletorPeriodo select {
+  background: none;
+  border: none;
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.seletorPeriodo select option {
+  color: var(--color-text);
+}
+
+/* Cards de contagem */
+
+.grade {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   gap: 0.9rem;
 }
 
-.cartaoInfo,
-.cartaoAtividade {
+.cartao {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  padding: 1.1rem 1.25rem;
+  gap: 0.5rem;
+  padding: 1.25rem 1.4rem;
   border-radius: 12px;
   background-color: var(--color-card-bg);
   border: 1px solid var(--color-card-border);
   box-shadow: var(--shadow-card);
 }
 
-.cartaoInfoCabecalho {
+.cartaoIcone {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.85rem;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
+}
+
+.corAzul {
+  background-color: rgba(74, 111, 165, 0.14);
+  color: #4a6fa5;
+}
+
+.corVerde {
+  background-color: rgba(34, 197, 94, 0.14);
+  color: #16a34a;
+}
+
+.corAmarela {
+  background-color: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+}
+
+.corRoxa {
+  background-color: rgba(139, 92, 246, 0.14);
+  color: #7c3aed;
+}
+
+.cartaoValor {
+  font-size: 1.4rem;
   font-weight: 700;
   color: var(--color-text);
 }
 
-.valorGrande {
-  font-size: 1.6rem;
+.cartaoRotulo {
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+}
+
+.cartaoNota {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.tendencia {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.tendenciaAlta {
+  color: #16a34a;
+}
+
+.tendenciaBaixa {
+  color: #dc2626;
+}
+
+/* Resumo de uso da plataforma */
+
+.linhaResumo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.9rem;
+}
+
+.itemResumo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  background-color: var(--color-card-bg);
+  border: 1px solid var(--color-card-border);
+  box-shadow: var(--shadow-card);
+}
+
+.itemResumoRotulo {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+}
+
+.itemResumoValor {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.itemResumoNota {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+/* Blocos (donut / crescimento / uso do banco) */
+
+.linha3Colunas {
+  display: grid;
+  grid-template-columns: 1fr 1.6fr 1fr;
+  gap: 0.9rem;
+}
+
+.linha2Colunas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.9rem;
+}
+
+.linha3Colunas > *,
+.linha2Colunas > * {
+  min-width: 0;
+}
+
+.cartaoBloco {
+  display: flex;
+  flex-direction: column;
+  padding: 1.25rem 1.4rem;
+  border-radius: 12px;
+  background-color: var(--color-card-bg);
+  border: 1px solid var(--color-card-border);
+  box-shadow: var(--shadow-card);
+}
+
+.blocoCabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.blocoTitulo {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.blocoSubtitulo {
+  margin: 0.15rem 0 0.9rem;
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+}
+
+.blocoTag {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background-color: var(--color-pill-bg);
+}
+
+.linkVerTodas {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-accent);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.linkVerTodas:hover {
+  text-decoration: underline;
+}
+
+.semDados {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+/* Donut "Uso do banco de dados" */
+
+.donutLinha {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.donutContainer {
+  position: relative;
+  width: 160px;
+  flex-shrink: 0;
+}
+
+.donutCentro {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.donutTotal {
+  font-size: 1.15rem;
   font-weight: 800;
   color: var(--color-text);
 }
 
-.legendaInfo {
-  font-size: 0.78rem;
-  line-height: 1.5;
+.donutRotulo {
+  font-size: 0.72rem;
   color: var(--color-text-secondary);
 }
 
-.listaIntegracoes,
-.listaAmbiente {
+.legendaDonut {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
+  flex: 1;
+  min-width: 0;
 }
 
-.itemIntegracao {
+.legendaDonut li {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   font-size: 0.85rem;
-  color: var(--color-text);
 }
 
-.itemIntegracaoNome {
+.pontoLegenda {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legendaNome {
+  flex: 1;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+
+.legendaValor {
+  color: var(--color-text);
+  font-weight: 700;
+  font-size: 0.78rem;
+}
+
+.legendaPercentual {
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  min-width: 2.5em;
+  text-align: right;
+}
+
+/* Tabelas principais (contagem por tabela) */
+
+.listaUso {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.listaUso li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--color-card-border);
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.listaUso li:first-child {
+  border-top: none;
+}
+
+.listaUso li span {
   flex: 1;
 }
 
-.iconeOnline {
-  color: #16a34a;
+.listaUso li strong {
+  color: var(--color-text);
 }
 
-.iconeOffline {
-  color: #dc2626;
+/* Atividade recente — tabela */
+
+.tabelaWrapper {
+  overflow-x: auto;
 }
+
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.tabela th {
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-secondary);
+  border-bottom: 1px solid var(--color-card-border);
+  white-space: nowrap;
+}
+
+.tabela td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--color-card-border);
+  color: var(--color-text);
+  white-space: nowrap;
+}
+
+.tabela td:nth-child(3) {
+  white-space: normal;
+  min-width: 220px;
+}
+
+.tabela tr:last-child td {
+  border-bottom: none;
+}
+
+/* Ações rápidas */
+
+.acoesRapidas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem;
+}
+
+.acaoRapida {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1.1rem 0.75rem;
+  border-radius: 10px;
+  background-color: var(--color-pill-bg);
+  color: var(--color-text);
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.acaoRapida:hover {
+  background-color: var(--color-card-border);
+}
+
+/* Pills de status (banner + cartões) */
 
 .pillOnline,
 .pillOffline {
@@ -127,70 +468,26 @@
   font-size: 0.72rem;
   font-weight: 700;
   width: fit-content;
+  white-space: nowrap;
 }
 
 .pillOnline {
-  background-color: rgba(34, 197, 94, 0.14);
+  background-color: rgba(34, 197, 94, 0.16);
   color: #16a34a;
 }
 
 .pillOffline {
-  background-color: rgba(239, 68, 68, 0.14);
+  background-color: rgba(239, 68, 68, 0.16);
   color: #dc2626;
 }
 
-.listaAmbiente span {
-  font-size: 0.85rem;
-  color: var(--color-text);
+.banner .pillOnline,
+.banner .pillOffline {
+  background-color: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
 }
 
-.listaAtividade {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  max-height: 260px;
-  overflow-y: auto;
-}
-
-.itemAtividade {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.6rem 0;
-  border-top: 1px solid var(--color-card-border);
-  font-size: 0.82rem;
-}
-
-.listaAtividade > li:first-child {
-  border-top: none;
-}
-
-.itemAtividadeTexto {
-  color: var(--color-text-secondary);
-}
-
-.itemAtividadeTexto strong {
-  color: var(--color-text);
-}
-
-.itemAtividadeData {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  flex-shrink: 0;
-  color: var(--color-text-secondary);
-  font-size: 0.75rem;
-}
-
-.semAtividade {
-  margin: 0;
-  font-size: 0.85rem;
-  color: var(--color-text-secondary);
-}
+/* Zonas de risco */
 
 .erroCarga {
   margin: 0;
@@ -205,7 +502,6 @@
   display: flex;
   flex-direction: column;
   gap: 1.1rem;
-  max-width: 720px;
   padding: 1.5rem;
   border-radius: 14px;
   background-color: var(--color-card-bg);
@@ -238,10 +534,22 @@
   color: var(--color-text);
 }
 
-.grade {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 0.75rem;
+.controleDias {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  color: var(--color-text);
+}
+
+.inputDias {
+  width: 6rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-card-border);
+  background-color: var(--color-input-bg);
+  color: var(--color-text);
+  font-size: 0.9rem;
 }
 
 .item {
@@ -345,11 +653,29 @@
   display: flex;
   align-items: center;
   gap: 0.55rem;
-  max-width: 720px;
   padding: 0.9rem 1.1rem;
   border-radius: 10px;
   background-color: rgba(34, 197, 94, 0.12);
   color: #16a34a;
   font-size: 0.85rem;
   font-weight: 600;
+}
+
+@media (max-width: 1279px) {
+  .linha3Colunas {
+    grid-template-columns: 1fr 1fr;
+  }
+  .linha3Colunas > *:first-child {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 900px) {
+  .linha3Colunas,
+  .linha2Colunas {
+    grid-template-columns: 1fr;
+  }
+  .linha3Colunas > *:first-child {
+    grid-column: span 1;
+  }
 }

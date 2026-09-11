@@ -137,6 +137,11 @@ DATABASES = {
     'default': dj_database_url.parse(_database_url, conn_max_age=_conn_max_age)
 }
 
+# Limite de armazenamento do plano do banco (painel de Manutenção mostra
+# "X GB usado / DATABASE_QUOTA_GB GB"). Sem essa variável no ambiente,
+# fica None e a tela mostra só o tamanho usado, sem inventar uma cota.
+DATABASE_QUOTA_GB = int(os.environ.get('DATABASE_QUOTA_GB', '0')) or None
+
 
 # Django REST Framework
 # Autenticação via JWT (access + refresh token) para Gestor/Usuário (RN20).

@@ -8,6 +8,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.db import connection
 from django.db.models import Count, Prefetch
+from django.db.models.functions import TruncMonth
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -36,6 +37,17 @@ from .serializers import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _identificar_usuario(usuario):
+    """{'username', 'nome'} pra guardar no `detalhes` do LogAuditoria — na
+    hora de escrever, não na hora de ler: depois de excluída, a conta não
+    existe mais pro `alvo` (GenericForeignKey) resolver, e mesmo pra
+    contas vivas, o nome/plano no momento do evento pode não ser mais o
+    nome/plano atual. Guardar aqui garante que "Atividade recente" mostra
+    o que era verdade quando o evento aconteceu."""
+    nome = f'{usuario.first_name} {usuario.last_name}'.strip()
+    return {'username': usuario.username, 'nome': nome or usuario.username}
 
 
 def _tokens_para(usuario):
@@ -76,7 +88,7 @@ class CadastroView(APIView):
         # ator=None: cadastro público, nenhum Gestor envolvido — LogAuditoria
         # aceita isso (SET_NULL), diferente de quando é o Gestor quem cria a
         # conta pela tela de Contas (ver UsuarioViewSet.perform_create).
-        LogAuditoria.objects.create(ator=None, acao='usuario.criado', alvo=usuario)
+        LogAuditoria.objects.create(ator=None, acao='usuario.criado', alvo=usuario, detalhes=_identificar_usuario(usuario))
 
         try:
             enviar_email_confirmacao(usuario)
@@ -260,6 +272,84 @@ def _tamanho_do_banco():
     return None
 
 
+def _tamanho_tabela(model):
+    """Tamanho real de UMA tabela (índices incluídos) — só Postgres tem
+    esse catálogo; devolve None fora dele em vez de estimar."""
+    if connection.vendor != 'postgresql':
+        return None
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT pg_total_relation_size(%s)', [model._meta.db_table])
+            linha = cursor.fetchone()
+            return linha[0] if linha and linha[0] is not None else 0
+    except Exception:
+        logger.warning('Não foi possível determinar o tamanho da tabela %s.', model._meta.db_table, exc_info=True)
+        return None
+
+
+def _tamanho_por_categoria(tamanho_total_bytes):
+    """Quebra o tamanho do banco em 4 categorias reais, consultando o
+    tamanho de cada tabela (Postgres). "Outros" é o resto (tabelas
+    internas do Django — sessão, admin, content types etc.) — não uma
+    estimativa, é tamanho_total menos o que já contamos nas outras 3.
+    Só Postgres: em dev (sqlite) devolve None, front mostra estado vazio
+    em vez de inventar uma proporção."""
+    if connection.vendor != 'postgresql' or tamanho_total_bytes is None:
+        return None
+
+    tamanho_meteorologicos = _tamanho_tabela(Leitura)
+    tamanho_contas_estacoes = sum(
+        filter(None, [_tamanho_tabela(Usuario), _tamanho_tabela(Estacao), _tamanho_tabela(Assinatura)])
+    )
+    tamanho_logs = _tamanho_tabela(LogAuditoria)
+    if tamanho_meteorologicos is None or tamanho_logs is None:
+        return None
+
+    conhecidos = tamanho_meteorologicos + tamanho_contas_estacoes + tamanho_logs
+    tamanho_outros = max(tamanho_total_bytes - conhecidos, 0)
+
+    categorias = {
+        'dados_meteorologicos': tamanho_meteorologicos,
+        'contas_e_estacoes': tamanho_contas_estacoes,
+        'logs_e_auditoria': tamanho_logs,
+        'outros': tamanho_outros,
+    }
+    return {
+        chave: {
+            'tamanho_bytes': valor,
+            'tamanho_legivel': _tamanho_legivel(valor),
+            'percentual': round((valor / tamanho_total_bytes) * 100) if tamanho_total_bytes > 0 else 0,
+        }
+        for chave, valor in categorias.items()
+    }
+
+
+def _leituras_por_mes(meses=6):
+    """Total de leituras recebidas por mês, últimos `meses` meses
+    (incluindo o atual) — agregação real no banco (GROUP BY mês), não uma
+    amostra: o "Crescimento da plataforma" soma isso com contas/estações
+    novas por mês, que o front já calcula a partir das listas que ele
+    mesmo busca (evita duplicar essa lógica aqui)."""
+    agora = timezone.now()
+    # Meses corridos de verdade (não "30 dias vezes N", que desvia do
+    # calendário) — mesmo critério usado no cálculo de contas/estações
+    # novas por mês, feito no front a partir das listas que ele já busca.
+    ano_inicio, mes_inicio = agora.year, agora.month - (meses - 1)
+    while mes_inicio <= 0:
+        mes_inicio += 12
+        ano_inicio -= 1
+    primeiro_mes = agora.replace(
+        year=ano_inicio, month=mes_inicio, day=1, hour=0, minute=0, second=0, microsecond=0,
+    )
+    linhas = (
+        Leitura.objects.filter(data_hora__gte=primeiro_mes)
+        .annotate(mes=TruncMonth('data_hora'))
+        .values('mes')
+        .annotate(total=Count('id'))
+    )
+    return [{'ano': linha['mes'].year, 'mes': linha['mes'].month, 'total': linha['total']} for linha in linhas]
+
+
 def _checar_integracao(chave, url, **kwargs):
     """Ping curto (GET com timeout baixo) numa API externa — resultado
     fica em cache por alguns minutos pra não bater na API de novo a
@@ -289,13 +379,37 @@ class InfoSistemaView(APIView):
 
     def get(self, request):
         tamanho_bytes = _tamanho_do_banco()
+        quota_gb = settings.DATABASE_QUOTA_GB
+        quota_bytes = quota_gb * (1024 ** 3) if quota_gb else None
+
+        try:
+            dias = int(request.query_params.get('dias', 30))
+        except ValueError:
+            dias = 30
+        agora = timezone.now()
+        limite = agora - timezone.timedelta(days=dias)
+        limite_anterior = agora - timezone.timedelta(days=dias * 2)
+        leituras_periodo = Leitura.objects.filter(data_hora__gte=limite).count()
+        leituras_periodo_anterior = Leitura.objects.filter(
+            data_hora__gte=limite_anterior, data_hora__lt=limite,
+        ).count()
+        tendencia_leituras = (
+            round((leituras_periodo - leituras_periodo_anterior) / leituras_periodo_anterior * 100)
+            if leituras_periodo_anterior > 0 else None
+        )
 
         return Response({
             'banco': {
                 'motor': connection.vendor,
                 'tamanho_bytes': tamanho_bytes,
                 'tamanho_legivel': _tamanho_legivel(tamanho_bytes),
+                'quota_gb': quota_gb,
+                'percentual_uso': (
+                    round((tamanho_bytes / quota_bytes) * 100, 1)
+                    if tamanho_bytes is not None and quota_bytes else None
+                ),
             },
+            'banco_por_categoria': _tamanho_por_categoria(tamanho_bytes),
             'contagens': {
                 'contas': Usuario.objects.count(),
                 'estacoes': Estacao.objects.count(),
@@ -303,6 +417,12 @@ class InfoSistemaView(APIView):
                 'solicitacoes_rssi': SolicitacaoRssi.objects.count(),
                 'log_auditoria': LogAuditoria.objects.count(),
             },
+            'leituras_periodo': {
+                'dias': dias,
+                'total': leituras_periodo,
+                'tendencia': tendencia_leituras,
+            },
+            'leituras_por_mes': _leituras_por_mes(),
             'atividade_recente': LogAuditoriaSerializer(
                 LogAuditoria.objects.select_related('ator')[:15], many=True,
             ).data,
@@ -318,6 +438,47 @@ class InfoSistemaView(APIView):
                 'debug': settings.DEBUG,
             },
         })
+
+
+class LimparLeiturasAntigasView(APIView):
+    """Zona de risco (menor que a de LimparDadosOperacionaisView): apaga
+    só leituras mais velhas que `dias` — não mexe em contas, estações,
+    nem no restante do histórico. Mesmo padrão de segurança das outras
+    ações de apagar dado: GET é sempre só a prévia; POST só apaga com
+    `{"confirmar": true}` no corpo."""
+
+    permission_classes = [IsAuthenticated, EhGestor]
+
+    def _dias(self, request):
+        origem = request.query_params if request.method == 'GET' else request.data
+        try:
+            return max(int(origem.get('dias', 365)), 1)
+        except (TypeError, ValueError):
+            return 365
+
+    def get(self, request):
+        dias = self._dias(request)
+        limite = timezone.now() - timezone.timedelta(days=dias)
+        return Response({'dias': dias, 'quantidade': Leitura.objects.filter(data_hora__lt=limite).count()})
+
+    def post(self, request):
+        if request.data.get('confirmar') is not True:
+            return Response(
+                {'status': 'error', 'message': 'Envie {"confirmar": true} no corpo pra executar de verdade.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        dias = self._dias(request)
+        limite = timezone.now() - timezone.timedelta(days=dias)
+        alvo = Leitura.objects.filter(data_hora__lt=limite)
+        quantidade = alvo.count()
+        alvo.delete()
+
+        LogAuditoria.objects.create(
+            ator=request.user, acao='manutencao.leituras_antigas_removidas',
+            detalhes={'dias': dias, 'quantidade': quantidade},
+        )
+        return Response({'status': 'success', 'dias': dias, 'quantidade': quantidade})
 
 
 class UsuarioViewSet(viewsets.ModelViewSet):
@@ -376,7 +537,9 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         # Só o Gestor chega aqui (create é Gestor-only, ver get_permissions)
         # — cadastro público passa por CadastroView, não por este ViewSet.
         usuario = serializer.save()
-        LogAuditoria.objects.create(ator=self.request.user, acao='usuario.criado', alvo=usuario)
+        LogAuditoria.objects.create(
+            ator=self.request.user, acao='usuario.criado', alvo=usuario, detalhes=_identificar_usuario(usuario),
+        )
 
     def perform_update(self, serializer):
         # RN08: só o Gestor pode alterar o `role` de uma conta (promover a
@@ -413,7 +576,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         usuario.is_active = False
         usuario.save(update_fields=['is_active'])
         LogAuditoria.objects.create(
-            ator=request.user, acao='usuario.suspenso', alvo=usuario,
+            ator=request.user, acao='usuario.suspenso', alvo=usuario, detalhes=_identificar_usuario(usuario),
         )
         return Response({'status': 'success', 'is_active': usuario.is_active})
 
@@ -423,7 +586,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         usuario.is_active = True
         usuario.save(update_fields=['is_active'])
         LogAuditoria.objects.create(
-            ator=request.user, acao='usuario.reativado', alvo=usuario,
+            ator=request.user, acao='usuario.reativado', alvo=usuario, detalhes=_identificar_usuario(usuario),
         )
         return Response({'status': 'success', 'is_active': usuario.is_active})
 
@@ -516,7 +679,11 @@ class AssinaturaViewSet(viewsets.ModelViewSet):
         if origem == Assinatura.Origem.GESTOR:
             LogAuditoria.objects.create(
                 ator=request.user, acao='plano.alterado', alvo=usuario,
-                detalhes={'plano': plano.nome},
+                detalhes={
+                    **_identificar_usuario(usuario),
+                    'plano': plano.nome,
+                    'plano_anterior': atual.plano.nome if atual is not None else None,
+                },
             )
 
         return Response(AssinaturaSerializer(nova).data, status=status.HTTP_201_CREATED)

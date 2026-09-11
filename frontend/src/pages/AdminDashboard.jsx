@@ -19,14 +19,14 @@ import {
   WifiOff,
   XCircle,
 } from 'lucide-react'
-import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import StatusMessage from '../components/StatusMessage'
+import DistribuicaoContasCard from '../components/DistribuicaoContasCard'
 import { buscarEstacoes, buscarSensoresOrfaos } from '../services/estacaoService'
 import { buscarContas } from '../services/contasAdminService'
 import { buscarInfoSistema } from '../services/manutencaoService'
+import { calcularTendencia, calcularCrescimentoMensal } from '../services/estatisticasAdmin'
 import styles from './AdminDashboard.module.css'
-
-const CORES_PLANO = { Standard: '#4a6fa5', Pro: '#8b5cf6', Plus: '#f59e0b' }
 
 const OPCOES_PERIODO_TENDENCIA = [
   { valor: 7, rotulo: 'Últimos 7 dias' },
@@ -57,46 +57,6 @@ function rotuloAcao(acao) {
 function formatarDataHora(iso) {
   if (!iso) return '—'
   return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
-}
-
-// % de crescimento no período: quantos itens novos entraram nos últimos
-// `dias` contra quantos já existiam antes disso. Sem base anterior (tudo
-// foi criado dentro do próprio período, ou não existe nada) não dá pra
-// calcular uma variação de verdade — devolve null em vez de inventar um
-// número, e o card mostra só o total, sem seta.
-function calcularTendencia(itens, campoData, dias) {
-  const limite = Date.now() - dias * 24 * 60 * 60 * 1000
-  const novos = itens.filter((item) => new Date(item[campoData]).getTime() >= limite).length
-  const baseAnterior = itens.length - novos
-  if (baseAnterior <= 0) return null
-  return Math.round((novos / baseAnterior) * 100)
-}
-
-const NOMES_MES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
-
-// Novas contas/estações por mês, últimos 6 meses (incluindo o atual) —
-// contagem de verdade a partir de date_joined/criado_em, sem simular
-// nenhum ponto.
-function calcularCrescimentoMensal(contas, estacoes) {
-  const agora = new Date()
-  const meses = []
-  for (let i = 5; i >= 0; i -= 1) {
-    const referencia = new Date(agora.getFullYear(), agora.getMonth() - i, 1)
-    meses.push({ ano: referencia.getFullYear(), mes: referencia.getMonth(), rotulo: NOMES_MES[referencia.getMonth()] })
-  }
-
-  function contarNoMes(itens, campoData, ano, mes) {
-    return itens.filter((item) => {
-      const data = new Date(item[campoData])
-      return data.getFullYear() === ano && data.getMonth() === mes
-    }).length
-  }
-
-  return meses.map(({ ano, mes, rotulo }) => ({
-    rotulo,
-    contas: contarNoMes(contas, 'date_joined', ano, mes),
-    estacoes: contarNoMes(estacoes, 'criado_em', ano, mes),
-  }))
 }
 
 function ItemTendencia({ percentual }) {
@@ -145,14 +105,6 @@ function AdminDashboard() {
   const totalOffline = estacoes.length - totalOnline
   const totalAtivas = contas.filter((conta) => conta.is_active).length
   const totalAlertas = totalOffline + orfaos.length
-
-  const contadorPlanos = { Standard: 0, Pro: 0, Plus: 0 }
-  contas.forEach((conta) => {
-    if (conta.plano_atual && contadorPlanos[conta.plano_atual] != null) contadorPlanos[conta.plano_atual] += 1
-  })
-  const dadosDonut = Object.entries(contadorPlanos)
-    .filter(([, quantidade]) => quantidade > 0)
-    .map(([plano, quantidade]) => ({ plano, quantidade, cor: CORES_PLANO[plano] }))
 
   const tendenciaContas = useMemo(() => calcularTendencia(contas, 'date_joined', diasTendencia), [contas, diasTendencia])
   const tendenciaEstacoes = useMemo(
@@ -251,46 +203,7 @@ function AdminDashboard() {
       </div>
 
       <div className={styles.linha3Colunas}>
-        <div className={styles.cartaoBloco}>
-          <div className={styles.blocoCabecalho}>
-            <h2 className={styles.blocoTitulo}><Users size={16} /> Distribuição das contas</h2>
-            <Link to="/app/adm/contas" className={styles.linkVerTodas}>Ver todas <ArrowRight size={13} /></Link>
-          </div>
-          <p className={styles.blocoSubtitulo}>Planos ativos na plataforma</p>
-          {contas.length === 0 ? (
-            <p className={styles.semDados}>Nenhuma conta cadastrada ainda.</p>
-          ) : (
-            <div className={styles.donutLinha}>
-              <div className={styles.donutContainer}>
-                <ResponsiveContainer width="100%" height={160}>
-                  <PieChart>
-                    <Pie data={dadosDonut} dataKey="quantidade" innerRadius={44} outerRadius={70} startAngle={90} endAngle={-270}>
-                      {dadosDonut.map((fatia) => (
-                        <Cell key={fatia.plano} fill={fatia.cor} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className={styles.donutCentro}>
-                  <span className={styles.donutTotal}>{contas.length}</span>
-                  <span className={styles.donutRotulo}>contas</span>
-                </div>
-              </div>
-              <ul className={styles.legendaDonut}>
-                {Object.entries(contadorPlanos).map(([plano, quantidade]) => (
-                  <li key={plano}>
-                    <span className={styles.pontoLegenda} style={{ backgroundColor: CORES_PLANO[plano] }} />
-                    <span className={styles.legendaNome}>{plano}</span>
-                    <span className={styles.legendaValor}>{quantidade}</span>
-                    <span className={styles.legendaPercentual}>
-                      {contas.length > 0 ? Math.round((quantidade / contas.length) * 100) : 0}%
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
+        <DistribuicaoContasCard contas={contas} />
 
         <div className={`${styles.cartaoBloco} ${styles.cartaoBlocoLargo}`}>
           <div className={styles.blocoCabecalho}>

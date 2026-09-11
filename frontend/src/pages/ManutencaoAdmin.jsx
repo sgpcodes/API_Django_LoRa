@@ -1,32 +1,98 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
+  Activity,
   AlertTriangle,
-  CheckCircle2,
+  ArrowRight,
+  Bell,
+  Calendar,
   Clock,
   Cpu,
   Database,
   Globe,
   HardDrive,
-  History,
+  Radio,
   RefreshCw,
+  Settings,
   ShieldAlert,
   Trash2,
-  XCircle,
+  TrendingDown,
+  TrendingUp,
+  Users,
 } from 'lucide-react'
+import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import StatusMessage from '../components/StatusMessage'
-import { buscarInfoSistema, buscarResumoLimpeza, executarLimpeza } from '../services/manutencaoService'
+import DistribuicaoContasCard from '../components/DistribuicaoContasCard'
+import { buscarEstacoes, buscarSensoresOrfaos } from '../services/estacaoService'
+import { buscarContas } from '../services/contasAdminService'
+import {
+  buscarInfoSistema,
+  buscarResumoLimpeza,
+  executarLimpeza,
+  buscarResumoLimpezaLeiturasAntigas,
+  executarLimpezaLeiturasAntigas,
+} from '../services/manutencaoService'
+import { calcularTendencia, calcularCrescimentoMensal } from '../services/estatisticasAdmin'
 import styles from './ManutencaoAdmin.module.css'
 
 const FRASE_CONFIRMACAO = 'APAGAR TUDO'
+const FRASE_CONFIRMACAO_ANTIGAS = 'APAGAR LEITURAS ANTIGAS'
+
+const OPCOES_PERIODO = [
+  { valor: 7, rotulo: 'Últimos 7 dias' },
+  { valor: 30, rotulo: 'Últimos 30 dias' },
+  { valor: 90, rotulo: 'Últimos 90 dias' },
+]
 
 const ROTULOS_ACAO = {
+  'usuario.criado': 'Nova conta',
+  'usuario.excluido': 'Conta excluída',
+  'usuario.suspenso': 'Conta desativada',
+  'usuario.reativado': 'Conta reativada',
+  'plano.alterado': 'Plano alterado',
   'estacao.criada': 'Estação cadastrada',
-  'estacao.usuarios_alterados': 'Usuários da estação alterados',
-  'manutencao.limpeza_operacional': 'Limpeza operacional executada',
+  'estacao.usuarios_alterados': 'Estação atribuída',
+  'estacao.excluida': 'Estação removida',
+  'leituras_orfas.excluidas': 'Leituras órfãs removidas',
+  'manutencao.limpeza_operacional': 'Limpeza operacional',
+  'manutencao.leituras_antigas_removidas': 'Leituras antigas removidas',
 }
 
 function rotuloAcao(acao) {
   return ROTULOS_ACAO[acao] ?? acao
+}
+
+// Descrição de cada evento a partir do `detalhes` gravado no momento em
+// que ele aconteceu (RN05) — nunca resolvido "ao vivo" a partir do alvo,
+// que pode já ter sido excluído ou ter mudado de estado desde então.
+function descricaoEvento(evento) {
+  const d = evento.detalhes ?? {}
+  switch (evento.acao) {
+    case 'usuario.criado':
+      return `Conta de ${d.nome ?? d.username ?? '—'} criada`
+    case 'usuario.excluido':
+      return `Conta ${d.username ?? '—'} excluída`
+    case 'usuario.suspenso':
+      return `Conta de ${d.nome ?? d.username ?? '—'} suspensa`
+    case 'usuario.reativado':
+      return `Conta de ${d.nome ?? d.username ?? '—'} reativada`
+    case 'plano.alterado':
+      return `${d.nome ?? d.username ?? '—'} mudou de ${d.plano_anterior ?? 'nenhum plano'} para ${d.plano ?? '—'}`
+    case 'estacao.criada':
+      return `Estação ${d.identificador ?? '—'} cadastrada`
+    case 'estacao.usuarios_alterados':
+      return `Usuários vinculados à estação ${d.identificador ?? '—'} alterados`
+    case 'estacao.excluida':
+      return `Estação ${d.identificador ?? '—'} removida`
+    case 'leituras_orfas.excluidas':
+      return `${d.quantidade ?? 0} leitura(s) órfã(s) do sensor ${d.sensor_id ?? '—'} removida(s)`
+    case 'manutencao.limpeza_operacional':
+      return `${d.contas ?? 0} conta(s), ${d.estacoes ?? 0} estação(ões) e ${d.leituras ?? 0} leitura(s) apagadas`
+    case 'manutencao.leituras_antigas_removidas':
+      return `${d.quantidade ?? 0} leitura(s) com mais de ${d.dias ?? '—'} dia(s) removida(s)`
+    default:
+      return '—'
+  }
 }
 
 function formatarDataHora(iso) {
@@ -34,51 +100,133 @@ function formatarDataHora(iso) {
   return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
-// Tela "Manutenção" do Painel Administrativo — combina um painel de
-// "entranhas do sistema" (só leitura: tamanho do banco, contagens,
-// atividade recente, integrações externas) com a zona de risco de
-// verdade (apagar contas e dados operacionais). Nada no painel de
-// informações é inventado — tudo vem de contas/views.py:InfoSistemaView,
-// que só reúne números que já existem em outros lugares do sistema.
-//
-// Duas travas antes de executar a limpeza: precisa digitar a frase exata
-// E confirmar num segundo aviso (window.confirm) — bem mais fricção que
-// qualquer outro botão do painel, de propósito, porque isso aqui não
-// tem desfazer.
+const ROTULOS_CATEGORIA_BANCO = {
+  dados_meteorologicos: 'Dados meteorológicos',
+  contas_e_estacoes: 'Contas e estações',
+  logs_e_auditoria: 'Logs e auditoria',
+  outros: 'Outros',
+}
+
+const CORES_CATEGORIA_BANCO = {
+  dados_meteorologicos: '#4a6fa5',
+  contas_e_estacoes: '#8b5cf6',
+  logs_e_auditoria: '#f59e0b',
+  outros: '#94a3b8',
+}
+
+const ROTULOS_TABELA = {
+  contas: 'Contas',
+  estacoes: 'Estações',
+  leituras: 'Leituras',
+  solicitacoes_rssi: 'Solicitações de RSSI',
+  log_auditoria: 'Eventos de auditoria',
+}
+
+function ItemTendencia({ percentual }) {
+  if (percentual == null) return null
+  const Icone = percentual >= 0 ? TrendingUp : TrendingDown
+  return (
+    <span className={`${styles.tendencia} ${percentual >= 0 ? styles.tendenciaAlta : styles.tendenciaBaixa}`}>
+      <Icone size={12} />
+      {Math.abs(percentual)}%
+    </span>
+  )
+}
+
+// Tela "Manutenção" do Painel Administrativo — visão de operação e
+// infraestrutura, mais as zonas de risco. Tudo aqui é dado real: sem
+// disponibilidade histórica/SLA (não existe monitoramento contínuo nessa
+// arquitetura), sem "servidores" (é um único processo Django), sem
+// console de SQL nem botão de restauração — riscos desproporcionais
+// pra uma ação de um clique, deixados de fora de propósito.
 function ManutencaoAdmin() {
+  const [contas, setContas] = useState([])
+  const [estacoes, setEstacoes] = useState([])
+  const [orfaos, setOrfaos] = useState([])
   const [resumo, setResumo] = useState(null)
-  const [info, setInfo] = useState(null)
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState(null)
+
+  const [info, setInfo] = useState(null)
   const [erroInfo, setErroInfo] = useState(null)
+  const [diasPeriodo, setDiasPeriodo] = useState(30)
+
   const [fraseDigitada, setFraseDigitada] = useState('')
   const [executando, setExecutando] = useState(false)
   const [resultado, setResultado] = useState(null)
 
-  async function carregar() {
-    setCarregando(true)
+  const [diasAntigas, setDiasAntigas] = useState(365)
+  const [resumoAntigas, setResumoAntigas] = useState(null)
+  const [fraseAntigas, setFraseAntigas] = useState('')
+  const [executandoAntigas, setExecutandoAntigas] = useState(false)
+  const [resultadoAntigas, setResultadoAntigas] = useState(null)
+
+  async function carregarPrincipal() {
     try {
-      const dados = await buscarResumoLimpeza()
-      setResumo(dados)
+      const [dadosEstacoes, dadosOrfaos, dadosContas, dadosResumo] = await Promise.all([
+        buscarEstacoes(),
+        buscarSensoresOrfaos(),
+        buscarContas(),
+        buscarResumoLimpeza(),
+      ])
+      setEstacoes(dadosEstacoes)
+      setOrfaos(dadosOrfaos)
+      setContas(dadosContas)
+      setResumo(dadosResumo)
       setErro(null)
     } catch {
-      setErro('Não foi possível carregar a prévia agora.')
+      setErro('Não foi possível carregar o resumo agora.')
     } finally {
       setCarregando(false)
-    }
-
-    try {
-      const dadosInfo = await buscarInfoSistema()
-      setInfo(dadosInfo)
-      setErroInfo(null)
-    } catch {
-      setErroInfo('Não foi possível carregar as informações do sistema agora.')
     }
   }
 
   useEffect(() => {
-    carregar()
+    carregarPrincipal()
   }, [])
+
+  useEffect(() => {
+    buscarInfoSistema(diasPeriodo)
+      .then((dados) => {
+        setInfo(dados)
+        setErroInfo(null)
+      })
+      .catch(() => setErroInfo('Não foi possível carregar as informações do sistema agora.'))
+  }, [diasPeriodo])
+
+  useEffect(() => {
+    buscarResumoLimpezaLeiturasAntigas(diasAntigas)
+      .then(setResumoAntigas)
+      .catch(() => setResumoAntigas(null))
+  }, [diasAntigas])
+
+  const totalOffline = estacoes.filter((estacao) => estacao.esta_offline).length
+  const totalAlertas = totalOffline + orfaos.length
+
+  const inmetOnline = info?.integracoes?.inmet?.online ?? false
+  const ibgeOnline = info?.integracoes?.ibge?.online ?? false
+  const bancoOnline = info != null
+  const integracoesOnline = (inmetOnline ? 1 : 0) + (ibgeOnline ? 1 : 0)
+  const sistemaOperacional = bancoOnline && inmetOnline && ibgeOnline
+
+  const tendenciaContas = useMemo(() => calcularTendencia(contas, 'date_joined', diasPeriodo), [contas, diasPeriodo])
+  const tendenciaEstacoes = useMemo(
+    () => calcularTendencia(estacoes, 'criado_em', diasPeriodo),
+    [estacoes, diasPeriodo],
+  )
+  const crescimentoMensal = useMemo(
+    () => calcularCrescimentoMensal(contas, estacoes, info?.leituras_por_mes),
+    [contas, estacoes, info],
+  )
+
+  const dadosDonutBanco = info?.banco_por_categoria
+    ? Object.entries(info.banco_por_categoria).map(([chave, valor]) => ({
+        chave,
+        rotulo: ROTULOS_CATEGORIA_BANCO[chave] ?? chave,
+        cor: CORES_CATEGORIA_BANCO[chave] ?? '#94a3b8',
+        ...valor,
+      }))
+    : []
 
   const nadaParaApagar =
     resumo && resumo.leituras === 0 && resumo.estacoes === 0 && resumo.contas === 0 && resumo.solicitacoes_rssi === 0
@@ -98,7 +246,9 @@ function ManutencaoAdmin() {
       const dados = await executarLimpeza()
       setResultado(dados)
       setFraseDigitada('')
-      await carregar()
+      await carregarPrincipal()
+      const dadosInfo = await buscarInfoSistema(diasPeriodo)
+      setInfo(dadosInfo)
     } catch {
       setErro('Não foi possível concluir a limpeza. Tente de novo.')
     } finally {
@@ -106,117 +256,371 @@ function ManutencaoAdmin() {
     }
   }
 
+  async function aoConfirmarLimpezaAntigas() {
+    if (
+      !window.confirm(
+        `Isso vai apagar ${resumoAntigas.quantidade} leitura(s) com mais de ${diasAntigas} dia(s) PRA SEMPRE. Não tem como desfazer. Confirma?`,
+      )
+    ) {
+      return
+    }
+
+    setExecutandoAntigas(true)
+    try {
+      const dados = await executarLimpezaLeiturasAntigas(diasAntigas)
+      setResultadoAntigas(dados)
+      setFraseAntigas('')
+      const [novoResumoAntigas, novoResumo, novoInfo] = await Promise.all([
+        buscarResumoLimpezaLeiturasAntigas(diasAntigas),
+        buscarResumoLimpeza(),
+        buscarInfoSistema(diasPeriodo),
+      ])
+      setResumoAntigas(novoResumoAntigas)
+      setResumo(novoResumo)
+      setInfo(novoInfo)
+    } catch {
+      setResultadoAntigas(null)
+    } finally {
+      setExecutandoAntigas(false)
+    }
+  }
+
+  const banner = (
+    <div className={styles.banner}>
+      <div className={styles.bannerConteudo}>
+        <div className={styles.bannerIcone}>
+          <Database size={26} />
+        </div>
+        <div>
+          <h1 className={styles.bannerTitulo}>Manutenção do sistema</h1>
+          <p className={styles.bannerSubtitulo}>Infraestrutura, banco de dados e zona de risco da plataforma.</p>
+        </div>
+        {!erroInfo && (
+          <span className={sistemaOperacional ? styles.pillOnline : styles.pillOffline}>
+            {sistemaOperacional ? 'Sistema operacional' : 'Atenção necessária'}
+          </span>
+        )}
+      </div>
+      <div className={styles.seletorPeriodo}>
+        <Calendar size={14} />
+        <select value={diasPeriodo} onChange={(evento) => setDiasPeriodo(Number(evento.target.value))}>
+          {OPCOES_PERIODO.map((opcao) => (
+            <option key={opcao.valor} value={opcao.valor}>{opcao.rotulo}</option>
+          ))}
+        </select>
+      </div>
+    </div>
+  )
+
   if (carregando) {
     return (
       <div className={styles.pagina}>
+        {banner}
         <StatusMessage texto="Carregando..." />
+      </div>
+    )
+  }
+
+  if (erro) {
+    return (
+      <div className={styles.pagina}>
+        {banner}
+        <StatusMessage texto={erro} />
       </div>
     )
   }
 
   return (
     <div className={styles.pagina}>
-      <div className={styles.banner}>
-        <div className={styles.bannerConteudo}>
-          <div className={styles.bannerIcone}>
-            <Database size={26} />
-          </div>
-          <div>
-            <h1 className={styles.bannerTitulo}>Manutenção</h1>
-            <p className={styles.bannerSubtitulo}>
-              As entranhas do sistema, e a zona de risco pra zerar os dados operacionais.
-            </p>
-          </div>
+      {banner}
+
+      <div className={styles.grade}>
+        <div className={styles.cartao}>
+          <span className={`${styles.cartaoIcone} ${styles.corRoxa}`}><HardDrive size={20} /></span>
+          <span className={styles.cartaoValor}>{info?.banco?.tamanho_legivel ?? '—'}</span>
+          <span className={styles.cartaoRotulo}>Banco de dados</span>
+          {info?.banco?.percentual_uso != null && (
+            <span className={styles.cartaoNota}>{info.banco.percentual_uso}% da cota</span>
+          )}
+        </div>
+
+        <div className={styles.cartao}>
+          <span className={`${styles.cartaoIcone} ${integracoesOnline === 2 ? styles.corVerde : styles.corAmarela}`}>
+            <Globe size={20} />
+          </span>
+          <span className={styles.cartaoValor}>{integracoesOnline}/2</span>
+          <span className={styles.cartaoRotulo}>APIs externas online</span>
+        </div>
+
+        <div className={styles.cartao}>
+          <span className={`${styles.cartaoIcone} ${styles.corAzul}`}><Cpu size={20} /></span>
+          <span className={styles.cartaoValor}>Django {info?.ambiente?.django_versao ?? '—'}</span>
+          <span className={styles.cartaoRotulo}>Backend (1 processo)</span>
+          <span className={info?.ambiente?.debug ? styles.pillOffline : styles.pillOnline}>
+            {info?.ambiente ? (info.ambiente.debug ? 'DEBUG ativo' : 'DEBUG desligado') : '—'}
+          </span>
+        </div>
+
+        <div className={styles.cartao}>
+          <span className={`${styles.cartaoIcone} ${totalAlertas > 0 ? styles.corAmarela : styles.corVerde}`}>
+            <AlertTriangle size={20} />
+          </span>
+          <span className={styles.cartaoValor}>{totalAlertas}</span>
+          <span className={styles.cartaoRotulo}>Alertas ativos</span>
+        </div>
+
+        <div className={styles.cartao}>
+          <span className={`${styles.cartaoIcone} ${styles.corAzul}`}><Radio size={20} /></span>
+          <span className={styles.cartaoValor}>{totalOffline}</span>
+          <span className={styles.cartaoRotulo}>Estações offline</span>
+        </div>
+
+        <div className={styles.cartao}>
+          <span className={`${styles.cartaoIcone} ${styles.corVerde}`}><Clock size={20} /></span>
+          <span className={styles.cartaoValor}>{info?.contagens?.log_auditoria ?? '—'}</span>
+          <span className={styles.cartaoRotulo}>Eventos de auditoria</span>
         </div>
       </div>
 
-      {erroInfo && <p className={styles.erroCarga}>{erroInfo}</p>}
+      <div className={styles.linhaResumo}>
+        <div className={styles.itemResumo}>
+          <span className={styles.itemResumoRotulo}><Users size={13} /> Contas cadastradas</span>
+          <span className={styles.itemResumoValor}>{contas.length}</span>
+          <ItemTendencia percentual={tendenciaContas} />
+        </div>
+        <div className={styles.itemResumo}>
+          <span className={styles.itemResumoRotulo}><Radio size={13} /> Estações cadastradas</span>
+          <span className={styles.itemResumoValor}>{estacoes.length}</span>
+          <ItemTendencia percentual={tendenciaEstacoes} />
+        </div>
+        <div className={styles.itemResumo}>
+          <span className={styles.itemResumoRotulo}><Activity size={13} /> Leituras processadas ({info?.leituras_periodo?.dias ?? diasPeriodo}d)</span>
+          <span className={styles.itemResumoValor}>{info?.leituras_periodo?.total ?? '—'}</span>
+          <ItemTendencia percentual={info?.leituras_periodo?.tendencia ?? null} />
+        </div>
+        <div className={styles.itemResumo}>
+          <span className={styles.itemResumoRotulo}><HardDrive size={13} /> Armazenamento utilizado</span>
+          <span className={styles.itemResumoValor}>{info?.banco?.tamanho_legivel ?? '—'}</span>
+          {info?.banco?.percentual_uso != null && (
+            <span className={styles.itemResumoNota}>{info.banco.percentual_uso}% da cota</span>
+          )}
+        </div>
+      </div>
 
-      {info && (
-        <>
-          <div className={styles.gradeInfo}>
-            <div className={styles.cartaoInfo}>
-              <div className={styles.cartaoInfoCabecalho}>
-                <HardDrive size={16} />
-                <span>Banco de dados</span>
-              </div>
-              <span className={styles.valorGrande}>{info.banco.tamanho_legivel ?? '—'}</span>
-              <span className={styles.legendaInfo}>
-                Motor: {info.banco.motor} · {info.contagens.contas} conta(s) · {info.contagens.estacoes} estação(ões)
-                · {info.contagens.leituras} leitura(s) · {info.contagens.solicitacoes_rssi} RSSI ·{' '}
-                {info.contagens.log_auditoria} evento(s) de auditoria
-              </span>
-            </div>
+      <div className={styles.linha3Colunas}>
+        <DistribuicaoContasCard contas={contas} />
 
-            <div className={styles.cartaoInfo}>
-              <div className={styles.cartaoInfoCabecalho}>
-                <Globe size={16} />
-                <span>Integrações externas</span>
-              </div>
-              <div className={styles.listaIntegracoes}>
-                {[
-                  { chave: 'inmet', nome: 'INMET (clima)' },
-                  { chave: 'ibge', nome: 'IBGE (municípios)' },
-                ].map(({ chave, nome }) => {
-                  const integracao = info.integracoes[chave]
-                  return (
-                    <div key={chave} className={styles.itemIntegracao}>
-                      {integracao.online ? (
-                        <CheckCircle2 size={15} className={styles.iconeOnline} />
-                      ) : (
-                        <XCircle size={15} className={styles.iconeOffline} />
-                      )}
-                      <span className={styles.itemIntegracaoNome}>{nome}</span>
-                      <span className={integracao.online ? styles.pillOnline : styles.pillOffline}>
-                        {integracao.online ? 'Online' : 'Fora do ar'}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-
-            <div className={styles.cartaoInfo}>
-              <div className={styles.cartaoInfoCabecalho}>
-                <Cpu size={16} />
-                <span>Ambiente</span>
-              </div>
-              <div className={styles.listaAmbiente}>
-                <span>Django {info.ambiente.django_versao}</span>
-                <span>Python {info.ambiente.python_versao}</span>
-                <span className={info.ambiente.debug ? styles.pillOffline : styles.pillOnline}>
-                  {info.ambiente.debug ? 'DEBUG ativo' : 'DEBUG desligado'}
-                </span>
-              </div>
-            </div>
+        <div className={`${styles.cartaoBloco} ${styles.cartaoBlocoLargo}`}>
+          <div className={styles.blocoCabecalho}>
+            <h2 className={styles.blocoTitulo}><TrendingUp size={16} /> Crescimento da plataforma</h2>
+            <span className={styles.blocoTag}>Últimos 6 meses</span>
           </div>
+          <p className={styles.blocoSubtitulo}>Contas, estações e leituras por mês</p>
+          <ResponsiveContainer width="100%" height={200}>
+            <LineChart data={crescimentoMensal} margin={{ top: 10, right: 10, bottom: 0, left: -20 }}>
+              <CartesianGrid strokeDasharray="4 8" vertical={false} stroke="var(--color-grid)" />
+              <XAxis dataKey="rotulo" tick={{ fontSize: 12, fill: 'var(--color-text-secondary)' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 12, fill: 'var(--color-text-secondary)' }} axisLine={false} tickLine={false} width={30} allowDecimals={false} />
+              <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: 'var(--shadow-card)' }} />
+              <Line type="monotone" dataKey="contas" name="Contas" stroke="#4a6fa5" strokeWidth={3} dot={{ r: 3 }} />
+              <Line type="monotone" dataKey="estacoes" name="Estações" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 3 }} />
+              {info?.leituras_por_mes && (
+                <Line type="monotone" dataKey="leituras" name="Leituras" stroke="#16a34a" strokeWidth={3} dot={{ r: 3 }} />
+              )}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
 
-          <div className={styles.cartaoAtividade}>
-            <div className={styles.cartaoInfoCabecalho}>
-              <History size={16} />
-              <span>Atividade recente</span>
-            </div>
-            {info.atividade_recente.length === 0 ? (
-              <p className={styles.semAtividade}>Nenhum evento registrado ainda.</p>
-            ) : (
-              <ul className={styles.listaAtividade}>
-                {info.atividade_recente.map((evento) => (
-                  <li key={evento.id} className={styles.itemAtividade}>
-                    <span className={styles.itemAtividadeTexto}>
-                      <strong>{evento.ator_username ?? 'sistema'}</strong> · {rotuloAcao(evento.acao)}
-                    </span>
-                    <span className={styles.itemAtividadeData}>
-                      <Clock size={12} /> {formatarDataHora(evento.criado_em)}
-                    </span>
+        <div className={styles.cartaoBloco}>
+          <div className={styles.blocoCabecalho}>
+            <h2 className={styles.blocoTitulo}><Database size={16} /> Uso do banco de dados</h2>
+          </div>
+          <p className={styles.blocoSubtitulo}>Espaço ocupado por categoria de tabela</p>
+          {!info?.banco_por_categoria ? (
+            <p className={styles.semDados}>Só disponível com banco Postgres (não aparece no ambiente de desenvolvimento).</p>
+          ) : (
+            <div className={styles.donutLinha}>
+              <div className={styles.donutContainer}>
+                <ResponsiveContainer width="100%" height={160}>
+                  <PieChart>
+                    <Pie data={dadosDonutBanco} dataKey="percentual" innerRadius={44} outerRadius={70} startAngle={90} endAngle={-270}>
+                      {dadosDonutBanco.map((fatia) => (
+                        <Cell key={fatia.chave} fill={fatia.cor} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className={styles.donutCentro}>
+                  <span className={styles.donutTotal}>{info.banco.tamanho_legivel}</span>
+                  <span className={styles.donutRotulo}>total</span>
+                </div>
+              </div>
+              <ul className={styles.legendaDonut}>
+                {dadosDonutBanco.map((fatia) => (
+                  <li key={fatia.chave}>
+                    <span className={styles.pontoLegenda} style={{ backgroundColor: fatia.cor }} />
+                    <span className={styles.legendaNome}>{fatia.rotulo}</span>
+                    <span className={styles.legendaValor}>{fatia.tamanho_legivel}</span>
+                    <span className={styles.legendaPercentual}>{fatia.percentual}%</span>
                   </li>
                 ))}
               </ul>
-            )}
-          </div>
-        </>
-      )}
+            </div>
+          )}
+        </div>
+      </div>
 
-      {erro && <p className={styles.erroCarga}>{erro}</p>}
+      <div className={styles.cartaoBloco}>
+        <div className={styles.blocoCabecalho}>
+          <h2 className={styles.blocoTitulo}><Clock size={16} /> Atividade recente</h2>
+          <Link to="/app/adm/notificacoes" className={styles.linkVerTodas}>Ver todas <ArrowRight size={13} /></Link>
+        </div>
+        <p className={styles.blocoSubtitulo}>Últimas ações registradas no sistema</p>
+        {erroInfo ? (
+          <p className={styles.semDados}>{erroInfo}</p>
+        ) : !info ? (
+          <p className={styles.semDados}>Carregando...</p>
+        ) : info.atividade_recente.length === 0 ? (
+          <p className={styles.semDados}>Nenhum evento registrado ainda.</p>
+        ) : (
+          <div className={styles.tabelaWrapper}>
+            <table className={styles.tabela}>
+              <thead>
+                <tr>
+                  <th>Data e hora</th>
+                  <th>Evento</th>
+                  <th>Descrição</th>
+                  <th>Usuário</th>
+                </tr>
+              </thead>
+              <tbody>
+                {info.atividade_recente.map((evento) => (
+                  <tr key={evento.id}>
+                    <td>{formatarDataHora(evento.criado_em)}</td>
+                    <td>{rotuloAcao(evento.acao)}</td>
+                    <td>{descricaoEvento(evento)}</td>
+                    <td>{evento.ator_username ?? 'sistema'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div className={styles.linha2Colunas}>
+        <div className={styles.cartaoBloco}>
+          <div className={styles.blocoCabecalho}>
+            <h2 className={styles.blocoTitulo}><ArrowRight size={16} /> Ações rápidas</h2>
+          </div>
+          <div className={styles.acoesRapidas}>
+            <Link to="/app/adm/contas" className={styles.acaoRapida}>
+              <Users size={18} />
+              <span>Contas</span>
+            </Link>
+            <Link to="/app/adm/estacoes" className={styles.acaoRapida}>
+              <Radio size={18} />
+              <span>Estações</span>
+            </Link>
+            <Link to="/app/adm/notificacoes" className={styles.acaoRapida}>
+              <Bell size={18} />
+              <span>Notificações</span>
+            </Link>
+            <Link to="/app/adm/configuracoes" className={styles.acaoRapida}>
+              <Settings size={18} />
+              <span>Configurações</span>
+            </Link>
+          </div>
+        </div>
+
+        <div className={styles.cartaoBloco}>
+          <div className={styles.blocoCabecalho}>
+            <h2 className={styles.blocoTitulo}><HardDrive size={16} /> Tabelas principais</h2>
+          </div>
+          <p className={styles.blocoSubtitulo}>Quantidade de registros por tabela</p>
+          <ul className={styles.listaUso}>
+            {Object.entries(ROTULOS_TABELA).map(([chave, rotulo]) => (
+              <li key={chave}>
+                <Database size={14} />
+                <span>{rotulo}</span>
+                <strong>{info?.contagens?.[chave] ?? '—'}</strong>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      <div className={styles.cartaoPerigo}>
+        <div className={styles.cabecalhoPerigo}>
+          <Trash2 size={22} />
+          <div>
+            <h2 className={styles.tituloPerigo}>Limpar leituras antigas</h2>
+            <p className={styles.textoPerigo}>
+              Apaga só as leituras de clima mais velhas que o período escolhido — não mexe em contas, estações nem no
+              restante do histórico. <strong>Essa ação não pode ser desfeita.</strong>
+            </p>
+          </div>
+        </div>
+
+        <div className={styles.controleDias}>
+          <label htmlFor="dias-antigas">Apagar leituras com mais de</label>
+          <input
+            id="dias-antigas"
+            type="number"
+            min="1"
+            className={styles.inputDias}
+            value={diasAntigas}
+            onChange={(e) => setDiasAntigas(Math.max(Number(e.target.value) || 1, 1))}
+          />
+          <span>dia(s)</span>
+        </div>
+
+        {resumoAntigas && (
+          <div className={styles.grade}>
+            <div className={styles.item}>
+              <span className={styles.itemValor}>{resumoAntigas.quantidade}</span>
+              <span className={styles.itemRotulo}>leitura(s) seriam apagadas</span>
+            </div>
+          </div>
+        )}
+
+        {resumoAntigas && resumoAntigas.quantidade === 0 ? (
+          <p className={styles.avisoVazio}>
+            <AlertTriangle size={15} />
+            Não há leituras mais velhas que {diasAntigas} dia(s) agora.
+          </p>
+        ) : (
+          <div className={styles.blocoConfirmacao}>
+            <label className={styles.rotuloConfirmacao} htmlFor="frase-confirmacao-antigas">
+              Pra habilitar o botão, digite <strong>{FRASE_CONFIRMACAO_ANTIGAS}</strong> abaixo:
+            </label>
+            <input
+              id="frase-confirmacao-antigas"
+              className={styles.inputConfirmacao}
+              value={fraseAntigas}
+              onChange={(e) => setFraseAntigas(e.target.value)}
+              placeholder={FRASE_CONFIRMACAO_ANTIGAS}
+              autoComplete="off"
+            />
+            <button
+              type="button"
+              className={styles.botaoApagar}
+              disabled={fraseAntigas !== FRASE_CONFIRMACAO_ANTIGAS || executandoAntigas || !resumoAntigas}
+              onClick={aoConfirmarLimpezaAntigas}
+            >
+              <Trash2 size={16} />
+              {executandoAntigas ? 'Apagando...' : 'Apagar leituras antigas'}
+            </button>
+          </div>
+        )}
+
+        {resultadoAntigas && (
+          <div className={styles.cartaoResultado}>
+            <RefreshCw size={16} />
+            Pronto: {resultadoAntigas.quantidade} leitura(s) com mais de {resultadoAntigas.dias} dia(s) apagadas.
+          </div>
+        )}
+      </div>
 
       {resumo && (
         <div className={styles.cartaoPerigo}>

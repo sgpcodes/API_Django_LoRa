@@ -1,0 +1,129 @@
+.cartaoBloco {
+  display: flex;
+  flex-direction: column;
+  padding: 1.25rem 1.4rem;
+  border-radius: 12px;
+  background-color: var(--color-card-bg);
+  border: 1px solid var(--color-card-border);
+  box-shadow: var(--shadow-card);
+}
+
+.blocoCabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.blocoTitulo {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.blocoSubtitulo {
+  margin: 0.15rem 0 0.9rem;
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+}
+
+.linkVerTodas {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-accent);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.linkVerTodas:hover {
+  text-decoration: underline;
+}
+
+.semDados {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.donutLinha {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.donutContainer {
+  position: relative;
+  width: 160px;
+  flex-shrink: 0;
+}
+
+.donutCentro {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.donutTotal {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.donutRotulo {
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+}
+
+.legendaDonut {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.legendaDonut li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.pontoLegenda {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legendaNome {
+  flex: 1;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+
+.legendaValor {
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.legendaPercentual {
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  min-width: 2.5em;
+  text-align: right;
+}

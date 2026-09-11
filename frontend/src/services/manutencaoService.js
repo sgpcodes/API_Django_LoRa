@@ -14,10 +14,25 @@ export async function executarLimpeza() {
   return resposta.data
 }
 
-// Painel de "entranhas do sistema": tamanho real do banco, contagem por
-// tabela, atividade recente e status das integrações externas (INMET/
-// IBGE). Ver contas/views.py:InfoSistemaView.
-export async function buscarInfoSistema() {
-  const resposta = await api.get('/api/manutencao/info-sistema/')
+// Painel de "entranhas do sistema": tamanho real do banco (com % de uso
+// se DATABASE_QUOTA_GB estiver configurado), tamanho por categoria de
+// tabela, contagem por tabela, leituras no período (+ tendência),
+// leituras por mês, atividade recente e status das integrações externas
+// (INMET/IBGE). Ver contas/views.py:InfoSistemaView. `dias` também
+// define a janela de "leituras processadas" (30 por padrão).
+export async function buscarInfoSistema(dias) {
+  const resposta = await api.get('/api/manutencao/info-sistema/', { params: dias ? { dias } : {} })
+  return resposta.data
+}
+
+// Zona de risco menor que "apagar tudo": só leituras mais velhas que
+// `dias` — não mexe em contas nem estações.
+export async function buscarResumoLimpezaLeiturasAntigas(dias) {
+  const resposta = await api.get('/api/manutencao/limpar-leituras-antigas/', { params: { dias } })
+  return resposta.data
+}
+
+export async function executarLimpezaLeiturasAntigas(dias) {
+  const resposta = await api.post('/api/manutencao/limpar-leituras-antigas/', { dias, confirmar: true })
   return resposta.data
 }
