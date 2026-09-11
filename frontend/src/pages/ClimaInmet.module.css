@@ -185,6 +185,14 @@
   cursor: not-allowed;
 }
 
+.campoAjuda {
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--color-text-secondary);
+  opacity: 0.85;
+  line-height: 1.35;
+}
+
 /* Estação de referência */
 
 .estacaoCabecalho {

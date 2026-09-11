@@ -307,6 +307,10 @@ function ClimaInmet() {
                 <option key={item.codigo} value={item.codigo}>{item.nome}</option>
               ))}
             </select>
+            <small className={styles.campoAjuda}>
+              Só identificação e localização (seção "Estação de referência" abaixo) — o INMET não libera leitura ao
+              vivo por estação.
+            </small>
           </label>
 
           <label className={styles.campo}>
@@ -321,6 +325,7 @@ function ClimaInmet() {
                 <option key={item.codigo} value={item.codigo}>{item.nome}</option>
               ))}
             </select>
+            <small className={styles.campoAjuda}>É este campo que muda a previsão do tempo abaixo.</small>
           </label>
         </div>
       </section>
