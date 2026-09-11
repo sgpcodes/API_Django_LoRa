@@ -5,18 +5,14 @@ import {
   AlertTriangle,
   ArrowRight,
   BarChart3,
-  Calendar,
   CheckCircle2,
   Clock,
-  Database,
-  HardDrive,
   Radio,
   TrendingDown,
   TrendingUp,
   UserCheck,
   Users,
   Wifi,
-  WifiOff,
   XCircle,
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
@@ -28,11 +24,9 @@ import { buscarInfoSistema } from '../services/manutencaoService'
 import { calcularTendencia, calcularCrescimentoMensal } from '../services/estatisticasAdmin'
 import styles from './AdminDashboard.module.css'
 
-const OPCOES_PERIODO_TENDENCIA = [
-  { valor: 7, rotulo: 'Últimos 7 dias' },
-  { valor: 30, rotulo: 'Últimos 30 dias' },
-  { valor: 90, rotulo: 'Últimos 90 dias' },
-]
+// Período fixo pra calcular as tendências (RN — sem seletor na tela,
+// pra não duplicar o mesmo controle que já existe na Manutenção).
+const DIAS_TENDENCIA = 30
 
 // Rótulo amigável pra cada tipo real de evento do LogAuditoria (RN05) —
 // se um dia aparecer uma ação nova que ainda não está aqui, cai no
@@ -48,6 +42,7 @@ const ROTULOS_ACAO = {
   'estacao.excluida': 'Estação removida',
   'leituras_orfas.excluidas': 'Leituras órfãs removidas',
   'manutencao.limpeza_operacional': 'Limpeza operacional executada',
+  'manutencao.leituras_antigas_removidas': 'Leituras antigas removidas',
 }
 
 function rotuloAcao(acao) {
@@ -70,11 +65,12 @@ function ItemTendencia({ percentual }) {
   )
 }
 
-// Visão geral do Painel Administrativo — só com dado real. Onde o
-// sistema não tem como saber de verdade (ex.: disponibilidade histórica,
-// serviços internos separados que não existem nessa arquitetura), a
-// seção correspondente é honesta sobre isso em vez de mostrar um número
-// inventado.
+// Visão geral do Painel Administrativo — feedback rápido do sistema
+// (contas, estações, crescimento, atividade e status das integrações).
+// O que é mais técnico (banco por categoria, ambiente, zona de risco)
+// fica só na tela de Manutenção, pra não duplicar a mesma informação
+// em dois lugares. Só dado real: onde o sistema não tem como saber de
+// verdade, a seção correspondente é honesta sobre isso.
 function AdminDashboard() {
   const [contas, setContas] = useState([])
   const [estacoes, setEstacoes] = useState([])
@@ -83,7 +79,6 @@ function AdminDashboard() {
   const [erroInfo, setErroInfo] = useState(null)
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState(null)
-  const [diasTendencia, setDiasTendencia] = useState(30)
 
   useEffect(() => {
     Promise.all([buscarEstacoes(), buscarSensoresOrfaos(), buscarContas()])
@@ -98,7 +93,7 @@ function AdminDashboard() {
 
     buscarInfoSistema()
       .then(setInfo)
-      .catch(() => setErroInfo('Não foi possível carregar banco de dados, atividade recente e status do sistema agora.'))
+      .catch(() => setErroInfo('Não foi possível carregar atividade recente e status do sistema agora.'))
   }, [])
 
   const totalOnline = estacoes.filter((estacao) => !estacao.esta_offline).length
@@ -106,12 +101,12 @@ function AdminDashboard() {
   const totalAtivas = contas.filter((conta) => conta.is_active).length
   const totalAlertas = totalOffline + orfaos.length
 
-  const tendenciaContas = useMemo(() => calcularTendencia(contas, 'date_joined', diasTendencia), [contas, diasTendencia])
-  const tendenciaEstacoes = useMemo(
-    () => calcularTendencia(estacoes, 'criado_em', diasTendencia),
-    [estacoes, diasTendencia],
+  const tendenciaContas = useMemo(() => calcularTendencia(contas, 'date_joined', DIAS_TENDENCIA), [contas])
+  const tendenciaEstacoes = useMemo(() => calcularTendencia(estacoes, 'criado_em', DIAS_TENDENCIA), [estacoes])
+  const crescimentoMensal = useMemo(
+    () => calcularCrescimentoMensal(contas, estacoes, info?.leituras_por_mes),
+    [contas, estacoes, info],
   )
-  const crescimentoMensal = useMemo(() => calcularCrescimentoMensal(contas, estacoes), [contas, estacoes])
 
   const bancoOnline = info != null
   const inmetOnline = info?.integracoes?.inmet?.online ?? false
@@ -128,14 +123,6 @@ function AdminDashboard() {
           <h1 className={styles.bannerTitulo}>Visão geral do sistema</h1>
           <p className={styles.bannerSubtitulo}>Acompanhe o desempenho da plataforma, contas e estações.</p>
         </div>
-      </div>
-      <div className={styles.seletorTendencia}>
-        <Calendar size={14} />
-        <select value={diasTendencia} onChange={(evento) => setDiasTendencia(Number(evento.target.value))}>
-          {OPCOES_PERIODO_TENDENCIA.map((opcao) => (
-            <option key={opcao.valor} value={opcao.valor}>{opcao.rotulo}</option>
-          ))}
-        </select>
       </div>
     </div>
   )
@@ -194,12 +181,6 @@ function AdminDashboard() {
           <span className={styles.cartaoValor}>{totalAlertas}</span>
           <span className={styles.cartaoRotulo}>Alertas ativos</span>
         </div>
-
-        <div className={styles.cartao}>
-          <span className={`${styles.cartaoIcone} ${styles.corRoxa}`}><HardDrive size={20} /></span>
-          <span className={styles.cartaoValor}>{info?.banco?.tamanho_legivel ?? '—'}</span>
-          <span className={styles.cartaoRotulo}>Tamanho do banco de dados</span>
-        </div>
       </div>
 
       <div className={styles.linha3Colunas}>
@@ -210,7 +191,7 @@ function AdminDashboard() {
             <h2 className={styles.blocoTitulo}><TrendingUp size={16} /> Crescimento da plataforma</h2>
             <span className={styles.blocoTag}>Últimos 6 meses</span>
           </div>
-          <p className={styles.blocoSubtitulo}>Novas contas e estações cadastradas por mês</p>
+          <p className={styles.blocoSubtitulo}>Contas, estações e leituras por mês</p>
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={crescimentoMensal} margin={{ top: 10, right: 10, bottom: 0, left: -20 }}>
               <CartesianGrid strokeDasharray="4 8" vertical={false} stroke="var(--color-grid)" />
@@ -219,66 +200,11 @@ function AdminDashboard() {
               <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: 'var(--shadow-card)' }} />
               <Line type="monotone" dataKey="contas" name="Contas" stroke="#4a6fa5" strokeWidth={3} dot={{ r: 3 }} />
               <Line type="monotone" dataKey="estacoes" name="Estações" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 3 }} />
+              {info?.leituras_por_mes && (
+                <Line type="monotone" dataKey="leituras" name="Leituras" stroke="#16a34a" strokeWidth={3} dot={{ r: 3 }} />
+              )}
             </LineChart>
           </ResponsiveContainer>
-        </div>
-
-        <div className={styles.cartaoBloco}>
-          <div className={styles.blocoCabecalho}>
-            <h2 className={styles.blocoTitulo}><Activity size={16} /> Uso da plataforma</h2>
-            <Link to="/app/adm/manutencao" className={styles.linkVerTodas}>Ver detalhes <ArrowRight size={13} /></Link>
-          </div>
-          <p className={styles.blocoSubtitulo}>Armazenamento e processamento de dados</p>
-          {erroInfo ? (
-            <p className={styles.semDados}>{erroInfo}</p>
-          ) : (
-            <ul className={styles.listaUso}>
-              <li>
-                <Database size={14} />
-                <span>Banco de dados</span>
-                <strong>{info?.banco?.tamanho_legivel ?? '—'}</strong>
-              </li>
-              <li>
-                <Activity size={14} />
-                <span>Leituras processadas</span>
-                <strong>{info?.contagens?.leituras ?? '—'}</strong>
-              </li>
-              <li>
-                <Clock size={14} />
-                <span>Eventos de auditoria</span>
-                <strong>{info?.contagens?.log_auditoria ?? '—'}</strong>
-              </li>
-            </ul>
-          )}
-        </div>
-      </div>
-
-      <div className={styles.linha2Colunas}>
-        <div className={styles.cartaoBloco}>
-          <div className={styles.blocoCabecalho}>
-            <h2 className={styles.blocoTitulo}><Clock size={16} /> Atividade recente</h2>
-            <Link to="/app/adm/notificacoes" className={styles.linkVerTodas}>Ver todas <ArrowRight size={13} /></Link>
-          </div>
-          <p className={styles.blocoSubtitulo}>Últimas ações no sistema</p>
-          {erroInfo ? (
-            <p className={styles.semDados}>{erroInfo}</p>
-          ) : !info ? (
-            <p className={styles.semDados}>Carregando...</p>
-          ) : info.atividade_recente.length === 0 ? (
-            <p className={styles.semDados}>Nenhum evento registrado ainda.</p>
-          ) : (
-            <ul className={styles.listaAtividade}>
-              {info.atividade_recente.slice(0, 6).map((evento) => (
-                <li key={evento.id}>
-                  <span className={styles.itemAtividadeTexto}>
-                    <strong>{rotuloAcao(evento.acao)}</strong>
-                    <small>{evento.ator_username ?? 'sistema'}</small>
-                  </span>
-                  <span className={styles.itemAtividadeData}>{formatarDataHora(evento.criado_em)}</span>
-                </li>
-              ))}
-            </ul>
-          )}
         </div>
 
         <div className={styles.cartaoBloco}>
@@ -286,7 +212,7 @@ function AdminDashboard() {
             <h2 className={styles.blocoTitulo}><Activity size={16} /> Status do sistema</h2>
             {!erroInfo && (
               <span className={sistemaOperacional ? styles.pillOnline : styles.pillOffline}>
-                {sistemaOperacional ? 'Sistema operacional' : 'Atenção necessária'}
+                {sistemaOperacional ? 'Operacional' : 'Atenção'}
               </span>
             )}
           </div>
@@ -311,6 +237,33 @@ function AdminDashboard() {
             </ul>
           )}
         </div>
+      </div>
+
+      <div className={styles.cartaoBloco}>
+        <div className={styles.blocoCabecalho}>
+          <h2 className={styles.blocoTitulo}><Clock size={16} /> Atividade recente</h2>
+          <Link to="/app/adm/notificacoes" className={styles.linkVerTodas}>Ver todas <ArrowRight size={13} /></Link>
+        </div>
+        <p className={styles.blocoSubtitulo}>Últimas ações no sistema</p>
+        {erroInfo ? (
+          <p className={styles.semDados}>{erroInfo}</p>
+        ) : !info ? (
+          <p className={styles.semDados}>Carregando...</p>
+        ) : info.atividade_recente.length === 0 ? (
+          <p className={styles.semDados}>Nenhum evento registrado ainda.</p>
+        ) : (
+          <ul className={styles.listaAtividade}>
+            {info.atividade_recente.slice(0, 6).map((evento) => (
+              <li key={evento.id}>
+                <span className={styles.itemAtividadeTexto}>
+                  <strong>{rotuloAcao(evento.acao)}</strong>
+                  <small>{evento.ator_username ?? 'sistema'}</small>
+                </span>
+                <span className={styles.itemAtividadeData}>{formatarDataHora(evento.criado_em)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   )

@@ -56,28 +56,6 @@
   color: rgba(255, 255, 255, 0.85);
 }
 
-.seletorPeriodo {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.85rem;
-  border-radius: 10px;
-  background-color: rgba(255, 255, 255, 0.14);
-}
-
-.seletorPeriodo select {
-  background: none;
-  border: none;
-  color: #ffffff;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.seletorPeriodo select option {
-  color: var(--color-text);
-}
-
 /* Cards de contagem */
 
 .grade {
@@ -327,9 +305,10 @@
 }
 
 .legendaDonut li {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 0.5rem;
+  column-gap: 0.6rem;
   font-size: 0.85rem;
 }
 
@@ -341,22 +320,29 @@
 }
 
 .legendaNome {
-  flex: 1;
+  min-width: 0;
   color: var(--color-text-secondary);
   font-weight: 600;
+}
+
+.legendaValores {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
 }
 
 .legendaValor {
   color: var(--color-text);
   font-weight: 700;
   font-size: 0.78rem;
+  white-space: nowrap;
 }
 
 .legendaPercentual {
   color: var(--color-text-secondary);
-  font-size: 0.78rem;
-  min-width: 2.5em;
-  text-align: right;
+  font-size: 0.72rem;
+  white-space: nowrap;
 }
 
 /* Tabelas principais (contagem por tabela) */

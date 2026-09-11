@@ -1,30 +1,23 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  Activity,
   AlertTriangle,
-  ArrowRight,
   Bell,
-  Calendar,
-  Clock,
   Cpu,
   Database,
   Globe,
   HardDrive,
-  Radio,
   RefreshCw,
   Settings,
   ShieldAlert,
   Trash2,
   TrendingDown,
   TrendingUp,
+  Radio,
   Users,
 } from 'lucide-react'
-import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
 import StatusMessage from '../components/StatusMessage'
-import DistribuicaoContasCard from '../components/DistribuicaoContasCard'
-import { buscarEstacoes, buscarSensoresOrfaos } from '../services/estacaoService'
-import { buscarContas } from '../services/contasAdminService'
 import {
   buscarInfoSistema,
   buscarResumoLimpeza,
@@ -32,73 +25,10 @@ import {
   buscarResumoLimpezaLeiturasAntigas,
   executarLimpezaLeiturasAntigas,
 } from '../services/manutencaoService'
-import { calcularTendencia, calcularCrescimentoMensal } from '../services/estatisticasAdmin'
 import styles from './ManutencaoAdmin.module.css'
 
 const FRASE_CONFIRMACAO = 'APAGAR TUDO'
 const FRASE_CONFIRMACAO_ANTIGAS = 'APAGAR LEITURAS ANTIGAS'
-
-const OPCOES_PERIODO = [
-  { valor: 7, rotulo: 'Últimos 7 dias' },
-  { valor: 30, rotulo: 'Últimos 30 dias' },
-  { valor: 90, rotulo: 'Últimos 90 dias' },
-]
-
-const ROTULOS_ACAO = {
-  'usuario.criado': 'Nova conta',
-  'usuario.excluido': 'Conta excluída',
-  'usuario.suspenso': 'Conta desativada',
-  'usuario.reativado': 'Conta reativada',
-  'plano.alterado': 'Plano alterado',
-  'estacao.criada': 'Estação cadastrada',
-  'estacao.usuarios_alterados': 'Estação atribuída',
-  'estacao.excluida': 'Estação removida',
-  'leituras_orfas.excluidas': 'Leituras órfãs removidas',
-  'manutencao.limpeza_operacional': 'Limpeza operacional',
-  'manutencao.leituras_antigas_removidas': 'Leituras antigas removidas',
-}
-
-function rotuloAcao(acao) {
-  return ROTULOS_ACAO[acao] ?? acao
-}
-
-// Descrição de cada evento a partir do `detalhes` gravado no momento em
-// que ele aconteceu (RN05) — nunca resolvido "ao vivo" a partir do alvo,
-// que pode já ter sido excluído ou ter mudado de estado desde então.
-function descricaoEvento(evento) {
-  const d = evento.detalhes ?? {}
-  switch (evento.acao) {
-    case 'usuario.criado':
-      return `Conta de ${d.nome ?? d.username ?? '—'} criada`
-    case 'usuario.excluido':
-      return `Conta ${d.username ?? '—'} excluída`
-    case 'usuario.suspenso':
-      return `Conta de ${d.nome ?? d.username ?? '—'} suspensa`
-    case 'usuario.reativado':
-      return `Conta de ${d.nome ?? d.username ?? '—'} reativada`
-    case 'plano.alterado':
-      return `${d.nome ?? d.username ?? '—'} mudou de ${d.plano_anterior ?? 'nenhum plano'} para ${d.plano ?? '—'}`
-    case 'estacao.criada':
-      return `Estação ${d.identificador ?? '—'} cadastrada`
-    case 'estacao.usuarios_alterados':
-      return `Usuários vinculados à estação ${d.identificador ?? '—'} alterados`
-    case 'estacao.excluida':
-      return `Estação ${d.identificador ?? '—'} removida`
-    case 'leituras_orfas.excluidas':
-      return `${d.quantidade ?? 0} leitura(s) órfã(s) do sensor ${d.sensor_id ?? '—'} removida(s)`
-    case 'manutencao.limpeza_operacional':
-      return `${d.contas ?? 0} conta(s), ${d.estacoes ?? 0} estação(ões) e ${d.leituras ?? 0} leitura(s) apagadas`
-    case 'manutencao.leituras_antigas_removidas':
-      return `${d.quantidade ?? 0} leitura(s) com mais de ${d.dias ?? '—'} dia(s) removida(s)`
-    default:
-      return '—'
-  }
-}
-
-function formatarDataHora(iso) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
-}
 
 const ROTULOS_CATEGORIA_BANCO = {
   dados_meteorologicos: 'Dados meteorológicos',
@@ -133,23 +63,21 @@ function ItemTendencia({ percentual }) {
   )
 }
 
-// Tela "Manutenção" do Painel Administrativo — visão de operação e
-// infraestrutura, mais as zonas de risco. Tudo aqui é dado real: sem
-// disponibilidade histórica/SLA (não existe monitoramento contínuo nessa
-// arquitetura), sem "servidores" (é um único processo Django), sem
-// console de SQL nem botão de restauração — riscos desproporcionais
-// pra uma ação de um clique, deixados de fora de propósito.
+// Tela "Manutenção" do Painel Administrativo — só o lado técnico da
+// operação (banco de dados, ambiente, integrações externas) e as zonas
+// de risco. Visão geral, distribuição de contas, crescimento e
+// atividade recente já ficam no Dashboard — pra não mostrar a mesma
+// informação duas vezes, cada uma dessas telas cobre uma metade.
+// Tudo aqui é dado real: sem console de SQL nem botão de restauração —
+// riscos desproporcionais pra uma ação de um clique, deixados de fora
+// de propósito.
 function ManutencaoAdmin() {
-  const [contas, setContas] = useState([])
-  const [estacoes, setEstacoes] = useState([])
-  const [orfaos, setOrfaos] = useState([])
   const [resumo, setResumo] = useState(null)
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState(null)
 
   const [info, setInfo] = useState(null)
   const [erroInfo, setErroInfo] = useState(null)
-  const [diasPeriodo, setDiasPeriodo] = useState(30)
 
   const [fraseDigitada, setFraseDigitada] = useState('')
   const [executando, setExecutando] = useState(false)
@@ -163,15 +91,7 @@ function ManutencaoAdmin() {
 
   async function carregarPrincipal() {
     try {
-      const [dadosEstacoes, dadosOrfaos, dadosContas, dadosResumo] = await Promise.all([
-        buscarEstacoes(),
-        buscarSensoresOrfaos(),
-        buscarContas(),
-        buscarResumoLimpeza(),
-      ])
-      setEstacoes(dadosEstacoes)
-      setOrfaos(dadosOrfaos)
-      setContas(dadosContas)
+      const dadosResumo = await buscarResumoLimpeza()
       setResumo(dadosResumo)
       setErro(null)
     } catch {
@@ -181,18 +101,20 @@ function ManutencaoAdmin() {
     }
   }
 
-  useEffect(() => {
-    carregarPrincipal()
-  }, [])
+  async function carregarInfo() {
+    try {
+      const dados = await buscarInfoSistema()
+      setInfo(dados)
+      setErroInfo(null)
+    } catch {
+      setErroInfo('Não foi possível carregar as informações do sistema agora.')
+    }
+  }
 
   useEffect(() => {
-    buscarInfoSistema(diasPeriodo)
-      .then((dados) => {
-        setInfo(dados)
-        setErroInfo(null)
-      })
-      .catch(() => setErroInfo('Não foi possível carregar as informações do sistema agora.'))
-  }, [diasPeriodo])
+    carregarPrincipal()
+    carregarInfo()
+  }, [])
 
   useEffect(() => {
     buscarResumoLimpezaLeiturasAntigas(diasAntigas)
@@ -200,24 +122,9 @@ function ManutencaoAdmin() {
       .catch(() => setResumoAntigas(null))
   }, [diasAntigas])
 
-  const totalOffline = estacoes.filter((estacao) => estacao.esta_offline).length
-  const totalAlertas = totalOffline + orfaos.length
-
   const inmetOnline = info?.integracoes?.inmet?.online ?? false
   const ibgeOnline = info?.integracoes?.ibge?.online ?? false
-  const bancoOnline = info != null
   const integracoesOnline = (inmetOnline ? 1 : 0) + (ibgeOnline ? 1 : 0)
-  const sistemaOperacional = bancoOnline && inmetOnline && ibgeOnline
-
-  const tendenciaContas = useMemo(() => calcularTendencia(contas, 'date_joined', diasPeriodo), [contas, diasPeriodo])
-  const tendenciaEstacoes = useMemo(
-    () => calcularTendencia(estacoes, 'criado_em', diasPeriodo),
-    [estacoes, diasPeriodo],
-  )
-  const crescimentoMensal = useMemo(
-    () => calcularCrescimentoMensal(contas, estacoes, info?.leituras_por_mes),
-    [contas, estacoes, info],
-  )
 
   const dadosDonutBanco = info?.banco_por_categoria
     ? Object.entries(info.banco_por_categoria).map(([chave, valor]) => ({
@@ -247,8 +154,7 @@ function ManutencaoAdmin() {
       setResultado(dados)
       setFraseDigitada('')
       await carregarPrincipal()
-      const dadosInfo = await buscarInfoSistema(diasPeriodo)
-      setInfo(dadosInfo)
+      await carregarInfo()
     } catch {
       setErro('Não foi possível concluir a limpeza. Tente de novo.')
     } finally {
@@ -270,14 +176,13 @@ function ManutencaoAdmin() {
       const dados = await executarLimpezaLeiturasAntigas(diasAntigas)
       setResultadoAntigas(dados)
       setFraseAntigas('')
-      const [novoResumoAntigas, novoResumo, novoInfo] = await Promise.all([
+      const [novoResumoAntigas, novoResumo] = await Promise.all([
         buscarResumoLimpezaLeiturasAntigas(diasAntigas),
         buscarResumoLimpeza(),
-        buscarInfoSistema(diasPeriodo),
       ])
       setResumoAntigas(novoResumoAntigas)
       setResumo(novoResumo)
-      setInfo(novoInfo)
+      await carregarInfo()
     } catch {
       setResultadoAntigas(null)
     } finally {
@@ -295,19 +200,6 @@ function ManutencaoAdmin() {
           <h1 className={styles.bannerTitulo}>Manutenção do sistema</h1>
           <p className={styles.bannerSubtitulo}>Infraestrutura, banco de dados e zona de risco da plataforma.</p>
         </div>
-        {!erroInfo && (
-          <span className={sistemaOperacional ? styles.pillOnline : styles.pillOffline}>
-            {sistemaOperacional ? 'Sistema operacional' : 'Atenção necessária'}
-          </span>
-        )}
-      </div>
-      <div className={styles.seletorPeriodo}>
-        <Calendar size={14} />
-        <select value={diasPeriodo} onChange={(evento) => setDiasPeriodo(Number(evento.target.value))}>
-          {OPCOES_PERIODO.map((opcao) => (
-            <option key={opcao.valor} value={opcao.valor}>{opcao.rotulo}</option>
-          ))}
-        </select>
       </div>
     </div>
   )
@@ -362,21 +254,7 @@ function ManutencaoAdmin() {
         </div>
 
         <div className={styles.cartao}>
-          <span className={`${styles.cartaoIcone} ${totalAlertas > 0 ? styles.corAmarela : styles.corVerde}`}>
-            <AlertTriangle size={20} />
-          </span>
-          <span className={styles.cartaoValor}>{totalAlertas}</span>
-          <span className={styles.cartaoRotulo}>Alertas ativos</span>
-        </div>
-
-        <div className={styles.cartao}>
-          <span className={`${styles.cartaoIcone} ${styles.corAzul}`}><Radio size={20} /></span>
-          <span className={styles.cartaoValor}>{totalOffline}</span>
-          <span className={styles.cartaoRotulo}>Estações offline</span>
-        </div>
-
-        <div className={styles.cartao}>
-          <span className={`${styles.cartaoIcone} ${styles.corVerde}`}><Clock size={20} /></span>
+          <span className={`${styles.cartaoIcone} ${styles.corVerde}`}><Bell size={20} /></span>
           <span className={styles.cartaoValor}>{info?.contagens?.log_auditoria ?? '—'}</span>
           <span className={styles.cartaoRotulo}>Eventos de auditoria</span>
         </div>
@@ -384,22 +262,12 @@ function ManutencaoAdmin() {
 
       <div className={styles.linhaResumo}>
         <div className={styles.itemResumo}>
-          <span className={styles.itemResumoRotulo}><Users size={13} /> Contas cadastradas</span>
-          <span className={styles.itemResumoValor}>{contas.length}</span>
-          <ItemTendencia percentual={tendenciaContas} />
-        </div>
-        <div className={styles.itemResumo}>
-          <span className={styles.itemResumoRotulo}><Radio size={13} /> Estações cadastradas</span>
-          <span className={styles.itemResumoValor}>{estacoes.length}</span>
-          <ItemTendencia percentual={tendenciaEstacoes} />
-        </div>
-        <div className={styles.itemResumo}>
-          <span className={styles.itemResumoRotulo}><Activity size={13} /> Leituras processadas ({info?.leituras_periodo?.dias ?? diasPeriodo}d)</span>
+          <span className={styles.itemResumoRotulo}>Leituras processadas ({info?.leituras_periodo?.dias ?? 30}d)</span>
           <span className={styles.itemResumoValor}>{info?.leituras_periodo?.total ?? '—'}</span>
           <ItemTendencia percentual={info?.leituras_periodo?.tendencia ?? null} />
         </div>
         <div className={styles.itemResumo}>
-          <span className={styles.itemResumoRotulo}><HardDrive size={13} /> Armazenamento utilizado</span>
+          <span className={styles.itemResumoRotulo}>Armazenamento utilizado</span>
           <span className={styles.itemResumoValor}>{info?.banco?.tamanho_legivel ?? '—'}</span>
           {info?.banco?.percentual_uso != null && (
             <span className={styles.itemResumoNota}>{info.banco.percentual_uso}% da cota</span>
@@ -407,103 +275,42 @@ function ManutencaoAdmin() {
         </div>
       </div>
 
-      <div className={styles.linha3Colunas}>
-        <DistribuicaoContasCard contas={contas} />
-
-        <div className={`${styles.cartaoBloco} ${styles.cartaoBlocoLargo}`}>
-          <div className={styles.blocoCabecalho}>
-            <h2 className={styles.blocoTitulo}><TrendingUp size={16} /> Crescimento da plataforma</h2>
-            <span className={styles.blocoTag}>Últimos 6 meses</span>
-          </div>
-          <p className={styles.blocoSubtitulo}>Contas, estações e leituras por mês</p>
-          <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={crescimentoMensal} margin={{ top: 10, right: 10, bottom: 0, left: -20 }}>
-              <CartesianGrid strokeDasharray="4 8" vertical={false} stroke="var(--color-grid)" />
-              <XAxis dataKey="rotulo" tick={{ fontSize: 12, fill: 'var(--color-text-secondary)' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 12, fill: 'var(--color-text-secondary)' }} axisLine={false} tickLine={false} width={30} allowDecimals={false} />
-              <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: 'var(--shadow-card)' }} />
-              <Line type="monotone" dataKey="contas" name="Contas" stroke="#4a6fa5" strokeWidth={3} dot={{ r: 3 }} />
-              <Line type="monotone" dataKey="estacoes" name="Estações" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 3 }} />
-              {info?.leituras_por_mes && (
-                <Line type="monotone" dataKey="leituras" name="Leituras" stroke="#16a34a" strokeWidth={3} dot={{ r: 3 }} />
-              )}
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className={styles.cartaoBloco}>
-          <div className={styles.blocoCabecalho}>
-            <h2 className={styles.blocoTitulo}><Database size={16} /> Uso do banco de dados</h2>
-          </div>
-          <p className={styles.blocoSubtitulo}>Espaço ocupado por categoria de tabela</p>
-          {!info?.banco_por_categoria ? (
-            <p className={styles.semDados}>Só disponível com banco Postgres (não aparece no ambiente de desenvolvimento).</p>
-          ) : (
-            <div className={styles.donutLinha}>
-              <div className={styles.donutContainer}>
-                <ResponsiveContainer width="100%" height={160}>
-                  <PieChart>
-                    <Pie data={dadosDonutBanco} dataKey="percentual" innerRadius={44} outerRadius={70} startAngle={90} endAngle={-270}>
-                      {dadosDonutBanco.map((fatia) => (
-                        <Cell key={fatia.chave} fill={fatia.cor} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className={styles.donutCentro}>
-                  <span className={styles.donutTotal}>{info.banco.tamanho_legivel}</span>
-                  <span className={styles.donutRotulo}>total</span>
-                </div>
-              </div>
-              <ul className={styles.legendaDonut}>
-                {dadosDonutBanco.map((fatia) => (
-                  <li key={fatia.chave}>
-                    <span className={styles.pontoLegenda} style={{ backgroundColor: fatia.cor }} />
-                    <span className={styles.legendaNome}>{fatia.rotulo}</span>
-                    <span className={styles.legendaValor}>{fatia.tamanho_legivel}</span>
-                    <span className={styles.legendaPercentual}>{fatia.percentual}%</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      </div>
-
       <div className={styles.cartaoBloco}>
         <div className={styles.blocoCabecalho}>
-          <h2 className={styles.blocoTitulo}><Clock size={16} /> Atividade recente</h2>
-          <Link to="/app/adm/notificacoes" className={styles.linkVerTodas}>Ver todas <ArrowRight size={13} /></Link>
+          <h2 className={styles.blocoTitulo}><Database size={16} /> Uso do banco de dados</h2>
         </div>
-        <p className={styles.blocoSubtitulo}>Últimas ações registradas no sistema</p>
-        {erroInfo ? (
-          <p className={styles.semDados}>{erroInfo}</p>
-        ) : !info ? (
-          <p className={styles.semDados}>Carregando...</p>
-        ) : info.atividade_recente.length === 0 ? (
-          <p className={styles.semDados}>Nenhum evento registrado ainda.</p>
+        <p className={styles.blocoSubtitulo}>Espaço ocupado por categoria de tabela</p>
+        {!info?.banco_por_categoria ? (
+          <p className={styles.semDados}>Só disponível com banco Postgres (não aparece no ambiente de desenvolvimento).</p>
         ) : (
-          <div className={styles.tabelaWrapper}>
-            <table className={styles.tabela}>
-              <thead>
-                <tr>
-                  <th>Data e hora</th>
-                  <th>Evento</th>
-                  <th>Descrição</th>
-                  <th>Usuário</th>
-                </tr>
-              </thead>
-              <tbody>
-                {info.atividade_recente.map((evento) => (
-                  <tr key={evento.id}>
-                    <td>{formatarDataHora(evento.criado_em)}</td>
-                    <td>{rotuloAcao(evento.acao)}</td>
-                    <td>{descricaoEvento(evento)}</td>
-                    <td>{evento.ator_username ?? 'sistema'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className={styles.donutLinha}>
+            <div className={styles.donutContainer}>
+              <ResponsiveContainer width="100%" height={160}>
+                <PieChart>
+                  <Pie data={dadosDonutBanco} dataKey="percentual" innerRadius={44} outerRadius={70} startAngle={90} endAngle={-270}>
+                    {dadosDonutBanco.map((fatia) => (
+                      <Cell key={fatia.chave} fill={fatia.cor} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+              <div className={styles.donutCentro}>
+                <span className={styles.donutTotal}>{info.banco.tamanho_legivel}</span>
+                <span className={styles.donutRotulo}>total</span>
+              </div>
+            </div>
+            <ul className={styles.legendaDonut}>
+              {dadosDonutBanco.map((fatia) => (
+                <li key={fatia.chave}>
+                  <span className={styles.pontoLegenda} style={{ backgroundColor: fatia.cor }} />
+                  <span className={styles.legendaNome}>{fatia.rotulo}</span>
+                  <span className={styles.legendaValores}>
+                    <span className={styles.legendaValor}>{fatia.tamanho_legivel}</span>
+                    <span className={styles.legendaPercentual}>{fatia.percentual}%</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </div>
@@ -511,7 +318,7 @@ function ManutencaoAdmin() {
       <div className={styles.linha2Colunas}>
         <div className={styles.cartaoBloco}>
           <div className={styles.blocoCabecalho}>
-            <h2 className={styles.blocoTitulo}><ArrowRight size={16} /> Ações rápidas</h2>
+            <h2 className={styles.blocoTitulo}>Ações rápidas</h2>
           </div>
           <div className={styles.acoesRapidas}>
             <Link to="/app/adm/contas" className={styles.acaoRapida}>

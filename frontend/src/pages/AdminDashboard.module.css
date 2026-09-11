@@ -58,28 +58,6 @@
   color: rgba(255, 255, 255, 0.85);
 }
 
-.seletorTendencia {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.85rem;
-  border-radius: 10px;
-  background-color: rgba(255, 255, 255, 0.14);
-}
-
-.seletorTendencia select {
-  background: none;
-  border: none;
-  color: #ffffff;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.seletorTendencia select option {
-  color: var(--color-text);
-}
-
 /* Cards de contagem */
 
 .grade {
