@@ -1,22 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet'
-import 'leaflet/dist/leaflet.css'
-import {
-  MapPin,
-  Landmark,
-  AlertTriangle,
-  Sun,
-  Cloud,
-  CloudRain,
-  CloudLightning,
-  CloudSun,
-  Wind,
-  Droplets,
-} from 'lucide-react'
+import { MapPin, AlertTriangle, Sun, Cloud, CloudRain, CloudLightning, CloudSun, Wind, Droplets } from 'lucide-react'
 import StatusMessage from '../components/StatusMessage'
 import { IndicadorAtualizando } from '../components/Spinner'
 import { buscarMeuPerfil } from '../services/perfilService'
-import { buscarEstacoesInmet, buscarPrevisaoInmet, buscarAvisosInmet } from '../services/inmetService'
+import { buscarPrevisaoInmet, buscarAvisosInmet } from '../services/inmetService'
 import { buscarMunicipiosPorUf } from '../services/ibgeService'
 import styles from './ClimaInmet.module.css'
 
@@ -25,11 +12,11 @@ import styles from './ClimaInmet.module.css'
 // Totalmente separada do Dashboard (dado da própria estação ESP32): não
 // reaproveita nenhum dado, componente ou rota de lá.
 //
-// O endpoint de leituras horárias por estação está bloqueado por
-// bot-defense do INMET (ver clima_externo/views.py) — por isso a
-// "Estação de referência" abaixo mostra só identificação/localização/
-// status (e um mapa focado nela), sem valor de leitura ao vivo, em vez
-// de fingir um dado que a API não consegue mais entregar.
+// A previsão do INMET é por MUNICÍPIO (produto de modelo, não leitura de
+// uma estação física — a resposta da API nem carrega um campo de estação,
+// só data/período), por isso a tela gira em torno de Estado + Município,
+// sem um seletor de "estação de referência": isso já existiu numa versão
+// anterior e só confundia, porque mudar de estação não mudava nada aqui.
 
 const UFS = [
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG',
@@ -139,8 +126,6 @@ function CardAviso({ aviso }) {
 
 function ClimaInmet() {
   const [uf, setUf] = useState('')
-  const [estacoesDoEstado, setEstacoesDoEstado] = useState([])
-  const [codigoEstacao, setCodigoEstacao] = useState('')
   const [municipios, setMunicipios] = useState([])
   const [codigoIbge, setCodigoIbge] = useState('')
 
@@ -151,15 +136,11 @@ function ClimaInmet() {
   const [avisos, setAvisos] = useState(null)
   const [erroAvisos, setErroAvisos] = useState(null)
 
-  const [todasEstacoes, setTodasEstacoes] = useState([])
-  const [erroMapa, setErroMapa] = useState(null)
-
   const [carregandoInicial, setCarregandoInicial] = useState(true)
   const [carregandoSelecao, setCarregandoSelecao] = useState(false)
   const [carregandoPrevisao, setCarregandoPrevisao] = useState(false)
 
-  // Carga inicial: perfil (pra sugerir o estado da conta) + todas as
-  // estações do Brasil (usadas só pelo mapa, sem filtro de UF).
+  // Carga inicial: só o perfil, pra sugerir o estado da conta.
   useEffect(() => {
     async function carregar() {
       try {
@@ -168,30 +149,19 @@ function ClimaInmet() {
       } catch {
         // Sem perfil disponível: segue sem sugestão de estado, a pessoa escolhe manualmente.
       }
-      try {
-        const estacoes = await buscarEstacoesInmet()
-        setTodasEstacoes(estacoes)
-      } catch {
-        setErroMapa('Não foi possível carregar o mapa de estações do INMET agora.')
-      }
       setCarregandoInicial(false)
     }
     carregar()
   }, [])
 
-  // Troca de UF: recarrega estações do estado, municípios do estado e
-  // avisos — as três buscas rodam juntas, então uma única "atualizando"
-  // cobre esse grupo (RN: nunca deixar a tela parada sem sinal durante
-  // o delay real dessas chamadas).
+  // Troca de UF: recarrega municípios do estado e avisos oficiais juntos.
   useEffect(() => {
     if (!uf) return
-    setCodigoEstacao('')
     setCodigoIbge('')
     setPrevisao(null)
     setCarregandoSelecao(true)
 
     Promise.allSettled([
-      buscarEstacoesInmet(uf).then(setEstacoesDoEstado).catch(() => setEstacoesDoEstado([])),
       buscarMunicipiosPorUf(uf).then(setMunicipios).catch(() => setMunicipios([])),
       buscarAvisosInmet(uf)
         .then((dados) => {
@@ -217,12 +187,6 @@ function ClimaInmet() {
   }, [municipios])
 
   useEffect(() => {
-    if (estacoesDoEstado.length > 0 && !codigoEstacao) {
-      setCodigoEstacao(estacoesDoEstado[0].codigo)
-    }
-  }, [estacoesDoEstado, codigoEstacao])
-
-  useEffect(() => {
     if (!codigoIbge) return
     setCarregandoPrevisao(true)
     buscarPrevisaoInmet(codigoIbge)
@@ -235,9 +199,9 @@ function ClimaInmet() {
       .finally(() => setCarregandoPrevisao(false))
   }, [codigoIbge])
 
-  const estacaoSelecionada = useMemo(
-    () => estacoesDoEstado.find((item) => item.codigo === codigoEstacao) ?? null,
-    [estacoesDoEstado, codigoEstacao],
+  const municipioSelecionado = useMemo(
+    () => municipios.find((item) => item.codigo === codigoIbge) ?? null,
+    [municipios, codigoIbge],
   )
 
   const banner = (
@@ -249,7 +213,7 @@ function ClimaInmet() {
         </div>
         <div>
           <h1 className={styles.bannerTitulo}>Clima INMET</h1>
-          <p className={styles.bannerSubtitulo}>Acompanhe as condições meteorológicas da estação selecionada.</p>
+          <p className={styles.bannerSubtitulo}>Acompanhe a previsão e os avisos oficiais do seu município.</p>
         </div>
       </div>
     </div>
@@ -270,19 +234,8 @@ function ClimaInmet() {
 
       <section className={styles.card}>
         <div className={styles.seletorCabecalho}>
-          <h2 className={styles.tituloSecao}><MapPin size={16} /> Selecionar de referência</h2>
+          <h2 className={styles.tituloSecao}><MapPin size={16} /> Selecionar localização</h2>
           {carregandoSelecao && <IndicadorAtualizando />}
-          {!carregandoSelecao && estacaoSelecionada && (
-            <div className={styles.chipStatus}>
-              <span className={estacaoSelecionada.operante ? styles.pontoOnline : styles.pontoOffline} />
-              <div className={styles.chipStatusTexto}>
-                <span className={styles.chipStatusTitulo}>
-                  {estacaoSelecionada.operante ? 'Estação ativa' : 'Estação com pane'}
-                </span>
-                <span className={styles.chipStatusSub}>{estacaoSelecionada.nome}</span>
-              </div>
-            </div>
-          )}
         </div>
         <div className={styles.seletores}>
           <label className={styles.campo}>
@@ -296,25 +249,7 @@ function ClimaInmet() {
           </label>
 
           <label className={styles.campo}>
-            <span>Estação INMET de referência</span>
-            <select
-              value={codigoEstacao}
-              onChange={(evento) => setCodigoEstacao(evento.target.value)}
-              disabled={estacoesDoEstado.length === 0}
-            >
-              {estacoesDoEstado.length === 0 && <option value="">Selecione um estado</option>}
-              {estacoesDoEstado.map((item) => (
-                <option key={item.codigo} value={item.codigo}>{item.nome}</option>
-              ))}
-            </select>
-            <small className={styles.campoAjuda}>
-              Só identificação e localização (seção "Estação de referência" abaixo) — o INMET não libera leitura ao
-              vivo por estação.
-            </small>
-          </label>
-
-          <label className={styles.campo}>
-            <span>Município (previsão)</span>
+            <span>Município</span>
             <select
               value={codigoIbge}
               onChange={(evento) => setCodigoIbge(evento.target.value)}
@@ -325,14 +260,15 @@ function ClimaInmet() {
                 <option key={item.codigo} value={item.codigo}>{item.nome}</option>
               ))}
             </select>
-            <small className={styles.campoAjuda}>É este campo que muda a previsão do tempo abaixo.</small>
           </label>
         </div>
       </section>
 
       <section className={styles.card}>
         <div className={styles.seletorCabecalho}>
-          <h2 className={styles.tituloSecao}><CloudSun size={16} /> Previsão do tempo (5 dias)</h2>
+          <h2 className={styles.tituloSecao}>
+            <CloudSun size={16} /> Previsão do tempo (5 dias){municipioSelecionado && ` — ${municipioSelecionado.nome}`}
+          </h2>
           {carregandoPrevisao && <IndicadorAtualizando />}
         </div>
         {carregandoPrevisao ? (
@@ -403,118 +339,6 @@ function ClimaInmet() {
             {[...avisos.hoje, ...avisos.futuro].map((aviso) => (
               <CardAviso key={aviso.id} aviso={aviso} />
             ))}
-          </div>
-        )}
-      </section>
-
-      <section className={styles.card}>
-        <div className={styles.estacaoCabecalho}>
-          <h2 className={styles.tituloSecao}><Landmark size={16} /> Estação de referência (INMET)</h2>
-          {carregandoSelecao && <IndicadorAtualizando />}
-          {!carregandoSelecao && estacaoSelecionada && (
-            <span className={estacaoSelecionada.operante ? styles.badgeOperante : styles.badgePane}>
-              {estacaoSelecionada.operante ? 'Ativa' : 'Com pane'}
-            </span>
-          )}
-        </div>
-        {carregandoSelecao ? (
-          <CardVazio texto="Carregando estação..." />
-        ) : !estacaoSelecionada ? (
-          <CardVazio texto="Escolha um estado com estação disponível para ver os detalhes." />
-        ) : (
-          <div className={styles.estacaoGrid}>
-            <div className={styles.estacaoMapaContainer}>
-              <MapContainer
-                key={estacaoSelecionada.codigo}
-                center={[Number(estacaoSelecionada.latitude), Number(estacaoSelecionada.longitude)]}
-                zoom={9}
-                scrollWheelZoom={false}
-                className={styles.estacaoMapa}
-              >
-                <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
-                <CircleMarker
-                  center={[Number(estacaoSelecionada.latitude), Number(estacaoSelecionada.longitude)]}
-                  radius={8}
-                  pathOptions={{
-                    color: estacaoSelecionada.operante ? 'var(--color-status-online)' : 'var(--color-status-offline)',
-                    fillOpacity: 0.8,
-                  }}
-                >
-                  <Popup>
-                    <strong>{estacaoSelecionada.nome}</strong>
-                    <br />
-                    {estacaoSelecionada.uf} · {estacaoSelecionada.situacao}
-                  </Popup>
-                </CircleMarker>
-              </MapContainer>
-            </div>
-
-            <div className={styles.estacaoInfo}>
-              <div className={styles.estacaoLinha}>
-                <span className={styles.estacaoRotulo}>Nome</span>
-                <span>{estacaoSelecionada.nome}</span>
-              </div>
-              <div className={styles.estacaoLinha}>
-                <span className={styles.estacaoRotulo}>Código</span>
-                <span>{estacaoSelecionada.codigo}</span>
-              </div>
-              <div className={styles.estacaoLinha}>
-                <span className={styles.estacaoRotulo}>Coordenadas</span>
-                <span>{estacaoSelecionada.latitude}, {estacaoSelecionada.longitude}</span>
-              </div>
-              <div className={styles.estacaoLinha}>
-                <span className={styles.estacaoRotulo}>Altitude</span>
-                <span>{estacaoSelecionada.altitude} m</span>
-              </div>
-              <div className={styles.estacaoLinha}>
-                <span className={styles.estacaoRotulo}>Status</span>
-                <span className={estacaoSelecionada.operante ? styles.statusOperante : styles.statusPane}>
-                  {estacaoSelecionada.situacao}
-                </span>
-              </div>
-              <p className={styles.avisoTexto}>
-                O INMET não disponibiliza leitura ao vivo desta estação via API pública no momento — mostramos só a
-                identificação e localização oficiais dela.
-              </p>
-            </div>
-          </div>
-        )}
-      </section>
-
-      <section className={styles.card}>
-        <h2 className={styles.tituloSecao}><MapPin size={16} /> Mapa de estações</h2>
-        {erroMapa ? (
-          <CardVazio texto={erroMapa} />
-        ) : (
-          <div className={styles.mapaContainer}>
-            <MapContainer center={[-14.2, -51.9]} zoom={4} scrollWheelZoom={false} className={styles.mapa}>
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-              {todasEstacoes
-                .filter((item) => Number.isFinite(Number(item.latitude)) && Number.isFinite(Number(item.longitude)))
-                .map((item) => (
-                <CircleMarker
-                  key={item.codigo}
-                  center={[Number(item.latitude), Number(item.longitude)]}
-                  radius={4}
-                  pathOptions={{
-                    color: item.operante ? 'var(--color-status-online)' : 'var(--color-status-offline)',
-                    fillOpacity: 0.8,
-                  }}
-                >
-                  <Popup>
-                    <strong>{item.nome}</strong>
-                    <br />
-                    {item.uf} · {item.situacao}
-                  </Popup>
-                </CircleMarker>
-              ))}
-            </MapContainer>
           </div>
         )}
       </section>
