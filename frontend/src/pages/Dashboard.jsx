@@ -11,7 +11,7 @@ import StatusMessage from '../components/StatusMessage'
 import { derivarVisaoPeriodo } from '../services/climaExternoService'
 import { buscarClimaDaEstacao } from '../services/climaEstacaoService'
 import { buscarMinhaEstacaoPrincipal } from '../services/estacaoService'
-import { OPCOES_PERIODO } from '../services/metricasClima'
+import { OPCOES_PERIODO, tendenciaUltimaHora } from '../services/metricasClima'
 import styles from './Dashboard.module.css'
 
 // Dashboard da conta Standard (Tela 4 da especificação de fluxo). Os dados
@@ -59,7 +59,9 @@ function Dashboard() {
 
   const visao = useMemo(() => (clima ? derivarVisaoPeriodo(clima, periodo) : null), [clima, periodo])
 
-  const cabecalho = <CabecalhoStandard identificadorEstacao={estacao?.identificador ?? '—'} />
+  const cabecalho = (
+    <CabecalhoStandard identificadorEstacao={estacao?.identificador ?? '—'} estacaoOnline={!estacao?.esta_offline} />
+  )
 
   if (carregando) {
     return (
@@ -112,6 +114,18 @@ function Dashboard() {
 
   const { resumoTopo } = visao
 
+  // Horário da última leitura chegada (uma só data_hora por leitura, vale
+  // pra temperatura/umidade/pressão/vento juntos) e tendência comparando a
+  // média da última hora com a da hora anterior — não com "a média do dia
+  // anterior" (isso já existe em resumoDia, mas é uma janela grande demais
+  // pra responder "subiu ou desceu na última hora").
+  const horarioUltimaLeitura = clima.atualizadoEm
+    ? new Date(clima.atualizadoEm).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    : null
+  const tendenciaTemperatura = tendenciaUltimaHora(clima.horaria.temperatura)
+  const tendenciaUmidade = tendenciaUltimaHora(clima.horaria.umidade)
+  const tendenciaPressao = tendenciaUltimaHora(clima.horaria.pressao)
+
   return (
     <div className={styles.pagina}>
       {cabecalho}
@@ -142,17 +156,12 @@ function Dashboard() {
           rotulo="Temperatura"
           valor={resumoTopo.temperatura != null ? `${resumoTopo.temperatura}°C` : '—'}
           legenda={
-            clima.resumoDia.deltaTemperatura == null
+            tendenciaTemperatura.delta == null
               ? undefined
-              : `${Math.abs(clima.resumoDia.deltaTemperatura)}°C ${clima.resumoDia.deltaTemperatura >= 0 ? 'acima' : 'abaixo'} da média anterior`
+              : `${Math.abs(tendenciaTemperatura.delta)}°C na última hora`
           }
-          tendencia={
-            clima.resumoDia.deltaTemperatura == null
-              ? undefined
-              : clima.resumoDia.deltaTemperatura >= 0
-                ? 'alta'
-                : 'baixa'
-          }
+          tendencia={tendenciaTemperatura.tendencia}
+          horarioAtualizacao={horarioUltimaLeitura}
         />
         <SummaryStatCard
           icone={Droplets}
@@ -160,13 +169,10 @@ function Dashboard() {
           rotulo="Umidade"
           valor={resumoTopo.umidade != null ? `${resumoTopo.umidade}%` : '—'}
           legenda={
-            clima.resumoDia.deltaUmidade == null
-              ? undefined
-              : `${Math.abs(clima.resumoDia.deltaUmidade)}% ${clima.resumoDia.deltaUmidade >= 0 ? 'acima' : 'abaixo'} da média anterior`
+            tendenciaUmidade.delta == null ? undefined : `${Math.abs(tendenciaUmidade.delta)}% na última hora`
           }
-          tendencia={
-            clima.resumoDia.deltaUmidade == null ? undefined : clima.resumoDia.deltaUmidade >= 0 ? 'alta' : 'baixa'
-          }
+          tendencia={tendenciaUmidade.tendencia}
+          horarioAtualizacao={horarioUltimaLeitura}
         />
         <SummaryStatCard
           icone={Gauge}
@@ -174,13 +180,10 @@ function Dashboard() {
           rotulo="Pressão"
           valor={resumoTopo.pressao != null ? `${resumoTopo.pressao} hPa` : '—'}
           legenda={
-            clima.resumoDia.deltaPressao == null
-              ? undefined
-              : `${Math.abs(clima.resumoDia.deltaPressao)} hPa ${clima.resumoDia.deltaPressao >= 0 ? 'acima' : 'abaixo'} da média anterior`
+            tendenciaPressao.delta == null ? undefined : `${Math.abs(tendenciaPressao.delta)} hPa na última hora`
           }
-          tendencia={
-            clima.resumoDia.deltaPressao == null ? undefined : clima.resumoDia.deltaPressao >= 0 ? 'alta' : 'baixa'
-          }
+          tendencia={tendenciaPressao.tendencia}
+          horarioAtualizacao={horarioUltimaLeitura}
         />
         <SummaryStatCard
           icone={Wind}
@@ -188,6 +191,7 @@ function Dashboard() {
           rotulo="Vento"
           valor={resumoTopo.vento.velocidade != null ? `${resumoTopo.vento.velocidade} km/h` : '—'}
           legenda={`${resumoTopo.vento.direcaoTexto} · Rajadas ${resumoTopo.vento.rajada ?? '—'} km/h`}
+          horarioAtualizacao={horarioUltimaLeitura}
         />
       </div>
 

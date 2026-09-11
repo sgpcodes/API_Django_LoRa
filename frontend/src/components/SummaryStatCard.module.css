@@ -52,6 +52,15 @@
   transition: var(--transition-theme);
 }
 
+.horario {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  color: var(--color-text-secondary);
+  opacity: 0.85;
+}
+
 .barraProgresso {
   width: 100%;
   height: 5px;

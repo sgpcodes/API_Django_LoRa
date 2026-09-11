@@ -30,6 +30,7 @@ function formatarDataHora(data) {
 // exportação.
 function CabecalhoStandard({
   identificadorEstacao,
+  estacaoOnline = true,
   subtitulo = 'Acompanhe em tempo real os dados da sua estação.',
   mostrarExportar = true,
   mostrarChips = true,
@@ -64,10 +65,10 @@ function CabecalhoStandard({
             </div>
 
             <div className={styles.chip}>
-              <span className={styles.pontoAtivo} />
+              <span className={`${styles.pontoAtivo} ${estacaoOnline ? '' : styles.pontoInativo}`} />
               <div className={styles.chipTexto}>
                 <span className={styles.chipHora}>{identificadorEstacao}</span>
-                <span className={styles.chipData}>Estação ativa</span>
+                <span className={styles.chipData}>{estacaoOnline ? 'Estação online' : 'Estação offline'}</span>
               </div>
             </div>
           </>

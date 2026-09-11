@@ -64,6 +64,10 @@
   flex-shrink: 0;
 }
 
+.pontoInativo {
+  background-color: var(--color-status-offline, #dc2626);
+}
+
 .menuExportar {
   position: relative;
 }

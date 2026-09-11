@@ -20,3 +20,16 @@ export const OPCOES_PERIODO = [
   { valor: 7, rotulo: 'Últimos 7 dias' },
   { valor: 30, rotulo: 'Últimos 30 dias' },
 ]
+
+// Compara a última hora com pontos (uma média por hora — ver
+// climaEstacaoService.js/climaExternoService.js `horaria.*`) com a hora
+// anterior a ela. Sem duas horas com dado real pra comparar, devolve
+// tendência indefinida em vez de arriscar um "subiu"/"desceu" errado.
+export function tendenciaUltimaHora(serieHoraria) {
+  const atual = serieHoraria?.at(-1)?.valor
+  const anterior = serieHoraria?.at(-2)?.valor
+  if (atual == null || anterior == null) return { delta: null, tendencia: undefined }
+  const delta = Number((atual - anterior).toFixed(1))
+  if (delta === 0) return { delta, tendencia: undefined }
+  return { delta, tendencia: delta > 0 ? 'alta' : 'baixa' }
+}
