@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { MapPin, AlertTriangle, Sun, Cloud, CloudRain, CloudLightning, CloudSun, Wind, Droplets } from 'lucide-react'
+import { MapPin, AlertTriangle, Landmark, Sun, Cloud, CloudRain, CloudLightning, CloudSun, Wind, Droplets } from 'lucide-react'
 import StatusMessage from '../components/StatusMessage'
 import { IndicadorAtualizando } from '../components/Spinner'
 import { buscarMeuPerfil } from '../services/perfilService'
-import { buscarPrevisaoInmet, buscarAvisosInmet } from '../services/inmetService'
+import { buscarEstacoesInmet, buscarPrevisaoInmet, buscarAvisosInmet } from '../services/inmetService'
 import { buscarMunicipiosPorUf } from '../services/ibgeService'
 import styles from './ClimaInmet.module.css'
 
@@ -15,8 +15,11 @@ import styles from './ClimaInmet.module.css'
 // A previsão do INMET é por MUNICÍPIO (produto de modelo, não leitura de
 // uma estação física — a resposta da API nem carrega um campo de estação,
 // só data/período), por isso a tela gira em torno de Estado + Município,
-// sem um seletor de "estação de referência": isso já existiu numa versão
-// anterior e só confundia, porque mudar de estação não mudava nada aqui.
+// sem um seletor de "estação de referência" independente: isso já existiu
+// numa versão anterior e só confundia, porque mudar de estação não mudava
+// nada na previsão. A lista de estações oficiais lá embaixo é só
+// informativa (nome/status/localização) e segue o Estado já escolhido em
+// vez de ter um seletor próprio, exatamente pra não reabrir essa confusão.
 
 const UFS = [
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG',
@@ -136,6 +139,9 @@ function ClimaInmet() {
   const [avisos, setAvisos] = useState(null)
   const [erroAvisos, setErroAvisos] = useState(null)
 
+  const [estacoesDoEstado, setEstacoesDoEstado] = useState([])
+  const [erroEstacoes, setErroEstacoes] = useState(null)
+
   const [carregandoInicial, setCarregandoInicial] = useState(true)
   const [carregandoSelecao, setCarregandoSelecao] = useState(false)
   const [carregandoPrevisao, setCarregandoPrevisao] = useState(false)
@@ -154,7 +160,8 @@ function ClimaInmet() {
     carregar()
   }, [])
 
-  // Troca de UF: recarrega municípios do estado e avisos oficiais juntos.
+  // Troca de UF: recarrega municípios, avisos oficiais e a lista de
+  // estações do estado juntos.
   useEffect(() => {
     if (!uf) return
     setCodigoIbge('')
@@ -169,6 +176,12 @@ function ClimaInmet() {
           setErroAvisos(null)
         })
         .catch(() => setErroAvisos('Não foi possível carregar os avisos oficiais agora.')),
+      buscarEstacoesInmet(uf)
+        .then((dados) => {
+          setEstacoesDoEstado(dados)
+          setErroEstacoes(null)
+        })
+        .catch(() => setErroEstacoes('Não foi possível carregar as estações oficiais agora.')),
     ]).then(() => setCarregandoSelecao(false))
   }, [uf])
 
@@ -340,6 +353,43 @@ function ClimaInmet() {
               <CardAviso key={aviso.id} aviso={aviso} />
             ))}
           </div>
+        )}
+      </section>
+
+      <section className={styles.card}>
+        <div className={styles.seletorCabecalho}>
+          <h2 className={styles.tituloSecao}>
+            <Landmark size={16} /> Estações oficiais do INMET{uf && ` — ${uf}`}
+          </h2>
+          {carregandoSelecao && <IndicadorAtualizando />}
+        </div>
+        <p className={styles.secaoNota}>
+          Só identificação, localização e status — o INMET não libera leitura ao vivo por estação via API pública.
+        </p>
+        {carregandoSelecao ? (
+          <CardVazio texto="Carregando estações..." />
+        ) : erroEstacoes ? (
+          <CardVazio texto={erroEstacoes} />
+        ) : estacoesDoEstado.length === 0 ? (
+          <CardVazio texto="Nenhuma estação oficial do INMET encontrada nesse estado." />
+        ) : (
+          <>
+            <p className={styles.contagemEstacoes}>
+              {estacoesDoEstado.length} estação(ões) — {estacoesDoEstado.filter((item) => item.operante).length} ativa(s),{' '}
+              {estacoesDoEstado.filter((item) => !item.operante).length} com pane
+            </p>
+            <ul className={styles.listaEstacoes}>
+              {estacoesDoEstado.map((item) => (
+                <li key={item.codigo}>
+                  <span className={item.operante ? styles.pontoOnline : styles.pontoOffline} />
+                  <div className={styles.estacaoItemTexto}>
+                    <span className={styles.estacaoItemNome}>{item.nome}</span>
+                    <span className={styles.estacaoItemSub}>{item.situacao}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </section>
     </div>
