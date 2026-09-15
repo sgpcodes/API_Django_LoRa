@@ -7,27 +7,33 @@ import GradeGraficosMetricas from '../components/GradeGraficosMetricas'
 import SummaryStatCard from '../components/SummaryStatCard'
 import StatusMessage from '../components/StatusMessage'
 import { buscarClimaAtual, derivarVisaoPeriodo } from '../services/climaExternoService'
-import { ESTACOES_VIRTUAIS, buscarEstacaoVirtual } from '../services/estacoesVirtuais'
+import { UFS, buscarMunicipiosPorUf } from '../services/ibgeService'
+import { geocodificarCidade } from '../services/geocodingService'
 import { tendenciaUltimaHora } from '../services/metricasClima'
 import styles from './Dashboard.module.css'
 
 // Dashboard da conta Standard — página da estação (Tela 4 da especificação
 // de fluxo, redesenhada: RF-15 a RF-22). Une o que antes eram duas telas
 // separadas — o Dashboard e a aba "Clima INMET" (previsão de 5 dias por
-// município) — numa página só: cabeçalho com identidade+mapa+seletor de
-// estação, tira de tempo real, previsão da semana + painel "Hoje", seletor
-// de período único e os 5 gráficos lado a lado.
+// município) — numa página só: cabeçalho com seletor de Estado/Cidade
+// (catálogo do IBGE) + mapa, tira de tempo real, previsão da semana +
+// painel "Hoje", seletor de período único e os 5 gráficos lado a lado.
 //
-// Piloto de estações virtuais (RF-11/RF-13): a conta escolhe entre as 5
-// estações fixas de services/estacoesVirtuais.js, cada uma com sua própria
-// coordenada — o clima (Open-Meteo) e a previsão do INMET são buscados de
-// novo pra localidade escolhida. Não depende mais de leitura bruta da
-// ESP32 (a real fica intermitente e só manda temperatura/umidade, o que
-// deixava pressão/vento/chuva sempre em "—") nem de estação atribuída pelo
-// admin — qualquer conta Standard vê as 5, sem bloqueio por plano ainda
-// (fica pra quando o cadastro de estação virtual virar de verdade, RF-03).
+// Não existe "estação" nem nome fictício aqui: o Open-Meteo não tem
+// estação nenhuma, só responde clima por coordenada (ver conversa no
+// parecer) — então a identidade da página é a própria cidade escolhida.
+// A coordenada dessa cidade é resolvida na hora via geocodingService.js
+// (mesmo provedor do clima); o INMET usa o código de município que o
+// próprio IBGE já devolve na lista. Também não depende mais de leitura
+// bruta da ESP32 (intermitente, só manda temperatura/umidade) nem de
+// estação atribuída pelo admin, e não tem bloqueio por plano ainda —
+// qualquer conta Standard pode escolher qualquer cidade do Brasil (fica
+// pra quando existir cadastro de estação virtual de verdade, RF-03).
 const INTERVALO_ATUALIZACAO_MS = 60_000
-const CHAVE_ESTACAO_SELECIONADA = 'lacop:estacaoVirtualSelecionada'
+const CHAVE_UF = 'lacop:ufSelecionada'
+const CHAVE_CIDADE = 'lacop:cidadeSelecionada'
+const UF_PADRAO = 'RJ'
+const CIDADE_PADRAO = 'Maricá'
 
 function Dashboard() {
   const { t, i18n } = useTranslation()
@@ -37,26 +43,73 @@ function Dashboard() {
     { valor: 7, rotulo: t('dashboard.periodo7dias') },
     { valor: 30, rotulo: t('dashboard.periodo30dias') },
   ]
-  const [estacaoVirtualId, setEstacaoVirtualId] = useState(
-    () => localStorage.getItem(CHAVE_ESTACAO_SELECIONADA) ?? ESTACOES_VIRTUAIS[0].id,
-  )
-  const estacaoVirtual = buscarEstacaoVirtual(estacaoVirtualId)
+  const [uf, setUf] = useState(() => localStorage.getItem(CHAVE_UF) ?? UF_PADRAO)
+  const [cidade, setCidade] = useState(() => localStorage.getItem(CHAVE_CIDADE) ?? CIDADE_PADRAO)
+  const [municipios, setMunicipios] = useState([])
+  const [coordenadas, setCoordenadas] = useState(null)
+  const [carregandoLocalizacao, setCarregandoLocalizacao] = useState(true)
   const [clima, setClima] = useState(null)
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState(null)
   const [periodo, setPeriodo] = useState('hoje')
 
-  // Busca a cada 1 min o clima (Open-Meteo) da estação virtual escolhida —
-  // troca de estação refaz a busca na hora, sem esperar o próximo ciclo.
-  // Trocar o período (Hoje/Ontem/7/30 dias) não busca de novo, só
-  // filtra/agrupa o que já está em `clima` (ver derivarVisaoPeriodo).
+  // Troca de estado: busca a lista de municípios dele (IBGE). Se a cidade
+  // atual não existir nessa lista (trocou de estado, ou é a carga inicial
+  // e "Maricá" não existe no estado escolhido), cai na primeira da lista.
   useEffect(() => {
+    let cancelado = false
+    buscarMunicipiosPorUf(uf)
+      .then((lista) => {
+        if (cancelado) return
+        setMunicipios(lista)
+        if (!lista.some((m) => m.nome === cidade)) {
+          setCidade(lista[0]?.nome ?? '')
+        }
+      })
+      .catch(() => {
+        if (!cancelado) setMunicipios([])
+      })
+    return () => {
+      cancelado = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uf])
+
+  // Troca de cidade: geocodifica pra ter uma coordenada de verdade —
+  // o IBGE não dá latitude/longitude, só nome/código (ver geocodingService.js).
+  useEffect(() => {
+    if (!cidade) return
+    let cancelado = false
+    setCarregandoLocalizacao(true)
+    geocodificarCidade(cidade, uf)
+      .then((coords) => {
+        if (!cancelado) setCoordenadas(coords)
+      })
+      .catch(() => {
+        if (!cancelado) {
+          setCoordenadas(null)
+          setErro(t('dashboard.erroBusca'))
+        }
+      })
+      .finally(() => {
+        if (!cancelado) setCarregandoLocalizacao(false)
+      })
+    return () => {
+      cancelado = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cidade, uf])
+
+  // Busca o clima (Open-Meteo) pra coordenada já resolvida, a cada 1 min —
+  // troca de cidade refaz na hora, sem esperar o próximo ciclo.
+  useEffect(() => {
+    if (!coordenadas) return
     let cancelado = false
     setCarregando(true)
 
     async function carregar() {
       try {
-        const dados = await buscarClimaAtual({ latitude: estacaoVirtual.latitude, longitude: estacaoVirtual.longitude })
+        const dados = await buscarClimaAtual(coordenadas)
         if (!cancelado) {
           setClima(dados)
           setErro(null)
@@ -75,18 +128,38 @@ function Dashboard() {
       clearInterval(intervalo)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [estacaoVirtual.id])
+  }, [coordenadas])
 
-  function aoMudarEstacao(id) {
-    setEstacaoVirtualId(id)
-    localStorage.setItem(CHAVE_ESTACAO_SELECIONADA, id)
+  function aoMudarUf(novaUf) {
+    setUf(novaUf)
+    localStorage.setItem(CHAVE_UF, novaUf)
+  }
+
+  function aoMudarCidade(novaCidade) {
+    setCidade(novaCidade)
+    localStorage.setItem(CHAVE_CIDADE, novaCidade)
   }
 
   const visao = useMemo(() => (clima ? derivarVisaoPeriodo(clima, periodo) : null), [clima, periodo])
 
+  const cabecalho = (
+    <EstacaoCabecalho
+      cidade={cidade}
+      uf={uf}
+      online={!erro}
+      coordenadas={coordenadas}
+      carregandoLocalizacao={carregandoLocalizacao}
+      ufs={UFS}
+      municipios={municipios}
+      onMudarUf={aoMudarUf}
+      onMudarCidade={aoMudarCidade}
+    />
+  )
+
   if (carregando) {
     return (
       <div className={styles.pagina}>
+        {cabecalho}
         <StatusMessage texto={t('dashboard.carregando')} />
       </div>
     )
@@ -95,6 +168,7 @@ function Dashboard() {
   if (erro || !clima) {
     return (
       <div className={styles.pagina}>
+        {cabecalho}
         <StatusMessage texto={erro ?? t('dashboard.erroBusca')} />
       </div>
     )
@@ -113,15 +187,7 @@ function Dashboard() {
 
   return (
     <div className={styles.pagina}>
-      <EstacaoCabecalho
-        nome={estacaoVirtual.nome}
-        online={!erro}
-        localizacaoTexto={`${estacaoVirtual.cidade} - ${estacaoVirtual.uf}`}
-        coordenadas={{ latitude: estacaoVirtual.latitude, longitude: estacaoVirtual.longitude }}
-        opcoesEstacao={ESTACOES_VIRTUAIS}
-        estacaoSelecionadaId={estacaoVirtual.id}
-        onMudarEstacao={aoMudarEstacao}
-      />
+      {cabecalho}
 
       <div className={styles.cardsPrincipais}>
         <SummaryStatCard
@@ -181,7 +247,7 @@ function Dashboard() {
         />
       </div>
 
-      <PrevisaoSemana clima={clima} uf={estacaoVirtual.uf} cidade={estacaoVirtual.cidade} />
+      <PrevisaoSemana clima={clima} uf={uf} cidade={cidade} />
 
       <div className={styles.seletorPeriodoTopo}>
         <span className={styles.seletorPeriodoRotulo}>

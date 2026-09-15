@@ -16,6 +16,10 @@ function formatarCoordenada(valor, positivo, negativo) {
 function Mapa({ coordenadas, nome, altura }) {
   return (
     <MapContainer
+      // `key` força o Leaflet a remontar (e recentralizar) quando a
+      // coordenada muda — `center` sozinho só vale na primeira montagem,
+      // trocar de cidade não move o mapa sem isso.
+      key={`${coordenadas.latitude},${coordenadas.longitude}`}
       center={[coordenadas.latitude, coordenadas.longitude]}
       zoom={11}
       scrollWheelZoom={false}
@@ -37,20 +41,29 @@ function Mapa({ coordenadas, nome, altura }) {
   )
 }
 
-// Cabeçalho da página da estação: identidade (nome, status) + localização
-// + mapa. `coordenadas` vem da estação virtual selecionada (ver
-// services/estacoesVirtuais.js) até existir cadastro de GPS de verdade
-// (ver parecer sobre Open-Meteo — é a mesma lacuna registrada lá).
-//
-// `opcoesEstacao` (opcional): quando vem com mais de uma opção, o nome
-// vira um seletor de verdade — é o piloto de várias estações virtuais
-// (RF-13), não uma estação fixa por conta. Sem isso (ou com só uma
-// opção), mostra só o nome, sem dropdown.
-function EstacaoCabecalho({ nome, online, localizacaoTexto, coordenadas, opcoesEstacao, estacaoSelecionadaId, onMudarEstacao }) {
+// Cabeçalho da página da estação: seletor de localização (Estado/Cidade,
+// catálogo do IBGE) + status + mapa. Não existe "nome de estação" fictício
+// aqui — o Open-Meteo não tem estação nenhuma, só responde clima por
+// coordenada (ver conversa no parecer: a "identidade" que existe é a
+// própria cidade escolhida, geocodificada na hora — ver
+// services/geocodingService.js). `coordenadas` fica null enquanto a
+// geocodificação da cidade escolhida ainda não voltou.
+function EstacaoCabecalho({
+  cidade,
+  uf,
+  online,
+  coordenadas,
+  carregandoLocalizacao,
+  ufs,
+  municipios,
+  onMudarUf,
+  onMudarCidade,
+}) {
   const { t } = useTranslation()
   const [mapaExpandido, setMapaExpandido] = useState(false)
-  const coordenadaTexto = `${formatarCoordenada(coordenadas.latitude, 'N', 'S')}, ${formatarCoordenada(coordenadas.longitude, 'L', 'O')}`
-  const temSeletor = opcoesEstacao?.length > 1
+  const coordenadaTexto = coordenadas
+    ? `${formatarCoordenada(coordenadas.latitude, 'N', 'S')}, ${formatarCoordenada(coordenadas.longitude, 'L', 'O')}`
+    : t('estacaoPagina.localizando')
 
   return (
     <div className={styles.cabecalho}>
@@ -60,52 +73,70 @@ function EstacaoCabecalho({ nome, online, localizacaoTexto, coordenadas, opcoesE
         </span>
         <div className={styles.textos}>
           <div className={styles.linhaNome}>
-            {temSeletor ? (
-              <span className={styles.seletorNome}>
-                <select
-                  id="estacao-selecionada"
-                  className={styles.selectNome}
-                  value={estacaoSelecionadaId}
-                  onChange={(evento) => onMudarEstacao(evento.target.value)}
-                  aria-label={t('estacaoPagina.escolherEstacao')}
-                >
-                  {opcoesEstacao.map((opcao) => (
-                    <option key={opcao.id} value={opcao.id}>
-                      {opcao.nome}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown size={18} className={styles.chevronNome} />
-              </span>
-            ) : (
-              <h1 className={styles.nome}>{nome}</h1>
-            )}
+            <span className={styles.seletorNome}>
+              <select
+                id="cidade-selecionada"
+                className={styles.selectNome}
+                value={cidade}
+                onChange={(evento) => onMudarCidade(evento.target.value)}
+                disabled={municipios.length === 0}
+                aria-label={t('estacaoPagina.escolherCidade')}
+              >
+                {municipios.length === 0 && <option value="">{t('estacaoPagina.carregandoCidades')}</option>}
+                {municipios.map((municipio) => (
+                  <option key={municipio.codigo} value={municipio.nome}>
+                    {municipio.nome}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown size={18} className={styles.chevronNome} />
+            </span>
             <span className={`${styles.status} ${online ? styles.statusOnline : styles.statusOffline}`}>
               <span className={styles.pontoStatus} />
               {online ? t('estacaoPagina.online') : t('estacaoPagina.offline')}
             </span>
           </div>
-          <span className={styles.localizacao}>{localizacaoTexto}</span>
-          <span className={styles.coordenadas}>{coordenadaTexto}</span>
+
+          <span className={styles.seletorUf}>
+            <select
+              id="uf-selecionada"
+              className={styles.selectUf}
+              value={uf}
+              onChange={(evento) => onMudarUf(evento.target.value)}
+              aria-label={t('estacaoPagina.escolherEstado')}
+            >
+              {ufs.map((sigla) => (
+                <option key={sigla} value={sigla}>
+                  {sigla}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={13} className={styles.chevronUf} />
+          </span>
+
+          <span className={styles.coordenadas}>{carregandoLocalizacao ? t('estacaoPagina.localizando') : coordenadaTexto}</span>
         </div>
       </div>
 
       <div className={styles.mapaContainer}>
-        <Mapa coordenadas={coordenadas} nome={nome} altura="100%" />
+        {coordenadas && <Mapa coordenadas={coordenadas} nome={cidade} altura="100%" />}
         <button
           type="button"
           className={styles.botaoExpandir}
           onClick={() => setMapaExpandido(true)}
           aria-label={t('estacaoPagina.expandirMapa')}
           title={t('estacaoPagina.expandirMapa')}
+          disabled={!coordenadas}
         >
           <Maximize2 size={14} />
         </button>
       </div>
 
-      <Modal aberto={mapaExpandido} onFechar={() => setMapaExpandido(false)} titulo={nome} icone={Radio}>
-        <Mapa coordenadas={coordenadas} nome={nome} altura="60vh" />
-      </Modal>
+      {coordenadas && (
+        <Modal aberto={mapaExpandido} onFechar={() => setMapaExpandido(false)} titulo={cidade} icone={Radio}>
+          <Mapa coordenadas={coordenadas} nome={cidade} altura="60vh" />
+        </Modal>
+      )}
     </div>
   )
 }

@@ -62,10 +62,8 @@ function formatarHora(horaISO) {
 // INMET não tem (ponto de orvalho, UV, visibilidade, nascer/pôr do sol —
 // tudo isso vem de `clima`, a mesma fonte que já alimenta a tira de tempo
 // real e os gráficos). É a fusão pedida entre o Dashboard e a aba Clima
-// INMET. `uf`/`cidade` vêm da estação virtual escolhida no seletor do
-// cabeçalho (ver services/estacoesVirtuais.js) — antes disso existir, essa
-// tela resolvia sozinha pela cidade/estado do perfil da conta; agora quem
-// manda é a estação selecionada, então refaz a busca sempre que ela muda.
+// INMET. `uf`/`cidade` vêm do seletor de Estado/Cidade do cabeçalho (ver
+// pages/Dashboard.jsx) — refaz a busca sempre que a cidade escolhida muda.
 function PrevisaoSemana({ clima, uf, cidade }) {
   const { t } = useTranslation()
   const [previsao, setPrevisao] = useState(null)
