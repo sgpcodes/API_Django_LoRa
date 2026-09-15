@@ -1,26 +1,33 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Radio, Thermometer, Droplets, Gauge, Wind, CloudRain, Calendar } from 'lucide-react'
+import { Thermometer, Droplets, Gauge, Wind, CloudRain, Calendar } from 'lucide-react'
 import EstacaoCabecalho from '../components/EstacaoCabecalho'
 import PrevisaoSemana from '../components/PrevisaoSemana'
 import GradeGraficosMetricas from '../components/GradeGraficosMetricas'
 import SummaryStatCard from '../components/SummaryStatCard'
 import StatusMessage from '../components/StatusMessage'
-import { derivarVisaoPeriodo, COORDENADAS_PADRAO } from '../services/climaExternoService'
-import { buscarClimaDaEstacao } from '../services/climaEstacaoService'
+import { buscarClimaAtual, derivarVisaoPeriodo, COORDENADAS_PADRAO } from '../services/climaExternoService'
 import { buscarMinhaEstacaoPrincipal } from '../services/estacaoService'
 import { tendenciaUltimaHora } from '../services/metricasClima'
 import styles from './Dashboard.module.css'
 
 // Dashboard da conta Standard — página da estação (Tela 4 da especificação
 // de fluxo, redesenhada: RF-15 a RF-22). Une o que antes eram duas telas
-// separadas — o Dashboard (dado da própria estação/ESP32, com fallback pra
-// Open-Meteo enquanto o sensor não manda tudo — ver climaEstacaoService.js)
-// e a aba "Clima INMET" (previsão de 5 dias por município) — numa página
-// só: cabeçalho com identidade+mapa, tira de tempo real, previsão da
-// semana + painel "Hoje", seletor de período único e os 5 gráficos lado a
-// lado. A aba INMET separada e o dashboard antigo (estação real "crua")
-// saíram do menu — ver Sidebar.jsx e App.jsx.
+// separadas — o Dashboard e a aba "Clima INMET" (previsão de 5 dias por
+// município) — numa página só: cabeçalho com identidade+mapa, tira de
+// tempo real, previsão da semana + painel "Hoje", seletor de período único
+// e os 5 gráficos lado a lado.
+//
+// O dado climático não vem mais da leitura bruta da ESP32 (ver histórico
+// de climaEstacaoService.js, que hoje só sobrevive por causa de
+// `direcaoTexto`, usado pelo painel do admin): a conta pediu pra tirar
+// essa dependência — a ESP32 real só manda temperatura/umidade e fica
+// intermitente, o que deixava pressão/vento/chuva sempre em "—" e o selo
+// "Offline" contradizendo o resto da tela cheia de dado. Agora é tudo
+// Open-Meteo (`buscarClimaAtual`), pra qualquer conta Standard, com ou sem
+// estação atribuída — por isso a trava "aguardando estação" saiu daqui. O
+// cadastro de Estação pelo admin continua existindo (ver EstacoesAdmin.jsx)
+// só pra identidade/nome no cabeçalho, quando houver uma.
 const INTERVALO_ATUALIZACAO_MS = 60_000
 
 function Dashboard() {
@@ -37,16 +44,15 @@ function Dashboard() {
   const [erro, setErro] = useState(null)
   const [periodo, setPeriodo] = useState('hoje')
 
-  // Busca a cada 1 min — a estação atribuída (se mudar, o dashboard troca
-  // sozinho de fonte) e o histórico completo dela. Trocar o período
-  // (Hoje/Ontem/7/30 dias) não busca de novo, só filtra/agrupa o que já
-  // está em `clima` (ver derivarVisaoPeriodo).
+  // Busca a cada 1 min: o clima (Open-Meteo, sempre) e, à parte, o nome da
+  // estação atribuída — só pra identidade do cabeçalho, sem bloquear nada
+  // se a conta não tiver uma. Trocar o período (Hoje/Ontem/7/30 dias) não
+  // busca de novo, só filtra/agrupa o que já está em `clima` (ver
+  // derivarVisaoPeriodo).
   useEffect(() => {
     async function carregar() {
       try {
-        const minhaEstacao = await buscarMinhaEstacaoPrincipal()
-        setEstacao(minhaEstacao)
-        const dados = minhaEstacao ? await buscarClimaDaEstacao(minhaEstacao.identificador) : null
+        const dados = await buscarClimaAtual(COORDENADAS_PADRAO)
         setClima(dados)
         setErro(null)
       } catch {
@@ -54,6 +60,7 @@ function Dashboard() {
       } finally {
         setCarregando(false)
       }
+      buscarMinhaEstacaoPrincipal().then(setEstacao).catch(() => setEstacao(null))
     }
 
     carregar()
@@ -71,32 +78,10 @@ function Dashboard() {
     )
   }
 
-  if (erro) {
+  if (erro || !clima) {
     return (
       <div className={styles.pagina}>
-        <StatusMessage texto={erro} />
-      </div>
-    )
-  }
-
-  if (!estacao) {
-    return (
-      <div className={styles.pagina}>
-        <div className={styles.avisoEstacao}>
-          <span className={styles.avisoEstacaoIcone}>
-            <Radio size={26} />
-          </span>
-          <h2 className={styles.avisoEstacaoTitulo}>{t('dashboard.aguardandoTitulo')}</h2>
-          <p className={styles.avisoEstacaoTexto}>{t('dashboard.aguardandoTexto')}</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (!clima) {
-    return (
-      <div className={styles.pagina}>
-        <StatusMessage texto={t('dashboard.semLeituras')} />
+        <StatusMessage texto={erro ?? t('dashboard.erroBusca')} />
       </div>
     )
   }
@@ -115,9 +100,9 @@ function Dashboard() {
   return (
     <div className={styles.pagina}>
       <EstacaoCabecalho
-        nome={estacao.nome || estacao.identificador}
-        online={!estacao.esta_offline}
-        localizacaoTexto={estacao.localizacao || t('estacaoPagina.localizacaoPadrao')}
+        nome={estacao?.nome || estacao?.identificador || t('estacaoPagina.nomePadrao')}
+        online={!erro}
+        localizacaoTexto={estacao?.localizacao || t('estacaoPagina.localizacaoPadrao')}
         coordenadas={COORDENADAS_PADRAO}
       />
 

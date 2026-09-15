@@ -42,12 +42,8 @@ export default {
     periodoOntem: 'Ontem',
     periodo7dias: 'Últimos 7 dias',
     periodo30dias: 'Últimos 30 dias',
-    carregando: 'Carregando dados da estação...',
-    erroBusca: 'Não foi possível buscar os dados da estação agora. Tentando de novo em instantes.',
-    aguardandoTitulo: 'Aguardando sua estação',
-    aguardandoTexto:
-      'Sua conta ainda não tem uma estação meteorológica vinculada. Assim que o administrador atribuir uma a você, os dados aparecem aqui automaticamente — o resto do sistema já está liberado.',
-    semLeituras: 'Sua estação ainda não enviou nenhuma leitura. Assim que os dados chegarem, eles aparecem aqui automaticamente.',
+    carregando: 'Carregando dados do clima...',
+    erroBusca: 'Não foi possível buscar os dados de clima agora. Tentando de novo em instantes.',
     temperatura: 'Temperatura',
     umidade: 'Umidade',
     pressao: 'Pressão',
@@ -59,6 +55,7 @@ export default {
     rajadas: 'Rajadas',
   },
   estacaoPagina: {
+    nomePadrao: 'Estação LACOP',
     online: 'Online',
     offline: 'Offline',
     expandirMapa: 'Expandir mapa',

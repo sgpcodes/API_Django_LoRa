@@ -42,12 +42,8 @@ export default {
     periodoOntem: 'Yesterday',
     periodo7dias: 'Last 7 days',
     periodo30dias: 'Last 30 days',
-    carregando: 'Loading station data...',
-    erroBusca: 'Could not fetch station data right now. Retrying shortly.',
-    aguardandoTitulo: 'Waiting for your station',
-    aguardandoTexto:
-      "Your account doesn't have a weather station linked yet. As soon as the administrator assigns one, the data shows up here automatically — the rest of the system is already available.",
-    semLeituras: "Your station hasn't sent any reading yet. As soon as data arrives, it shows up here automatically.",
+    carregando: 'Loading weather data...',
+    erroBusca: 'Could not fetch weather data right now. Retrying shortly.',
     temperatura: 'Temperature',
     umidade: 'Humidity',
     pressao: 'Pressure',
@@ -59,6 +55,7 @@ export default {
     rajadas: 'Gusts',
   },
   estacaoPagina: {
+    nomePadrao: 'LACOP Station',
     online: 'Online',
     offline: 'Offline',
     expandirMapa: 'Expand map',
