@@ -11,11 +11,7 @@ import {
   ShieldQuestion,
   Lock,
   Smartphone,
-  Monitor,
-  History,
   Users,
-  Globe,
-  Bell,
   TrendingUp,
   Check,
   Radio,
@@ -379,8 +375,7 @@ function PerfilAdmin() {
               )}
 
               <LinhaEmBreve icone={Smartphone} rotulo="Verificação em duas etapas" />
-              <LinhaEmBreve icone={Monitor} rotulo="Sessões ativas" />
-              <LinhaEmBreve icone={History} rotulo="Histórico de acessos" />
+              <LinhaEmBreve icone={ShieldQuestion} rotulo="Privacidade de dados" />
             </ul>
             {senhaTrocada && (
               <p className={styles.avisoSalvo}>
@@ -398,10 +393,7 @@ function PerfilAdmin() {
               </h2>
             </div>
             <ul className={styles.listaLinhas}>
-              <LinhaEmBreve icone={ShieldQuestion} rotulo="Privacidade de dados" />
               <LinhaEmBreve icone={Users} rotulo="Compartilhamento de dados" />
-              <LinhaEmBreve icone={Globe} rotulo="Cookies e rastreamento" />
-              <LinhaEmBreve icone={Bell} rotulo="Comunicações" />
             </ul>
           </section>
 
