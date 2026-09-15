@@ -55,10 +55,10 @@ export default {
     rajadas: 'Rajadas',
   },
   estacaoPagina: {
-    nomePadrao: 'Estação LACOP',
     online: 'Online',
     offline: 'Offline',
     expandirMapa: 'Expandir mapa',
+    escolherEstacao: 'Escolher estação',
     previsaoTitulo: 'Previsão do tempo',
     carregandoPrevisao: 'Carregando previsão...',
     previsaoIndisponivel: 'Previsão indisponível no momento.',
@@ -69,7 +69,6 @@ export default {
     nascerSol: 'Nascer do sol',
     porSol: 'Pôr do sol',
     condicaoAtual: 'Condição atual',
-    localizacaoPadrao: 'Maricá - RJ',
     expandirGrafico: 'Expandir — {{metrica}}',
   },
   adminDashboard: {

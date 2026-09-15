@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
-import { Radio, Maximize2 } from 'lucide-react'
+import { Radio, Maximize2, ChevronDown } from 'lucide-react'
 import Modal from './Modal'
 import styles from './EstacaoCabecalho.module.css'
 
@@ -38,13 +38,19 @@ function Mapa({ coordenadas, nome, altura }) {
 }
 
 // Cabeçalho da página da estação: identidade (nome, status) + localização
-// + mapa. `coordenadas` vem de COORDENADAS_PADRAO (climaExternoService) até
-// existir um campo de GPS próprio no cadastro da Estação (ver parecer sobre
-// estações virtuais — é a mesma lacuna registrada lá).
-function EstacaoCabecalho({ nome, online, localizacaoTexto, coordenadas }) {
+// + mapa. `coordenadas` vem da estação virtual selecionada (ver
+// services/estacoesVirtuais.js) até existir cadastro de GPS de verdade
+// (ver parecer sobre Open-Meteo — é a mesma lacuna registrada lá).
+//
+// `opcoesEstacao` (opcional): quando vem com mais de uma opção, o nome
+// vira um seletor de verdade — é o piloto de várias estações virtuais
+// (RF-13), não uma estação fixa por conta. Sem isso (ou com só uma
+// opção), mostra só o nome, sem dropdown.
+function EstacaoCabecalho({ nome, online, localizacaoTexto, coordenadas, opcoesEstacao, estacaoSelecionadaId, onMudarEstacao }) {
   const { t } = useTranslation()
   const [mapaExpandido, setMapaExpandido] = useState(false)
   const coordenadaTexto = `${formatarCoordenada(coordenadas.latitude, 'N', 'S')}, ${formatarCoordenada(coordenadas.longitude, 'L', 'O')}`
+  const temSeletor = opcoesEstacao?.length > 1
 
   return (
     <div className={styles.cabecalho}>
@@ -54,7 +60,26 @@ function EstacaoCabecalho({ nome, online, localizacaoTexto, coordenadas }) {
         </span>
         <div className={styles.textos}>
           <div className={styles.linhaNome}>
-            <h1 className={styles.nome}>{nome}</h1>
+            {temSeletor ? (
+              <span className={styles.seletorNome}>
+                <select
+                  id="estacao-selecionada"
+                  className={styles.selectNome}
+                  value={estacaoSelecionadaId}
+                  onChange={(evento) => onMudarEstacao(evento.target.value)}
+                  aria-label={t('estacaoPagina.escolherEstacao')}
+                >
+                  {opcoesEstacao.map((opcao) => (
+                    <option key={opcao.id} value={opcao.id}>
+                      {opcao.nome}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={18} className={styles.chevronNome} />
+              </span>
+            ) : (
+              <h1 className={styles.nome}>{nome}</h1>
+            )}
             <span className={`${styles.status} ${online ? styles.statusOnline : styles.statusOffline}`}>
               <span className={styles.pontoStatus} />
               {online ? t('estacaoPagina.online') : t('estacaoPagina.offline')}

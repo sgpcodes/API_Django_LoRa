@@ -55,10 +55,10 @@ export default {
     rajadas: 'Gusts',
   },
   estacaoPagina: {
-    nomePadrao: 'LACOP Station',
     online: 'Online',
     offline: 'Offline',
     expandirMapa: 'Expand map',
+    escolherEstacao: 'Choose station',
     previsaoTitulo: 'Weather forecast',
     carregandoPrevisao: 'Loading forecast...',
     previsaoIndisponivel: 'Forecast unavailable right now.',
@@ -69,7 +69,6 @@ export default {
     nascerSol: 'Sunrise',
     porSol: 'Sunset',
     condicaoAtual: 'Current condition',
-    localizacaoPadrao: 'Maricá, Brazil',
     expandirGrafico: 'Expand — {{metrica}}',
   },
   adminDashboard: {

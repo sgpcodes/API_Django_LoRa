@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Sun, Cloud, CloudRain, CloudLightning, CloudSun, Wind, Droplets, Sunrise, Sunset, Eye, Gauge } from 'lucide-react'
 import StatusMessage from './StatusMessage'
-import { buscarMeuPerfil } from '../services/perfilService'
 import { buscarPrevisaoInmet } from '../services/inmetService'
 import { buscarMunicipiosPorUf } from '../services/ibgeService'
 import styles from './PrevisaoSemana.module.css'
@@ -63,10 +62,11 @@ function formatarHora(horaISO) {
 // INMET não tem (ponto de orvalho, UV, visibilidade, nascer/pôr do sol —
 // tudo isso vem de `clima`, a mesma fonte que já alimenta a tira de tempo
 // real e os gráficos). É a fusão pedida entre o Dashboard e a aba Clima
-// INMET — sem seletor de Estado/Município visível: resolve sozinho a
-// partir da cidade/estado do perfil da conta, igual o antigo ClimaInmet.jsx
-// já fazia por trás do seletor.
-function PrevisaoSemana({ clima }) {
+// INMET. `uf`/`cidade` vêm da estação virtual escolhida no seletor do
+// cabeçalho (ver services/estacoesVirtuais.js) — antes disso existir, essa
+// tela resolvia sozinha pela cidade/estado do perfil da conta; agora quem
+// manda é a estação selecionada, então refaz a busca sempre que ela muda.
+function PrevisaoSemana({ clima, uf, cidade }) {
   const { t } = useTranslation()
   const [previsao, setPrevisao] = useState(null)
   const [nomeMunicipio, setNomeMunicipio] = useState(null)
@@ -76,22 +76,22 @@ function PrevisaoSemana({ clima }) {
 
   useEffect(() => {
     let cancelado = false
+    setCarregando(true)
 
     async function carregar() {
       try {
-        const perfil = await buscarMeuPerfil()
-        const uf = (perfil?.estado || 'RJ').toUpperCase()
         const municipios = await buscarMunicipiosPorUf(uf)
         if (municipios.length === 0) throw new Error('sem municípios')
 
-        const cidade = normalizarTexto(perfil?.cidade)
-        const municipio = municipios.find((m) => normalizarTexto(m.nome) === cidade) ?? municipios[0]
+        const cidadeNormalizada = normalizarTexto(cidade)
+        const municipio = municipios.find((m) => normalizarTexto(m.nome) === cidadeNormalizada) ?? municipios[0]
         const dados = await buscarPrevisaoInmet(municipio.codigo)
 
         if (!cancelado) {
           setPrevisao(dados)
           setNomeMunicipio(municipio.nome)
           setErro(null)
+          setDiaSelecionadoIndice(0)
         }
       } catch {
         if (!cancelado) setErro(t('estacaoPagina.previsaoIndisponivel'))
@@ -105,7 +105,7 @@ function PrevisaoSemana({ clima }) {
       cancelado = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [uf, cidade])
 
   const diaHoje = useMemo(() => (previsao?.dias?.[0] ? resumirDia(previsao.dias[0]) : null), [previsao])
 
