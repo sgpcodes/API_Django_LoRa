@@ -21,8 +21,10 @@ const BASE_URL = 'https://api.open-meteo.com/v1/forecast'
 const DIAS_HISTORICO_MAXIMO = 30 // RN09/RN21 — teto do plano Standard
 
 // Coordenadas padrão (Maricá-RJ, sede do LACOP/UFF) — usada até a tela de
-// vínculo de estação guardar uma localização própria da conta.
-const COORDENADAS_PADRAO = { latitude: -22.9194, longitude: -42.8186 }
+// vínculo de estação guardar uma localização própria da conta. Exportada
+// porque o cabeçalho da página da estação (EstacaoCabecalho.jsx) usa o
+// mesmo ponto pra centralizar o mapa.
+export const COORDENADAS_PADRAO = { latitude: -22.9194, longitude: -42.8186 }
 
 // Tabela reduzida dos WMO Weather Codes que a Open-Meteo devolve, só com
 // os textos em português que aparecem no card "Condições atuais".
@@ -89,9 +91,11 @@ function diaRotulo(dataISO) {
   return dataISO.slice(8, 10) + '/' + dataISO.slice(5, 7)
 }
 
-// Agrupa as leituras horárias de um campo em pontos diários (média, mínima
-// e máxima) — TODOS os dias buscados (até 30); quem exibe decide quantos
-// usar (ver `derivarVisaoPeriodo`).
+// Agrupa as leituras horárias de um campo em pontos diários (média, mínima,
+// máxima e soma) — TODOS os dias buscados (até 30); quem exibe decide
+// quantos usar (ver `derivarVisaoPeriodo`). `soma` existe pra chuva, que se
+// lê como total do dia, não como média (não faz sentido "temperatura média"
+// virar "chuva média" — chove em rajadas, não constante o dia todo).
 function agruparPorDia(horas, valores) {
   const porDia = new Map()
 
@@ -110,6 +114,7 @@ function agruparPorDia(horas, valores) {
       media: media(lista),
       minimo: validos.length ? Number(Math.min(...validos).toFixed(1)) : null,
       maximo: validos.length ? Number(Math.max(...validos).toFixed(1)) : null,
+      soma: validos.length ? Number(validos.reduce((soma, valor) => soma + valor, 0).toFixed(1)) : null,
     }
   })
 }
@@ -194,6 +199,7 @@ function normalizar(dados) {
   const horariaTemperatura = horasPassadas.map((h, i) => ({ dataHora: h, rotulo: horaRotulo(h), valor: corte(dados.hourly.temperature_2m)[i] }))
   const horariaUmidade = horasPassadas.map((h, i) => ({ dataHora: h, rotulo: horaRotulo(h), valor: corte(dados.hourly.relative_humidity_2m)[i] }))
   const horariaPressao = horasPassadas.map((h, i) => ({ dataHora: h, rotulo: horaRotulo(h), valor: corte(dados.hourly.surface_pressure)[i] }))
+  const horariaChuva = horasPassadas.map((h, i) => ({ dataHora: h, rotulo: horaRotulo(h), valor: corte(dados.hourly.precipitation)[i] }))
   const horariaVento = horasPassadas.map((h, i) => ({
     dataHora: h,
     rotulo: horaRotulo(h),
@@ -206,6 +212,7 @@ function normalizar(dados) {
   const diariaTemperatura = agruparPorDia(horasPassadas, corte(dados.hourly.temperature_2m))
   const diariaUmidade = agruparPorDia(horasPassadas, corte(dados.hourly.relative_humidity_2m))
   const diariaPressao = agruparPorDia(horasPassadas, corte(dados.hourly.surface_pressure))
+  const diariaChuva = agruparPorDia(horasPassadas, corte(dados.hourly.precipitation))
   const diariaVentoSimples = agruparPorDia(horasPassadas, corte(dados.hourly.wind_speed_10m))
   const diariaVento = agruparVentoPorDia(
     horasPassadas, corte(dados.hourly.wind_speed_10m), corte(dados.hourly.wind_gusts_10m), corte(dados.hourly.wind_direction_10m),
@@ -229,10 +236,15 @@ function normalizar(dados) {
     precipitacao: atual.precipitation,
     visibilidadeKm: atual.visibility != null ? Number((atual.visibility / 1000).toFixed(1)) : null,
     condicaoTexto: descricaoTempo(atual.weather_code),
+    // `daily` só é pedido com forecast_days=1 (ver buscarClimaAtual) — o
+    // nascer/pôr do sol de hoje já vem na posição 0 sem precisar de outra
+    // chamada.
+    nascerSol: dados.daily?.sunrise?.[0] ?? null,
+    porSol: dados.daily?.sunset?.[0] ?? null,
     atualizadoEm: atual.time,
     resumoDia,
-    horaria: { temperatura: horariaTemperatura, umidade: horariaUmidade, pressao: horariaPressao, vento: horariaVento },
-    diaria: { temperatura: diariaTemperatura, umidade: diariaUmidade, pressao: diariaPressao, vento: diariaVento },
+    horaria: { temperatura: horariaTemperatura, umidade: horariaUmidade, pressao: horariaPressao, chuva: horariaChuva, vento: horariaVento },
+    diaria: { temperatura: diariaTemperatura, umidade: diariaUmidade, pressao: diariaPressao, chuva: diariaChuva, vento: diariaVento },
   }
 }
 
@@ -258,10 +270,12 @@ export async function buscarClimaAtual(coordenadas = COORDENADAS_PADRAO) {
       'temperature_2m',
       'relative_humidity_2m',
       'surface_pressure',
+      'precipitation',
       'wind_speed_10m',
       'wind_direction_10m',
       'wind_gusts_10m',
     ].join(','),
+    daily: ['sunrise', 'sunset'].join(','),
     past_days: String(DIAS_HISTORICO_MAXIMO),
     forecast_days: '1',
     timezone: 'America/Sao_Paulo',
@@ -296,6 +310,7 @@ export function derivarVisaoPeriodo(clima, periodo) {
     const temperatura = filtrarDia(clima.horaria.temperatura)
     const umidade = filtrarDia(clima.horaria.umidade)
     const pressao = filtrarDia(clima.horaria.pressao)
+    const chuva = filtrarDia(clima.horaria.chuva)
     const vento = filtrarDia(clima.horaria.vento)
 
     return {
@@ -304,12 +319,14 @@ export function derivarVisaoPeriodo(clima, periodo) {
         temperatura: temperatura.map((p) => ({ rotulo: p.rotulo, valor: p.valor })),
         umidade: umidade.map((p) => ({ rotulo: p.rotulo, valor: p.valor })),
         pressao: pressao.map((p) => ({ rotulo: p.rotulo, valor: p.valor })),
+        chuva: chuva.map((p) => ({ rotulo: p.rotulo, valor: p.valor })),
         vento: vento.map((p) => ({ rotulo: p.rotulo, valor: p.velocidade })),
       },
       tabela: {
         temperatura: [...temperatura].reverse(),
         umidade: [...umidade].reverse(),
         pressao: [...pressao].reverse(),
+        chuva: [...chuva].reverse(),
         vento: [...vento].reverse(),
       },
       resumoTopo:
@@ -318,17 +335,27 @@ export function derivarVisaoPeriodo(clima, periodo) {
               temperatura: clima.temperatura,
               umidade: clima.umidade,
               pressao: clima.pressao,
+              chuva: clima.precipitacao,
               vento: clima.vento,
+              maxMin: {
+                temperatura: { maximo: clima.diaria.temperatura.at(-1)?.maximo, minimo: clima.diaria.temperatura.at(-1)?.minimo },
+                umidade: { maximo: clima.diaria.umidade.at(-1)?.maximo, minimo: clima.diaria.umidade.at(-1)?.minimo },
+                pressao: { maximo: clima.diaria.pressao.at(-1)?.maximo, minimo: clima.diaria.pressao.at(-1)?.minimo },
+                chuva: { maximo: clima.diaria.chuva.at(-1)?.soma, minimo: 0 },
+                vento: { maximo: clima.diaria.vento.at(-1)?.rajadaMaxima, minimo: null },
+              },
             }
           : {
               temperatura: media(temperatura.map((p) => p.valor)),
               umidade: media(umidade.map((p) => p.valor)),
               pressao: media(pressao.map((p) => p.valor)),
+              chuva: chuva.reduce((soma, p) => soma + (p.valor ?? 0), 0),
               vento: {
                 velocidade: media(vento.map((p) => p.velocidade)),
                 rajada: vento.length ? Math.max(...vento.map((p) => p.rajada).filter((v) => v != null)) : null,
                 direcaoTexto: direcaoTexto(mediaCircular(vento.map((p) => p.direcaoGraus))),
               },
+              maxMin: null,
             },
     }
   }
@@ -337,6 +364,7 @@ export function derivarVisaoPeriodo(clima, periodo) {
   const temperatura = clima.diaria.temperatura.slice(-dias)
   const umidade = clima.diaria.umidade.slice(-dias)
   const pressao = clima.diaria.pressao.slice(-dias)
+  const chuva = clima.diaria.chuva.slice(-dias)
   const vento = clima.diaria.vento.slice(-dias)
 
   return {
@@ -345,18 +373,22 @@ export function derivarVisaoPeriodo(clima, periodo) {
       temperatura: temperatura.map((d) => ({ rotulo: d.rotulo, valor: d.media })),
       umidade: umidade.map((d) => ({ rotulo: d.rotulo, valor: d.media })),
       pressao: pressao.map((d) => ({ rotulo: d.rotulo, valor: d.media })),
+      chuva: chuva.map((d) => ({ rotulo: d.rotulo, valor: d.soma })),
       vento: vento.map((d) => ({ rotulo: d.rotulo, valor: d.velocidadeMedia })),
     },
     tabela: {
       temperatura: [...temperatura].reverse(),
       umidade: [...umidade].reverse(),
       pressao: [...pressao].reverse(),
+      chuva: [...chuva].reverse(),
       vento: [...vento].reverse(),
     },
     resumoTopo: {
       temperatura: media(temperatura.map((d) => d.media)),
       umidade: media(umidade.map((d) => d.media)),
       pressao: media(pressao.map((d) => d.media)),
+      chuva: chuva.reduce((soma, d) => soma + (d.soma ?? 0), 0),
+      maxMin: null,
       vento: {
         velocidade: media(vento.map((d) => d.velocidadeMedia)),
         rajada: vento.length ? Math.max(...vento.map((d) => d.rajadaMaxima).filter((v) => v != null)) : null,

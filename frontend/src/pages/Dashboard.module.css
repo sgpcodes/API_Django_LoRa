@@ -15,10 +15,8 @@
   min-width: 0;
 }
 
-/* Seletor de período — único, no topo da página: controla tanto o
-   gráfico quanto a tabela de histórico logo abaixo (a navegação entre
-   métricas de cada um, essa sim, é independente — ver GraficoHistorico
-   Carrossel.jsx / HistoricoDiarioTable.jsx). */
+/* Seletor de período — único, controla a tira de tempo real e os 5
+   gráficos logo abaixo (ver components/GradeGraficosMetricas.jsx). */
 .seletorPeriodoTopo {
   display: flex;
   align-items: center;
@@ -72,43 +70,12 @@
 
 .cardsPrincipais {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 0.75rem;
 }
 
-.resumoGrid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.75rem;
-}
-
-.grid2Colunas {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
-  align-items: stretch;
-}
-
-.colunaLateral {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.grid1Coluna {
-  display: grid;
-  grid-template-columns: 1fr;
-}
-
-.grid2Colunas > *,
-.resumoGrid > *,
 .cardsPrincipais > * {
   min-width: 0;
-}
-
-.semDados {
-  font-size: 0.9rem;
-  color: var(--color-text-secondary);
 }
 
 .avisoEstacao {
@@ -152,19 +119,13 @@
 }
 
 @media (max-width: 1023px) {
-  .cardsPrincipais,
-  .resumoGrid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .grid2Colunas {
-    grid-template-columns: 1fr;
+  .cardsPrincipais {
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
 @media (max-width: 640px) {
-  .cardsPrincipais,
-  .resumoGrid {
-    grid-template-columns: 1fr;
+  .cardsPrincipais {
+    grid-template-columns: repeat(2, 1fr);
   }
 }

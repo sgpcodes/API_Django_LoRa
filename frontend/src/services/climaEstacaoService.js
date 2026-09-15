@@ -222,6 +222,13 @@ export async function buscarClimaDaEstacao(identificadorEstacao) {
   const resumoDia = calcularResumoDia(diariaTemperatura, diariaUmidade, diariaPressao, diariaVento)
   const ventoAtual = ultimoPonto.leitura.dados_adicionais ?? {}
 
+  // Chuva: sem sensor de pluviômetro no hardware atual, então fica sempre
+  // vazia — mesmo tratamento que vento tinha antes de existir
+  // `dados_adicionais`, pronta pra ligar assim que o sensor existir, sem
+  // precisar mudar o formato de novo.
+  const horariaChuva = agruparPorHora(pontos, () => null)
+  const diariaChuva = agruparPorDia(pontos, () => null).map((d) => ({ ...d, soma: null }))
+
   return {
     temperatura: ultimoPonto.leitura.temperatura,
     umidade: ultimoPonto.leitura.umidade,
@@ -237,10 +244,14 @@ export async function buscarClimaDaEstacao(identificadorEstacao) {
     indiceUV: null,
     precipitacao: null,
     visibilidadeKm: null,
+    // Nascer/pôr do sol e condição em texto são derivados de fonte externa
+    // (posição do sol, modelo de tempo) — sem equivalente em sensor físico.
+    nascerSol: null,
+    porSol: null,
     condicaoTexto: 'Dados da estação',
     atualizadoEm: ultimoPonto.leitura.data_hora,
     resumoDia,
-    horaria: { temperatura: horariaTemperatura, umidade: horariaUmidade, pressao: horariaPressao, vento: horariaVento },
-    diaria: { temperatura: diariaTemperatura, umidade: diariaUmidade, pressao: diariaPressao, vento: diariaVento },
+    horaria: { temperatura: horariaTemperatura, umidade: horariaUmidade, pressao: horariaPressao, chuva: horariaChuva, vento: horariaVento },
+    diaria: { temperatura: diariaTemperatura, umidade: diariaUmidade, pressao: diariaPressao, chuva: diariaChuva, vento: diariaVento },
   }
 }

@@ -14,7 +14,6 @@ import {
   ChevronRight,
   ChevronDown,
   Radio,
-  CloudSun,
   X,
 } from 'lucide-react'
 import logoLacop from '../assets/lacop.png'
@@ -25,6 +24,9 @@ import styles from './Sidebar.module.css'
 // Menu da conta Standard/Pro/Plus (Seção 2.2 da especificação de fluxo).
 // "Visão Geral" e "Dados do LoRa" (dashboard da estação real) saíram do
 // menu, mas as páginas continuam existindo — ver pages/DashboardLora.jsx.
+// "Clima INMET" não tem mais item próprio: a previsão do INMET foi
+// incorporada dentro do próprio "Dashboard" (ver pages/Dashboard.jsx e
+// components/PrevisaoSemana.jsx) — a página separada foi removida.
 // "Perfil" não tem item próprio no menu — o chip da conta no rodapé (ver
 // mais abaixo) já leva pra lá. "Checkout" também não: só é alcançado de
 // dentro do fluxo de upgrade (Gerenciamento de Plano → "Fazer upgrade"),
@@ -32,7 +34,6 @@ import styles from './Sidebar.module.css'
 const ITENS_NAV = [
   { to: '/app', chave: 'dashboard', icone: LayoutGrid, fim: true },
   { to: '/app/notificacoes', chave: 'notificacoes', icone: Bell },
-  { to: '/app/inmet', chave: 'climaInmet', icone: CloudSun },
   { to: '/app/configuracoes', chave: 'configuracoes', icone: Settings },
   { to: '/app/plano', chave: 'gerenciamentoPlano', icone: CreditCard },
 ]

@@ -1,7 +1,8 @@
-// Só pra alimentar o dropdown de município (UF -> lista de municípios,
-// pra buscar a previsão do tempo desse município). API pública do IBGE,
-// direto do navegador — sem risco de CORS conhecido, e não precisa passar
-// pelo backend (é só uma lista de nomes/códigos).
+// Só pra resolver UF -> lista de municípios (código IBGE), que
+// components/PrevisaoSemana.jsx usa pra casar a cidade do perfil com um
+// código de município e pedir a previsão do INMET pra ele. API pública do
+// IBGE, direto do navegador — sem risco de CORS conhecido, e não precisa
+// passar pelo backend (é só uma lista de nomes/códigos).
 export async function buscarMunicipiosPorUf(uf) {
   if (!uf) return []
   const resposta = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios`)

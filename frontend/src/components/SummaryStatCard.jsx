@@ -10,8 +10,21 @@ const COR_TENDENCIA = { alta: '#16a34a', baixa: '#dc2626' }
 // nela (verde subindo, vermelha descendo). "horarioAtualizacao" (opcional)
 // mostra quando a última leitura chegou. "progresso" (0-100, opcional)
 // desenha uma barrinha embaixo — usado no card "Sensores ativos" da Visão
-// Geral.
-function SummaryStatCard({ icone: Icone, cor, rotulo, valor, legenda, tendencia, horarioAtualizacao, progresso }) {
+// Geral. "maxMin" (opcional, { maximo, minimo, rotuloMaximo, rotuloMinimo,
+// unidade }) desenha a linha "Máx. do dia | Mín. do dia" — usada na tira de
+// tempo real da página da estação; "—" quando o valor ainda não existe
+// (fonte real sem aquele sensor, ex.: chuva na estação física).
+function SummaryStatCard({
+  icone: Icone,
+  cor,
+  rotulo,
+  valor,
+  legenda,
+  tendencia,
+  horarioAtualizacao,
+  progresso,
+  maxMin,
+}) {
   const { t } = useTranslation()
   const IconeTendencia = tendencia === 'alta' ? ArrowUp : tendencia === 'baixa' ? ArrowDown : null
 
@@ -42,6 +55,18 @@ function SummaryStatCard({ icone: Icone, cor, rotulo, valor, legenda, tendencia,
             className={styles.barraProgressoPreenchida}
             style={{ width: `${Math.min(100, Math.max(0, progresso))}%`, backgroundColor: cor }}
           />
+        </div>
+      )}
+      {maxMin && (
+        <div className={styles.maxMin}>
+          <span>
+            {maxMin.rotuloMaximo ?? t('comum.maximoDoDia')}{' '}
+            <strong>{maxMin.maximo != null ? `${maxMin.maximo}${maxMin.unidade ?? ''}` : '—'}</strong>
+          </span>
+          <span>
+            {maxMin.rotuloMinimo ?? t('comum.minimoDoDia')}{' '}
+            <strong>{maxMin.minimo != null ? `${maxMin.minimo}${maxMin.unidade ?? ''}` : '—'}</strong>
+          </span>
         </div>
       )}
     </div>

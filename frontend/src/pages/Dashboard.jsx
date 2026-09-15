@@ -1,25 +1,26 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Radio, Thermometer, Droplets, Gauge, Wind, Calendar } from 'lucide-react'
-import CabecalhoStandard from '../components/CabecalhoStandard'
+import { Radio, Thermometer, Droplets, Gauge, Wind, CloudRain, Calendar } from 'lucide-react'
+import EstacaoCabecalho from '../components/EstacaoCabecalho'
+import PrevisaoSemana from '../components/PrevisaoSemana'
+import GradeGraficosMetricas from '../components/GradeGraficosMetricas'
 import SummaryStatCard from '../components/SummaryStatCard'
-import GraficoHistoricoCarrossel from '../components/GraficoHistoricoCarrossel'
-import CondicoesAtuaisCard from '../components/CondicoesAtuaisCard'
-import HistoricoDiarioTable from '../components/HistoricoDiarioTable'
-import ResumoDiaCard from '../components/ResumoDiaCard'
-import StatusEstacaoCard from '../components/StatusEstacaoCard'
 import StatusMessage from '../components/StatusMessage'
-import { derivarVisaoPeriodo } from '../services/climaExternoService'
+import { derivarVisaoPeriodo, COORDENADAS_PADRAO } from '../services/climaExternoService'
 import { buscarClimaDaEstacao } from '../services/climaEstacaoService'
 import { buscarMinhaEstacaoPrincipal } from '../services/estacaoService'
 import { tendenciaUltimaHora } from '../services/metricasClima'
 import styles from './Dashboard.module.css'
 
-// Dashboard da conta Standard (Tela 4 da especificação de fluxo). Os dados
-// exibidos vêm da estação (ESP32) atribuída à conta pelo admin — ver
-// services/climaEstacaoService.js. Enquanto a estação não manda nenhuma
-// leitura ainda (acabou de ser atribuída), mostra um aviso em vez de
-// dado vazio/quebrado.
+// Dashboard da conta Standard — página da estação (Tela 4 da especificação
+// de fluxo, redesenhada: RF-15 a RF-22). Une o que antes eram duas telas
+// separadas — o Dashboard (dado da própria estação/ESP32, com fallback pra
+// Open-Meteo enquanto o sensor não manda tudo — ver climaEstacaoService.js)
+// e a aba "Clima INMET" (previsão de 5 dias por município) — numa página
+// só: cabeçalho com identidade+mapa, tira de tempo real, previsão da
+// semana + painel "Hoje", seletor de período único e os 5 gráficos lado a
+// lado. A aba INMET separada e o dashboard antigo (estação real "crua")
+// saíram do menu — ver Sidebar.jsx e App.jsx.
 const INTERVALO_ATUALIZACAO_MS = 60_000
 
 function Dashboard() {
@@ -34,11 +35,6 @@ function Dashboard() {
   const [clima, setClima] = useState(null)
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState(null)
-  // Gráfico e tabela navegam entre métricas (temperatura/umidade/pressão/
-  // vento) de forma independente um do outro — só o período é
-  // compartilhado (ver seletor logo abaixo do cabeçalho).
-  const [indiceGrafico, setIndiceGrafico] = useState(0)
-  const [indiceTabela, setIndiceTabela] = useState(0)
   const [periodo, setPeriodo] = useState('hoje')
 
   // Busca a cada 1 min — a estação atribuída (se mudar, o dashboard troca
@@ -67,14 +63,9 @@ function Dashboard() {
 
   const visao = useMemo(() => (clima ? derivarVisaoPeriodo(clima, periodo) : null), [clima, periodo])
 
-  const cabecalho = (
-    <CabecalhoStandard identificadorEstacao={estacao?.identificador ?? '—'} estacaoOnline={!estacao?.esta_offline} />
-  )
-
   if (carregando) {
     return (
       <div className={styles.pagina}>
-        {cabecalho}
         <StatusMessage texto={t('dashboard.carregando')} />
       </div>
     )
@@ -83,20 +74,14 @@ function Dashboard() {
   if (erro) {
     return (
       <div className={styles.pagina}>
-        {cabecalho}
         <StatusMessage texto={erro} />
       </div>
     )
   }
 
-  // Sem estação atribuída ainda: só o Dashboard fica bloqueado — o resto
-  // do sistema (Perfil, Notificações, Configurações, Plano) continua
-  // liberado normalmente pela Sidebar. Atualiza sozinho quando o admin
-  // atribuir uma (a busca acima já roda de novo a cada 1 min).
   if (!estacao) {
     return (
       <div className={styles.pagina}>
-        {cabecalho}
         <div className={styles.avisoEstacao}>
           <span className={styles.avisoEstacaoIcone}>
             <Radio size={26} />
@@ -111,19 +96,12 @@ function Dashboard() {
   if (!clima) {
     return (
       <div className={styles.pagina}>
-        {cabecalho}
         <StatusMessage texto={t('dashboard.semLeituras')} />
       </div>
     )
   }
 
   const { resumoTopo } = visao
-
-  // Horário da última leitura chegada (uma só data_hora por leitura, vale
-  // pra temperatura/umidade/pressão/vento juntos) e tendência comparando a
-  // média da última hora com a da hora anterior — não com "a média do dia
-  // anterior" (isso já existe em resumoDia, mas é uma janela grande demais
-  // pra responder "subiu ou desceu na última hora").
   const horarioUltimaLeitura = clima.atualizadoEm
     ? new Date(clima.atualizadoEm).toLocaleTimeString(i18n.language === 'en' ? 'en-US' : 'pt-BR', {
         hour: '2-digit',
@@ -136,7 +114,72 @@ function Dashboard() {
 
   return (
     <div className={styles.pagina}>
-      {cabecalho}
+      <EstacaoCabecalho
+        nome={estacao.nome || estacao.identificador}
+        online={!estacao.esta_offline}
+        localizacaoTexto={estacao.localizacao || t('estacaoPagina.localizacaoPadrao')}
+        coordenadas={COORDENADAS_PADRAO}
+      />
+
+      <div className={styles.cardsPrincipais}>
+        <SummaryStatCard
+          icone={Thermometer}
+          cor="var(--color-accent)"
+          rotulo={t('dashboard.temperatura')}
+          valor={resumoTopo.temperatura != null ? `${resumoTopo.temperatura}°C` : '—'}
+          legenda={
+            tendenciaTemperatura.delta == null
+              ? undefined
+              : t('dashboard.ultimaHoraTemperatura', { valor: Math.abs(tendenciaTemperatura.delta) })
+          }
+          tendencia={tendenciaTemperatura.tendencia}
+          horarioAtualizacao={horarioUltimaLeitura}
+          maxMin={{ ...resumoTopo.maxMin?.temperatura, unidade: '°C' }}
+        />
+        <SummaryStatCard
+          icone={Droplets}
+          cor="var(--color-accent)"
+          rotulo={t('dashboard.umidade')}
+          valor={resumoTopo.umidade != null ? `${resumoTopo.umidade}%` : '—'}
+          legenda={
+            tendenciaUmidade.delta == null ? undefined : t('dashboard.ultimaHoraUmidade', { valor: Math.abs(tendenciaUmidade.delta) })
+          }
+          tendencia={tendenciaUmidade.tendencia}
+          horarioAtualizacao={horarioUltimaLeitura}
+          maxMin={{ ...resumoTopo.maxMin?.umidade, unidade: '%' }}
+        />
+        <SummaryStatCard
+          icone={Gauge}
+          cor="var(--color-accent)"
+          rotulo={t('dashboard.pressao')}
+          valor={resumoTopo.pressao != null ? `${resumoTopo.pressao} hPa` : '—'}
+          legenda={
+            tendenciaPressao.delta == null ? undefined : t('dashboard.ultimaHoraPressao', { valor: Math.abs(tendenciaPressao.delta) })
+          }
+          tendencia={tendenciaPressao.tendencia}
+          horarioAtualizacao={horarioUltimaLeitura}
+          maxMin={{ ...resumoTopo.maxMin?.pressao, unidade: ' hPa' }}
+        />
+        <SummaryStatCard
+          icone={Wind}
+          cor="var(--color-accent)"
+          rotulo={t('dashboard.vento')}
+          valor={resumoTopo.vento.velocidade != null ? `${resumoTopo.vento.velocidade} km/h` : '—'}
+          legenda={`${resumoTopo.vento.direcaoTexto} · ${t('dashboard.rajadas')} ${resumoTopo.vento.rajada ?? '—'} km/h`}
+          horarioAtualizacao={horarioUltimaLeitura}
+          maxMin={{ maximo: resumoTopo.maxMin?.vento?.maximo, minimo: null, unidade: ' km/h' }}
+        />
+        <SummaryStatCard
+          icone={CloudRain}
+          cor="var(--color-accent)"
+          rotulo={t('dashboard.chuva')}
+          valor={resumoTopo.chuva != null ? `${resumoTopo.chuva} mm` : '—'}
+          horarioAtualizacao={horarioUltimaLeitura}
+          maxMin={{ ...resumoTopo.maxMin?.chuva, unidade: ' mm' }}
+        />
+      </div>
+
+      <PrevisaoSemana clima={clima} />
 
       <div className={styles.seletorPeriodoTopo}>
         <span className={styles.seletorPeriodoRotulo}>
@@ -157,74 +200,7 @@ function Dashboard() {
         </div>
       </div>
 
-      <div className={styles.cardsPrincipais}>
-        <SummaryStatCard
-          icone={Thermometer}
-          cor="var(--color-accent)"
-          rotulo={t('dashboard.temperatura')}
-          valor={resumoTopo.temperatura != null ? `${resumoTopo.temperatura}°C` : '—'}
-          legenda={
-            tendenciaTemperatura.delta == null
-              ? undefined
-              : t('dashboard.ultimaHoraTemperatura', { valor: Math.abs(tendenciaTemperatura.delta) })
-          }
-          tendencia={tendenciaTemperatura.tendencia}
-          horarioAtualizacao={horarioUltimaLeitura}
-        />
-        <SummaryStatCard
-          icone={Droplets}
-          cor="var(--color-accent)"
-          rotulo={t('dashboard.umidade')}
-          valor={resumoTopo.umidade != null ? `${resumoTopo.umidade}%` : '—'}
-          legenda={
-            tendenciaUmidade.delta == null
-              ? undefined
-              : t('dashboard.ultimaHoraUmidade', { valor: Math.abs(tendenciaUmidade.delta) })
-          }
-          tendencia={tendenciaUmidade.tendencia}
-          horarioAtualizacao={horarioUltimaLeitura}
-        />
-        <SummaryStatCard
-          icone={Gauge}
-          cor="var(--color-accent)"
-          rotulo={t('dashboard.pressao')}
-          valor={resumoTopo.pressao != null ? `${resumoTopo.pressao} hPa` : '—'}
-          legenda={
-            tendenciaPressao.delta == null
-              ? undefined
-              : t('dashboard.ultimaHoraPressao', { valor: Math.abs(tendenciaPressao.delta) })
-          }
-          tendencia={tendenciaPressao.tendencia}
-          horarioAtualizacao={horarioUltimaLeitura}
-        />
-        <SummaryStatCard
-          icone={Wind}
-          cor="var(--color-accent)"
-          rotulo={t('dashboard.vento')}
-          valor={resumoTopo.vento.velocidade != null ? `${resumoTopo.vento.velocidade} km/h` : '—'}
-          legenda={`${resumoTopo.vento.direcaoTexto} · ${t('dashboard.rajadas')} ${resumoTopo.vento.rajada ?? '—'} km/h`}
-          horarioAtualizacao={horarioUltimaLeitura}
-        />
-      </div>
-
-      <section className={styles.grid2Colunas}>
-        <GraficoHistoricoCarrossel grafico={visao.grafico} indice={indiceGrafico} onMudarIndice={setIndiceGrafico} />
-        <CondicoesAtuaisCard clima={clima} />
-      </section>
-
-      <section className={styles.grid2Colunas}>
-        <HistoricoDiarioTable
-          tabela={visao.tabela}
-          indice={indiceTabela}
-          onMudarIndice={setIndiceTabela}
-          periodo={periodo}
-          granularidade={visao.granularidade}
-        />
-        <div className={styles.colunaLateral}>
-          <ResumoDiaCard resumo={clima.resumoDia} />
-          <StatusEstacaoCard operacional={!estacao?.esta_offline} />
-        </div>
-      </section>
+      <GradeGraficosMetricas grafico={visao.grafico} resumoTopo={resumoTopo} />
     </div>
   )
 }

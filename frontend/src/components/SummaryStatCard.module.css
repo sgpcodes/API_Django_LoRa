@@ -75,3 +75,20 @@
   border-radius: 999px;
   transition: width 0.3s ease;
 }
+
+.maxMin {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.15rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--color-card-border);
+  font-size: 0.76rem;
+  color: var(--color-text-secondary);
+}
+
+.maxMin strong {
+  color: var(--color-text);
+  font-weight: 600;
+}
