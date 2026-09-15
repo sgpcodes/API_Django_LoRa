@@ -319,6 +319,13 @@
   font-style: italic;
 }
 
+/* Contas administradoras: altura fixa (~4 contas) e rolagem interna,
+   pra não empurrar o resto do layout quando a lista crescer. */
+.listaContasRolavel {
+  max-height: 15rem;
+  overflow-y: auto;
+}
+
 .linkAcao {
   background: none;
   border: none;

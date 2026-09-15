@@ -407,7 +407,7 @@ function PerfilAdmin() {
             {administradores.length === 0 ? (
               <p className={styles.valorEmBreve}>Nenhuma outra conta administradora cadastrada.</p>
             ) : (
-              <ul className={styles.listaLinhas}>
+              <ul className={`${styles.listaLinhas} ${styles.listaContasRolavel}`}>
                 {administradores.map((admin) => {
                   const nomeAdmin = [admin.first_name, admin.last_name].filter(Boolean).join(' ') || admin.username
                   const expandido = adminExpandidoId === admin.id
