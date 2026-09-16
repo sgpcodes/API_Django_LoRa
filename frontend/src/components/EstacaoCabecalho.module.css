@@ -48,13 +48,15 @@
   position: relative;
   display: inline-flex;
   align-items: center;
+  max-width: min(220px, 42vw);
 }
 
 .selectNome {
   appearance: none;
   -webkit-appearance: none;
   margin: 0;
-  padding: 0.15rem 1.6rem 0.15rem 0;
+  width: 100%;
+  padding: 0.15rem 1.4rem 0.15rem 0;
   border: none;
   background: transparent;
   font-family: inherit;
@@ -63,6 +65,9 @@
   color: var(--color-text);
   cursor: pointer;
   border-radius: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .selectNome:hover,
