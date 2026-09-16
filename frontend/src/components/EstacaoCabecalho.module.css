@@ -44,41 +44,68 @@
   flex-wrap: wrap;
 }
 
-.seletorNome {
+.seletoresLocalizacao {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Chip arredondado com borda meio transparente — cidade e UF lado a lado,
+   cada um do tamanho do próprio texto (não do nome mais comprido da
+   lista). O truque é dar `max-width` em px direto no <select>, não só no
+   wrapper: sem isso, o navegador ignora a largura do texto selecionado e
+   dimensiona a caixa pela opção mais longa da lista (município enorme no
+   RJ, por exemplo) — foi o que deixava aquele vão feio antes. */
+.chip {
   position: relative;
   display: inline-flex;
   align-items: center;
-  max-width: min(220px, 42vw);
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-text-secondary) 30%, transparent);
+  background-color: color-mix(in srgb, var(--color-text-secondary) 6%, transparent);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
-.selectNome {
+.chip:hover {
+  border-color: var(--color-accent);
+}
+
+.chipSelect {
   appearance: none;
   -webkit-appearance: none;
   margin: 0;
-  width: 100%;
-  padding: 0.15rem 1.4rem 0.15rem 0;
+  max-width: 150px;
+  padding: 0.3rem 1.55rem 0.3rem 0.85rem;
   border: none;
   background: transparent;
   font-family: inherit;
-  font-size: 1.2rem;
+  font-size: 0.92rem;
   font-weight: 700;
   color: var(--color-text);
   cursor: pointer;
-  border-radius: 6px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.selectNome:hover,
-.selectNome:focus-visible {
-  color: var(--color-accent);
+.chipSelectUf {
+  max-width: 4.2rem;
+  padding-right: 1.3rem;
+}
+
+.chipSelect:focus-visible {
   outline: none;
 }
 
-.chevronNome {
+.chip:has(.chipSelect:focus-visible) {
+  border-color: var(--color-accent);
+}
+
+.chipChevron {
   position: absolute;
-  right: 0;
+  right: 0.65rem;
+  top: 50%;
+  transform: translateY(-50%);
   color: var(--color-text-secondary);
   pointer-events: none;
 }
@@ -115,40 +142,6 @@
 
 .statusOffline .pontoStatus {
   background-color: var(--color-status-offline, #dc2626);
-}
-
-.seletorUf {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  width: fit-content;
-}
-
-.selectUf {
-  appearance: none;
-  -webkit-appearance: none;
-  margin: 0;
-  padding: 0.1rem 1.1rem 0.1rem 0;
-  border: none;
-  background: transparent;
-  font-family: inherit;
-  font-size: 0.88rem;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-}
-
-.selectUf:hover,
-.selectUf:focus-visible {
-  color: var(--color-accent);
-  outline: none;
-}
-
-.chevronUf {
-  position: absolute;
-  right: 0;
-  color: var(--color-text-secondary);
-  pointer-events: none;
 }
 
 .coordenadas {

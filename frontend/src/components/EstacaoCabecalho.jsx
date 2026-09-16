@@ -73,46 +73,49 @@ function EstacaoCabecalho({
         </span>
         <div className={styles.textos}>
           <div className={styles.linhaNome}>
-            <span className={styles.seletorNome}>
-              <select
-                id="cidade-selecionada"
-                className={styles.selectNome}
-                value={cidade}
-                onChange={(evento) => onMudarCidade(evento.target.value)}
-                disabled={municipios.length === 0}
-                aria-label={t('estacaoPagina.escolherCidade')}
-              >
-                {municipios.length === 0 && <option value="">{t('estacaoPagina.carregandoCidades')}</option>}
-                {municipios.map((municipio) => (
-                  <option key={municipio.codigo} value={municipio.nome}>
-                    {municipio.nome}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown size={18} className={styles.chevronNome} />
-            </span>
+            <div className={styles.seletoresLocalizacao}>
+              <span className={styles.chip}>
+                <select
+                  id="cidade-selecionada"
+                  className={styles.chipSelect}
+                  value={cidade}
+                  onChange={(evento) => onMudarCidade(evento.target.value)}
+                  disabled={municipios.length === 0}
+                  aria-label={t('estacaoPagina.escolherCidade')}
+                >
+                  {municipios.length === 0 && <option value="">{t('estacaoPagina.carregandoCidades')}</option>}
+                  {municipios.map((municipio) => (
+                    <option key={municipio.codigo} value={municipio.nome}>
+                      {municipio.nome}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className={styles.chipChevron} />
+              </span>
+
+              <span className={styles.chip}>
+                <select
+                  id="uf-selecionada"
+                  className={`${styles.chipSelect} ${styles.chipSelectUf}`}
+                  value={uf}
+                  onChange={(evento) => onMudarUf(evento.target.value)}
+                  aria-label={t('estacaoPagina.escolherEstado')}
+                >
+                  {ufs.map((sigla) => (
+                    <option key={sigla} value={sigla}>
+                      {sigla}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className={styles.chipChevron} />
+              </span>
+            </div>
+
             <span className={`${styles.status} ${online ? styles.statusOnline : styles.statusOffline}`}>
               <span className={styles.pontoStatus} />
               {online ? t('estacaoPagina.online') : t('estacaoPagina.offline')}
             </span>
           </div>
-
-          <span className={styles.seletorUf}>
-            <select
-              id="uf-selecionada"
-              className={styles.selectUf}
-              value={uf}
-              onChange={(evento) => onMudarUf(evento.target.value)}
-              aria-label={t('estacaoPagina.escolherEstado')}
-            >
-              {ufs.map((sigla) => (
-                <option key={sigla} value={sigla}>
-                  {sigla}
-                </option>
-              ))}
-            </select>
-            <ChevronDown size={13} className={styles.chevronUf} />
-          </span>
 
           <span className={styles.coordenadas}>{carregandoLocalizacao ? t('estacaoPagina.localizando') : coordenadaTexto}</span>
         </div>
