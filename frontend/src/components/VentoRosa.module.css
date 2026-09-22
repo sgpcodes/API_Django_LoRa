@@ -131,24 +131,32 @@
   stroke-width: 1.5;
 }
 
+/* `fill` pinta a fatia no SVG; `background-color` pinta o quadradinho de
+   cor da legenda/tabela (um <span> de HTML normal — `fill` não existe
+   fora de SVG, então sem isso o quadradinho ficava sem cor nenhuma). */
 .faixaf1 {
   fill: var(--vento-f1);
+  background-color: var(--vento-f1);
 }
 
 .faixaf2 {
   fill: var(--vento-f2);
+  background-color: var(--vento-f2);
 }
 
 .faixaf3 {
   fill: var(--vento-f3);
+  background-color: var(--vento-f3);
 }
 
 .faixaf4 {
   fill: var(--vento-f4);
+  background-color: var(--vento-f4);
 }
 
 .faixaf5 {
   fill: var(--vento-f5);
+  background-color: var(--vento-f5);
 }
 
 .legenda {
