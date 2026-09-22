@@ -214,6 +214,14 @@ function normalizar(dados) {
   const horas = dados.hourly?.time ?? []
   const agora = new Date()
 
+  // Posição de "hoje" dentro de `daily.time` — não é 0: `past_days` (RN09)
+  // desloca esse array também, não só o `hourly`. `atual.time` vem no
+  // mesmo fuso pedido (America/Sao_Paulo) que `daily.time`, então compara
+  // direto como texto sem risco de fuso horário diferente do navegador.
+  const hojeISO = atual?.time?.slice(0, 10)
+  const indiceHojeBusca = (dados.daily?.time ?? []).findIndex((data) => data >= hojeISO)
+  const indiceHoje = indiceHojeBusca === -1 ? 0 : indiceHojeBusca
+
   // A Open-Meteo devolve algumas horas "futuras" (previsão do resto do dia
   // de hoje/amanhã, por causa de forecast_days=1) — descarta o que ainda
   // não aconteceu, senão "Hoje" mostraria previsão como se fosse leitura.
@@ -262,26 +270,35 @@ function normalizar(dados) {
     precipitacao: atual.precipitation,
     visibilidadeKm: atual.visibility != null ? Number((atual.visibility / 1000).toFixed(1)) : null,
     condicaoTexto: descricaoTempo(atual.weather_code),
-    // Nascer/pôr do sol de hoje é a posição 0 de `daily` (forecast_days=15,
-    // ver buscarClimaAtual).
-    nascerSol: dados.daily?.sunrise?.[0] ?? null,
-    porSol: dados.daily?.sunset?.[0] ?? null,
-    // Previsão de 15 dias — fonte única do card "Previsão do tempo"
-    // (components/PrevisaoSemana.jsx): o INMET só dá 5 dias, então a partir
-    // daqui é tudo Open-Meteo (também é de onde vem a rosa dos ventos e os
-    // gráficos, então fica uma fonte só).
-    previsaoDiaria: (dados.daily?.time ?? []).map((data, i) => ({
-      data,
-      diaSemana: diaSemanaTexto(data),
-      tempMax: dados.daily?.temperature_2m_max?.[i] ?? null,
-      tempMin: dados.daily?.temperature_2m_min?.[i] ?? null,
-      chuvaProbabilidade: dados.daily?.precipitation_probability_max?.[i] ?? null,
-      weatherCode: dados.daily?.weather_code?.[i] ?? null,
-      condicao: condicaoPorCodigo(dados.daily?.weather_code?.[i]),
-      ventoVelocidade: dados.daily?.wind_speed_10m_max?.[i] ?? null,
-      ventoDirecaoTexto: direcaoTexto(dados.daily?.wind_direction_10m_dominant?.[i]),
-      ventoIntensidade: intensidadeVento(dados.daily?.wind_speed_10m_max?.[i]),
-    })),
+    // Nascer/pôr do sol de HOJE — `daily` também leva o `past_days` (RN09,
+    // usado pros gráficos), então o índice 0 de `daily.time` não é hoje, é
+    // 30 dias atrás (bug real: "Hoje" mostrava a data errada e o painel de
+    // hora em hora de qualquer dia clicado vinha vazio, porque a data
+    // "de hoje" usada era de um mês atrás). `indiceHoje` acha a posição
+    // certa comparando com `current.time`, que vem no mesmo fuso horário
+    // pedido (America/Sao_Paulo) que `daily.time` — não dá pra usar a data
+    // do navegador aqui porque pode estar em outro fuso.
+    nascerSol: dados.daily?.sunrise?.[indiceHoje] ?? null,
+    porSol: dados.daily?.sunset?.[indiceHoje] ?? null,
+    // Previsão de 15 dias (a partir de HOJE, ver `indiceHoje` acima) —
+    // fonte única do card "Previsão do tempo" (components/PrevisaoSemana.jsx):
+    // o INMET só dá 5 dias, então daqui pra baixo é tudo Open-Meteo (também
+    // é de onde vem a rosa dos ventos e os gráficos, fica uma fonte só).
+    previsaoDiaria: (dados.daily?.time ?? []).slice(indiceHoje).map((data, indiceRelativo) => {
+      const i = indiceHoje + indiceRelativo
+      return {
+        data,
+        diaSemana: diaSemanaTexto(data),
+        tempMax: dados.daily?.temperature_2m_max?.[i] ?? null,
+        tempMin: dados.daily?.temperature_2m_min?.[i] ?? null,
+        chuvaProbabilidade: dados.daily?.precipitation_probability_max?.[i] ?? null,
+        weatherCode: dados.daily?.weather_code?.[i] ?? null,
+        condicao: condicaoPorCodigo(dados.daily?.weather_code?.[i]),
+        ventoVelocidade: dados.daily?.wind_speed_10m_max?.[i] ?? null,
+        ventoDirecaoTexto: direcaoTexto(dados.daily?.wind_direction_10m_dominant?.[i]),
+        ventoIntensidade: intensidadeVento(dados.daily?.wind_speed_10m_max?.[i]),
+      }
+    }),
     // Previsão HORA A HORA (passado + futuro, sem cortar) — alimenta o
     // painel que abre ao clicar num dia em PrevisaoSemana.jsx. É a única
     // lista aqui que não corta o futuro: é o próprio ponto dela.

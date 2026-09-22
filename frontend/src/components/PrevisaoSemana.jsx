@@ -60,6 +60,47 @@ function iconeParaHora(condicao, dataHoraISO) {
   return IMAGEM_CONDICAO[condicao] ?? IMAGEM_CONDICAO.sol
 }
 
+const TURNOS = [
+  { chave: 'manha', rotulo: 'estacaoPagina.turnoManha', ehDoTurno: (hora) => hora >= 6 && hora < 12 },
+  { chave: 'tarde', rotulo: 'estacaoPagina.turnoTarde', ehDoTurno: (hora) => hora >= 12 && hora < 18 },
+  { chave: 'noite', rotulo: 'estacaoPagina.turnoNoite', ehDoTurno: (hora) => hora >= 18 || hora < 6 },
+]
+
+// Prioriza a condição mais severa do turno em vez de fazer "moda" —
+// numa janela de 6h, se teve 1h de chuva e 5h de sol, o que importa pra
+// quem consulta a previsão é que vai chover, não que a maioria do turno
+// fez sol.
+const PRIORIDADE_CONDICAO = { tempestade: 4, chuva: 3, nublado: 2, 'parcialmente-nublado': 1, sol: 0 }
+
+function condicaoMaisSevera(lista) {
+  return lista.reduce((pior, atual) => (PRIORIDADE_CONDICAO[atual] > PRIORIDADE_CONDICAO[pior] ? atual : pior), 'sol')
+}
+
+function media(numeros) {
+  const validos = numeros.filter((n) => n != null)
+  return validos.length ? Math.round(validos.reduce((soma, n) => soma + n, 0) / validos.length) : null
+}
+
+// Agrupa a previsão hora a hora de um dia em manhã/tarde/noite — turno sem
+// nenhuma hora dentro dele (ex.: manhã de hoje já passou) simplesmente não
+// entra na lista.
+function agruparPorTurno(pontosDoDia) {
+  return TURNOS.map((turno) => {
+    const pontos = pontosDoDia.filter((p) => turno.ehDoTurno(Number(p.dataHora.slice(11, 13))))
+    if (pontos.length === 0) return null
+    const condicao = condicaoMaisSevera(pontos.map((p) => p.condicao))
+    return {
+      chave: turno.chave,
+      rotulo: turno.rotulo,
+      temperatura: media(pontos.map((p) => p.temperatura)),
+      chuvaProbabilidade: pontos.some((p) => p.chuvaProbabilidade != null)
+        ? Math.max(...pontos.map((p) => p.chuvaProbabilidade ?? 0))
+        : null,
+      icone: turno.chave === 'noite' && condicao === 'sol' ? IMAGEM_CONDICAO.noite : (IMAGEM_CONDICAO[condicao] ?? IMAGEM_CONDICAO.sol),
+    }
+  }).filter(Boolean)
+}
+
 // Previsão de 15 dias (RF-21, Open-Meteo — o INMET só cobre 5) + painel
 // "Hoje" com o que só o Open-Meteo tem (ponto de orvalho, UV, visibilidade,
 // nascer/pôr do sol). Clicar num dia expande um painel hora a hora embaixo
@@ -75,12 +116,13 @@ function PrevisaoSemana({ clima, cidade }) {
   const iconeHoje = diaHoje ? iconeParaHora(diaHoje.condicao, clima?.atualizadoEm) : IMAGEM_CONDICAO.sol
 
   const diaExpandido = diaExpandidoIndice != null ? dias[diaExpandidoIndice] : null
-  const horasDoDiaExpandido = useMemo(() => {
+  const turnosDoDiaExpandido = useMemo(() => {
     if (!diaExpandido) return []
     const agora = new Date()
-    return (clima?.previsaoHoraria ?? []).filter(
+    const horasDoDia = (clima?.previsaoHoraria ?? []).filter(
       (ponto) => ponto.data === diaExpandido.data && new Date(ponto.dataHora) >= agora,
     )
+    return agruparPorTurno(horasDoDia)
   }, [clima, diaExpandido])
 
   function aoClicarDia(indice) {
@@ -139,19 +181,19 @@ function PrevisaoSemana({ clima, cidade }) {
         {diaExpandido && (
           <div className={styles.painelHoras}>
             <h3 className={styles.painelHorasTitulo}>
-              {t('estacaoPagina.previsaoPorHora')} — {diaExpandidoIndice === 0 ? t('dashboard.periodoHoje') : abreviarDiaSemana(diaExpandido.diaSemana)}, {formatarDataCurta(diaExpandido.data)}
+              {t('estacaoPagina.previsaoPorPeriodo')} — {diaExpandidoIndice === 0 ? t('dashboard.periodoHoje') : abreviarDiaSemana(diaExpandido.diaSemana)}, {formatarDataCurta(diaExpandido.data)}
             </h3>
-            {horasDoDiaExpandido.length === 0 ? (
+            {turnosDoDiaExpandido.length === 0 ? (
               <p className={styles.vazio}>{t('estacaoPagina.previsaoIndisponivel')}</p>
             ) : (
-              <div className={styles.horas}>
-                {horasDoDiaExpandido.map((ponto) => (
-                  <div key={ponto.dataHora} className={styles.horaCard}>
-                    <span className={styles.horaRotulo}>{ponto.hora}</span>
-                    <img src={iconeParaHora(ponto.condicao, ponto.dataHora)} alt="" className={styles.horaIcone} />
-                    <span className={styles.horaTemp}>{Math.round(ponto.temperatura)}°</span>
-                    <span className={styles.horaChuva}>
-                      <Droplets size={11} /> {ponto.chuvaProbabilidade != null ? `${ponto.chuvaProbabilidade}%` : '—'}
+              <div className={styles.turnos}>
+                {turnosDoDiaExpandido.map((turno) => (
+                  <div key={turno.chave} className={styles.turnoCard}>
+                    <span className={styles.turnoRotulo}>{t(turno.rotulo)}</span>
+                    <img src={turno.icone} alt="" className={styles.turnoIcone} />
+                    <span className={styles.turnoTemp}>{turno.temperatura != null ? `${turno.temperatura}°` : '—'}</span>
+                    <span className={styles.turnoChuva}>
+                      <Droplets size={12} /> {turno.chuvaProbabilidade != null ? `${turno.chuvaProbabilidade}%` : '—'}
                     </span>
                   </div>
                 ))}
