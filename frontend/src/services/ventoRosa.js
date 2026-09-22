@@ -4,6 +4,13 @@
 // pra substituir o gráfico de linha do card de Vento.
 export const DIRECOES = ['N', 'NE', 'L', 'SE', 'S', 'SO', 'O', 'NO']
 
+// Nome por extenso de cada sigla — usado no card "Direção predominante"
+// (ex.: "Oeste (O)"), a sigla sozinha já aparece em todo o resto.
+export const NOME_DIRECAO = {
+  N: 'Norte', NE: 'Nordeste', L: 'Leste', SE: 'Sudeste',
+  S: 'Sul', SO: 'Sudoeste', O: 'Oeste', NO: 'Noroeste',
+}
+
 // Faixas em km/h (o projeto usa km/h em todo o resto da página) — a
 // referência trazida era em m/s (escala Beaufort); aqui é uma divisão
 // equivalente em km/h, mais grossa (5 faixas em vez de 9) pra caber num

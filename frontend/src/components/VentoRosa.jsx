@@ -41,7 +41,7 @@ function pathSetorAnular(r0, r1, a0, a1) {
 // existindo por acessibilidade, mas sozinho é lento demais pra explorar);
 // e o botão "Ver como tabela" troca o desenho pelos números crus de cada
 // direção/faixa, pra quem quer ler ou copiar o dado em vez de só olhar.
-function VentoRosa({ pontos, altura = 320 }) {
+function VentoRosa({ pontos, altura = 320, ocultarLegenda = false }) {
   const { t } = useTranslation()
   const [dica, setDica] = useState(null)
   const [modoTabela, setModoTabela] = useState(false)
@@ -193,20 +193,22 @@ function VentoRosa({ pontos, altura = 320 }) {
             })}
           </svg>
 
-          <div className={styles.legenda}>
-            <span className={styles.legendaTitulo}>{t('estacaoPagina.velocidadeVento')}</span>
-            <ul className={styles.listaLegenda}>
-              {[...FAIXAS_VENTO].reverse().map((faixa) => (
-                <li key={faixa.chave}>
-                  <span className={`${styles.amostraCor} ${styles[`faixa${faixa.chave}`]}`} />
-                  {faixa.rotulo}
-                </li>
-              ))}
-            </ul>
-            <span className={styles.calmaria}>
-              {t('estacaoPagina.calmaria')}: <strong>{rosa.calmaPct.toFixed(1)}%</strong>
-            </span>
-          </div>
+          {!ocultarLegenda && (
+            <div className={styles.legenda}>
+              <span className={styles.legendaTitulo}>{t('estacaoPagina.velocidadeVento')}</span>
+              <ul className={styles.listaLegenda}>
+                {[...FAIXAS_VENTO].reverse().map((faixa) => (
+                  <li key={faixa.chave}>
+                    <span className={`${styles.amostraCor} ${styles[`faixa${faixa.chave}`]}`} />
+                    {faixa.rotulo}
+                  </li>
+                ))}
+              </ul>
+              <span className={styles.calmaria}>
+                {t('estacaoPagina.calmaria')}: <strong>{rosa.calmaPct.toFixed(1)}%</strong>
+              </span>
+            </div>
+          )}
         </>
       )}
 

@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Maximize2 } from 'lucide-react'
 import { METRICAS_CLIMA } from '../services/metricasClima'
-import { derivarVisaoPeriodo, derivarPontosVento } from '../services/climaExternoService'
+import { derivarVisaoPeriodo } from '../services/climaExternoService'
 import GraficoMetrica from './GraficoMetrica'
-import VentoRosa from './VentoRosa'
+import PainelVento from './PainelVento'
 import Modal from './Modal'
 import styles from './GradeGraficosMetricas.module.css'
 
@@ -60,22 +60,16 @@ function GradeGraficosMetricas({ clima, periodoGlobal }) {
 
   return (
     <div className={styles.grade}>
-      {METRICAS_CLIMA.map((metrica) => {
+      {METRICAS_CLIMA.filter((metrica) => metrica.chave !== 'vento').map((metrica) => {
         const Icone = metrica.icone
         const periodo = periodoDoGrafico(metrica.chave)
         const visao = derivarVisaoPeriodo(clima, periodo)
         const dados = visao.grafico[metrica.chave] ?? []
         const { maximo, minimo } = maxMinDaSerie(visao.resumoTopo, metrica.chave, dados)
         const personalizado = periodosIndividuais[metrica.chave] != null
-        // Temperatura/umidade/pressão/vento dividem a tela em metades (2
-        // por fileira) — mais largura e altura que o terço de antes, foi
-        // pedido explicitamente pra aumentar o tamanho dos gráficos. Chuva
-        // fica sozinha, largura cheia — as barras por hora aproveitam bem
-        // o espaço extra.
-        const classeSpan = metrica.chave === 'chuva' ? styles.spanCheio : styles.spanDeMeio
 
         return (
-          <div key={metrica.chave} className={`${styles.cartao} ${classeSpan}`}>
+          <div key={metrica.chave} className={`${styles.cartao} ${styles.spanDeMeio}`}>
             <div className={styles.cabecalhoCartao}>
               <h3 className={styles.tituloCartao}>
                 <Icone size={16} />
@@ -114,11 +108,7 @@ function GradeGraficosMetricas({ clima, periodoGlobal }) {
 
             <div className={styles.corpoCartao}>
               <div className={styles.areaGrafico}>
-                {metrica.chave === 'vento' ? (
-                  <VentoRosa pontos={derivarPontosVento(clima, periodo)} altura={260} />
-                ) : (
-                  <GraficoMetrica metrica={metrica} dados={dados} altura={260} />
-                )}
+                <GraficoMetrica metrica={metrica} dados={dados} altura={260} />
               </div>
               <div className={styles.colunaMaxMin}>
                 <span>
@@ -135,16 +125,22 @@ function GradeGraficosMetricas({ clima, periodoGlobal }) {
         )
       })}
 
+      <div className={styles.spanCheio}>
+        <PainelVento
+          clima={clima}
+          periodo={periodoDoGrafico('vento')}
+          onMudarPeriodo={(valor) => aoMudarPeriodoDoGrafico('vento', valor)}
+          personalizado={periodosIndividuais.vento != null}
+        />
+      </div>
+
       <Modal
         aberto={metricaExpandida != null}
         onFechar={() => setMetricaExpandida(null)}
         titulo={metricaExpandida?.titulo}
         icone={metricaExpandida?.icone}
       >
-        {metricaExpandida && metricaExpandida.chave === 'vento' && (
-          <VentoRosa pontos={derivarPontosVento(clima, periodoDoGrafico('vento'))} altura={420} />
-        )}
-        {metricaExpandida && metricaExpandida.chave !== 'vento' && (
+        {metricaExpandida && (
           <GraficoMetrica
             metrica={metricaExpandida}
             dados={derivarVisaoPeriodo(clima, periodoDoGrafico(metricaExpandida.chave)).grafico[metricaExpandida.chave] ?? []}

@@ -395,6 +395,72 @@ export function derivarPontosVento(clima, periodo) {
   return clima.diaria.vento.slice(-periodo).map((d) => ({ velocidade: d.velocidadeMedia, direcaoGraus: d.direcaoGraus }))
 }
 
+function filtrarHorariaPorJanela(serieHoraria, diasAtras, quantidadeDias) {
+  const fim = new Date()
+  fim.setDate(fim.getDate() - diasAtras)
+  fim.setHours(23, 59, 59, 999)
+  const inicio = new Date(fim)
+  inicio.setDate(inicio.getDate() - quantidadeDias + 1)
+  inicio.setHours(0, 0, 0, 0)
+  return serieHoraria.filter((ponto) => {
+    const momento = new Date(ponto.dataHora)
+    return momento >= inicio && momento <= fim
+  })
+}
+
+function estatisticasDeJanela(pontos) {
+  const validos = pontos.filter((p) => p.velocidade != null)
+  if (validos.length === 0) {
+    return { media: null, rajadaMaxima: null, rajadaHorario: null, menorVelocidade: null, menorHorario: null }
+  }
+  const mediaVelocidade = Number((validos.reduce((soma, p) => soma + p.velocidade, 0) / validos.length).toFixed(1))
+  const comRajada = validos.filter((p) => p.rajada != null)
+  const maiorRajada = comRajada.length ? comRajada.reduce((maior, p) => (p.rajada > maior.rajada ? p : maior)) : null
+  const menor = validos.reduce((pior, p) => (p.velocidade < pior.velocidade ? p : pior))
+  return {
+    media: mediaVelocidade,
+    rajadaMaxima: maiorRajada?.rajada ?? null,
+    rajadaHorario: maiorRajada?.dataHora ?? null,
+    menorVelocidade: menor.velocidade,
+    menorHorario: menor.dataHora,
+  }
+}
+
+// Resumo do card "Vento" (components/PainelVento.jsx): velocidade média
+// (+ variação % contra o período anterior de mesmo tamanho), rajada máxima
+// e menor velocidade — os dois últimos com o horário exato em que
+// aconteceram, por isso usa sempre `clima.horaria.vento` (nunca a agregada
+// `clima.diaria.vento`, que perde o horário) mesmo pra períodos de 7/30
+// dias.
+export function derivarResumoVento(clima, periodo) {
+  const quantidadeDias = periodo === 'hoje' || periodo === 'ontem' ? 1 : periodo
+  const diasAtras = periodo === 'ontem' ? 1 : 0
+
+  const atual = estatisticasDeJanela(filtrarHorariaPorJanela(clima.horaria.vento, diasAtras, quantidadeDias))
+  // Período anterior de mesmo tamanho, imediatamente antes — só existe dado
+  // se couber dentro dos 30 dias de histórico (RN09); sem isso, `deltaPct`
+  // fica null e o card simplesmente não mostra a variação.
+  const anterior = estatisticasDeJanela(filtrarHorariaPorJanela(clima.horaria.vento, diasAtras + quantidadeDias, quantidadeDias))
+  const deltaPct = atual.media != null && anterior.media ? Math.round(((atual.media - anterior.media) / anterior.media) * 100) : null
+
+  return { ...atual, deltaPct }
+}
+
+function formatarDataBR(dataISO) {
+  const [ano, mes, dia] = dataISO.split('-')
+  return `${dia}/${mes}/${ano}`
+}
+
+// Intervalo de datas mostrado no seletor do card "Vento" (ex.: "16/09/2026
+// – 22/09/2026") — sempre um período PASSADO terminando hoje (mesma janela
+// que `derivarPontosVento`/`derivarVisaoPeriodo` usam pra 7/30 dias; os
+// dados são de monitoramento real, não previsão futura).
+export function intervaloDeDatas(periodo) {
+  if (periodo === 'hoje') return formatarDataBR(dataISODeslocada(0))
+  if (periodo === 'ontem') return formatarDataBR(dataISODeslocada(1))
+  return `${formatarDataBR(dataISODeslocada(periodo - 1))} – ${formatarDataBR(dataISODeslocada(0))}`
+}
+
 // Deriva o que o gráfico/tabela do Dashboard devem mostrar pro período
 // escolhido — 'hoje'/'ontem' (granularidade hora, sem médias) ou 7/30
 // (granularidade dia, com médias — RN: só faz média quando mais de um dia
