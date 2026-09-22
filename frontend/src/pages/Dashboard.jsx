@@ -268,7 +268,7 @@ function Dashboard() {
         </div>
       </div>
 
-      <GradeGraficosMetricas grafico={visao.grafico} resumoTopo={resumoTopo} />
+      <GradeGraficosMetricas clima={clima} periodoGlobal={periodo} />
     </div>
   )
 }

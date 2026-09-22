@@ -2,9 +2,17 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Maximize2 } from 'lucide-react'
 import { METRICAS_CLIMA } from '../services/metricasClima'
+import { derivarVisaoPeriodo } from '../services/climaExternoService'
 import GraficoMetrica from './GraficoMetrica'
 import Modal from './Modal'
 import styles from './GradeGraficosMetricas.module.css'
+
+const OPCOES_PERIODO_GRAFICO = [
+  { valor: 'hoje', rotulo: 'Hoje' },
+  { valor: 'ontem', rotulo: 'Ontem' },
+  { valor: 7, rotulo: '7 dias' },
+  { valor: 30, rotulo: '30 dias' },
+]
 
 // Máx./mín. de uma métrica pro cartãozinho ao lado do gráfico: usa o que
 // `derivarVisaoPeriodo` já calculou pro dia de hoje (`resumoTopo.maxMin`)
@@ -20,23 +28,50 @@ function maxMinDaSerie(resumoTopo, chave, dados) {
 
 // Os 5 gráficos hora a hora (temperatura, umidade, pressão, vento, chuva)
 // lado a lado — substitui o carrossel "um de cada vez" na página da
-// estação (RF-18: todos juntos, não um de cada vez). Cada um pode ser
-// expandido num modal maior; o período (Hoje/Ontem/7/30 dias) é
-// compartilhado, escolhido lá em cima na página.
-function GradeGraficosMetricas({ grafico, resumoTopo }) {
+// estação (RF-18: todos juntos, não um de cada vez). O período de cada um
+// segue o seletor global da página (`periodoGlobal`) por padrão, mas pode
+// ser trocado individualmente sem afetar os demais (RF-22) — `clima` (o
+// objeto bruto, com todo o histórico já buscado) é recalculado localmente
+// pra cada período diferente que algum gráfico esteja usando, sem nenhuma
+// chamada de rede nova.
+function GradeGraficosMetricas({ clima, periodoGlobal }) {
   const { t } = useTranslation()
   const [metricaExpandida, setMetricaExpandida] = useState(null)
+  // Só guarda uma chave aqui quando o período daquele gráfico DIVERGE do
+  // global — assim, se o período global mudar lá em cima, todo gráfico que
+  // não foi mexido manualmente acompanha sozinho.
+  const [periodosIndividuais, setPeriodosIndividuais] = useState({})
+
+  function periodoDoGrafico(chave) {
+    return periodosIndividuais[chave] ?? periodoGlobal
+  }
+
+  function aoMudarPeriodoDoGrafico(chave, novoPeriodo) {
+    setPeriodosIndividuais((atual) => {
+      if (novoPeriodo === periodoGlobal) {
+        const proximo = { ...atual }
+        delete proximo[chave]
+        return proximo
+      }
+      return { ...atual, [chave]: novoPeriodo }
+    })
+  }
 
   return (
     <div className={styles.grade}>
-      {METRICAS_CLIMA.map((metrica, indice) => {
+      {METRICAS_CLIMA.map((metrica) => {
         const Icone = metrica.icone
-        const dados = grafico[metrica.chave] ?? []
-        const { maximo, minimo } = maxMinDaSerie(resumoTopo, metrica.chave, dados)
-        // As 3 primeiras (temperatura/umidade/pressão) dividem a primeira
-        // fileira em terços; as 2 últimas (vento/chuva) dividem a segunda
-        // em metades — mesma proporção do mockup de referência.
-        const classeSpan = indice < 3 ? styles.spanDeTerco : styles.spanDeMeio
+        const periodo = periodoDoGrafico(metrica.chave)
+        const visao = derivarVisaoPeriodo(clima, periodo)
+        const dados = visao.grafico[metrica.chave] ?? []
+        const { maximo, minimo } = maxMinDaSerie(visao.resumoTopo, metrica.chave, dados)
+        const personalizado = periodosIndividuais[metrica.chave] != null
+        // Temperatura/umidade/pressão/vento dividem a tela em metades (2
+        // por fileira) — mais largura e altura que o terço de antes, foi
+        // pedido explicitamente pra aumentar o tamanho dos gráficos. Chuva
+        // fica sozinha, largura cheia — as barras por hora aproveitam bem
+        // o espaço extra.
+        const classeSpan = metrica.chave === 'chuva' ? styles.spanCheio : styles.spanDeMeio
 
         return (
           <div key={metrica.chave} className={`${styles.cartao} ${classeSpan}`}>
@@ -45,19 +80,40 @@ function GradeGraficosMetricas({ grafico, resumoTopo }) {
                 <Icone size={16} />
                 {metrica.titulo}
               </h3>
-              <button
-                type="button"
-                className={styles.botaoExpandir}
-                onClick={() => setMetricaExpandida(metrica)}
-                aria-label={t('estacaoPagina.expandirGrafico', { metrica: metrica.titulo })}
-              >
-                <Maximize2 size={13} />
-              </button>
+              <div className={styles.controlesCartao}>
+                <span className={`${styles.seletorPeriodoCartao} ${personalizado ? styles.seletorPeriodoPersonalizado : ''}`}>
+                  <select
+                    className={styles.selectPeriodoCartao}
+                    value={periodo}
+                    onChange={(evento) => {
+                      const valorBruto = evento.target.value
+                      const valor = valorBruto === 'hoje' || valorBruto === 'ontem' ? valorBruto : Number(valorBruto)
+                      aoMudarPeriodoDoGrafico(metrica.chave, valor)
+                    }}
+                    aria-label={t('estacaoPagina.periodoDoGrafico', { metrica: metrica.titulo })}
+                    title={personalizado ? t('estacaoPagina.periodoPersonalizado') : undefined}
+                  >
+                    {OPCOES_PERIODO_GRAFICO.map((opcao) => (
+                      <option key={opcao.valor} value={opcao.valor}>
+                        {opcao.rotulo}
+                      </option>
+                    ))}
+                  </select>
+                </span>
+                <button
+                  type="button"
+                  className={styles.botaoExpandir}
+                  onClick={() => setMetricaExpandida(metrica)}
+                  aria-label={t('estacaoPagina.expandirGrafico', { metrica: metrica.titulo })}
+                >
+                  <Maximize2 size={13} />
+                </button>
+              </div>
             </div>
 
             <div className={styles.corpoCartao}>
               <div className={styles.areaGrafico}>
-                <GraficoMetrica metrica={metrica} dados={dados} altura={190} />
+                <GraficoMetrica metrica={metrica} dados={dados} altura={260} />
               </div>
               <div className={styles.colunaMaxMin}>
                 <span>
@@ -80,7 +136,13 @@ function GradeGraficosMetricas({ grafico, resumoTopo }) {
         titulo={metricaExpandida?.titulo}
         icone={metricaExpandida?.icone}
       >
-        {metricaExpandida && <GraficoMetrica metrica={metricaExpandida} dados={grafico[metricaExpandida.chave] ?? []} altura={340} />}
+        {metricaExpandida && (
+          <GraficoMetrica
+            metrica={metricaExpandida}
+            dados={derivarVisaoPeriodo(clima, periodoDoGrafico(metricaExpandida.chave)).grafico[metricaExpandida.chave] ?? []}
+            altura={420}
+          />
+        )}
       </Modal>
     </div>
   )

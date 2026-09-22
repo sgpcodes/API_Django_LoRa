@@ -73,6 +73,8 @@ export default {
     porSol: 'Sunset',
     condicaoAtual: 'Current condition',
     expandirGrafico: 'Expand — {{metrica}}',
+    periodoDoGrafico: 'Period — {{metrica}}',
+    periodoPersonalizado: 'Different period than the rest of the page',
   },
   adminDashboard: {
     bannerTitulo: 'System overview',

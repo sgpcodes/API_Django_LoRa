@@ -1,19 +1,19 @@
 .grade {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 0.75rem;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.85rem;
 }
 
 .grade > * {
   min-width: 0;
 }
 
-.spanDeTerco {
-  grid-column: span 2;
+.spanDeMeio {
+  grid-column: span 1;
 }
 
-.spanDeMeio {
-  grid-column: span 3;
+.spanCheio {
+  grid-column: 1 / -1;
 }
 
 .cartao {
@@ -31,6 +31,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
   margin-bottom: 0.6rem;
 }
 
@@ -44,6 +46,51 @@
   color: var(--color-text);
 }
 
+.controlesCartao {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+/* Seletor de período por gráfico (RF-22) — pequeno, ao lado do botão de
+   expandir. Ganha um contorno na cor de destaque quando o período foi
+   trocado manualmente (deixou de seguir o seletor global da página). */
+.seletorPeriodoCartao {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 7px;
+  border: 1px solid var(--color-card-border);
+  background-color: var(--color-input-bg);
+}
+
+.seletorPeriodoPersonalizado {
+  border-color: var(--color-accent);
+}
+
+.selectPeriodoCartao {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  padding: 0.25rem 1.15rem 0.25rem 0.5rem;
+  border: none;
+  background: transparent
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
+    no-repeat right 0.4rem center;
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  border-radius: 7px;
+}
+
+.selectPeriodoCartao:hover,
+.selectPeriodoCartao:focus-visible {
+  color: var(--color-text);
+  outline: none;
+}
+
 .botaoExpandir {
   display: flex;
   align-items: center;
@@ -55,6 +102,7 @@
   background-color: var(--color-input-bg);
   color: var(--color-text-secondary);
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .botaoExpandir:hover {
@@ -98,19 +146,12 @@
   color: var(--color-text);
 }
 
-@media (max-width: 1023px) {
-  .grade {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .spanDeTerco,
-  .spanDeMeio {
-    grid-column: span 1;
-  }
-}
-
-@media (max-width: 640px) {
+@media (max-width: 900px) {
   .grade {
     grid-template-columns: 1fr;
+  }
+
+  .spanDeMeio {
+    grid-column: 1 / -1;
   }
 }

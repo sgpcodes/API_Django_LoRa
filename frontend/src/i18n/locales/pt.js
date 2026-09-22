@@ -73,6 +73,8 @@ export default {
     porSol: 'Pôr do sol',
     condicaoAtual: 'Condição atual',
     expandirGrafico: 'Expandir — {{metrica}}',
+    periodoDoGrafico: 'Período — {{metrica}}',
+    periodoPersonalizado: 'Período diferente do resto da página',
   },
   adminDashboard: {
     bannerTitulo: 'Visão geral do sistema',
