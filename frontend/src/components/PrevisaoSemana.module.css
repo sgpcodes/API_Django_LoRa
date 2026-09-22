@@ -27,9 +27,23 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 52px;
-  height: 52px;
+  width: 56px;
+  height: 56px;
   border-radius: 14px;
+  background-color: var(--color-pill-bg);
+  flex-shrink: 0;
+}
+
+.imagemIconeGrande {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+}
+
+.imagemIconePequena {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
   flex-shrink: 0;
 }
 
@@ -52,18 +66,22 @@
 }
 
 .diasSemana {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 0.65rem;
+  display: flex;
+  gap: 0.6rem;
+  overflow-x: auto;
+  padding-bottom: 0.35rem;
+  scrollbar-width: thin;
 }
 
 .diaCard {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   gap: 0.35rem;
-  padding: 1.1rem 0.7rem;
+  flex: 0 0 108px;
+  padding: 1rem 0.6rem 1.4rem;
   border: 2px solid transparent;
   border-radius: 14px;
   background-color: var(--color-pill-bg);
@@ -95,17 +113,21 @@
 }
 
 .diaCardIcone {
-  margin: 0.3rem 0;
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  margin: 0.2rem 0;
 }
 
 .diaCardTemp {
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--color-text);
+  white-space: nowrap;
 }
 
 .diaCardResumo {
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   color: var(--color-text-secondary);
   min-height: 2.2em;
 }
@@ -114,7 +136,80 @@
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.diaCardSeta {
+  position: absolute;
+  bottom: 0.4rem;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--color-text-secondary);
+  transition: transform 0.2s ease;
+}
+
+.diaCardSetaAberta {
+  transform: translateX(-50%) rotate(180deg);
+  color: var(--color-accent);
+}
+
+.painelHoras {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-card-border);
+}
+
+.painelHorasTitulo {
+  margin: 0 0 0.7rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.horas {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.35rem;
+  scrollbar-width: thin;
+}
+
+.horaCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  flex: 0 0 72px;
+  padding: 0.7rem 0.4rem;
+  border-radius: 12px;
+  background-color: var(--color-pill-bg);
+}
+
+.horaRotulo {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.horaIcone {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+
+.horaTemp {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.horaChuva {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.65rem;
   color: var(--color-text-secondary);
 }
 
@@ -194,15 +289,10 @@
   padding: 0.75rem;
   border-radius: 10px;
   background-color: var(--color-pill-bg);
-  color: var(--color-accent);
 }
 
 @media (max-width: 1023px) {
   .container {
     grid-template-columns: 1fr;
-  }
-
-  .diasSemana {
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   }
 }

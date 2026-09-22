@@ -60,8 +60,34 @@ function direcaoTexto(graus) {
   return PONTOS_CARDEAIS[indice]
 }
 
-function descricaoTempo(codigo) {
+export function descricaoTempo(codigo) {
   return DESCRICAO_POR_CODIGO[codigo] ?? 'Condição indisponível'
+}
+
+// Reduz os WMO Weather Codes da Open-Meteo às 5 condições que têm ícone
+// próprio (assets/clima/*.png — ver PrevisaoSemana.jsx): não existe ícone
+// de tempestade separado no material, então tempestade reaproveita o de
+// chuva.
+export function condicaoPorCodigo(codigo) {
+  if (codigo == null) return 'sol'
+  if (codigo === 95 || codigo === 96 || codigo === 99) return 'tempestade'
+  if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 71, 73, 75, 77, 80, 81, 82, 85, 86].includes(codigo)) return 'chuva'
+  if (codigo === 3 || codigo === 45 || codigo === 48) return 'nublado'
+  if (codigo === 2) return 'parcialmente-nublado'
+  return 'sol' // 0 (céu limpo), 1 (predominantemente limpo)
+}
+
+function intensidadeVento(kmh) {
+  if (kmh == null) return '—'
+  if (kmh < 20) return 'Fraco'
+  if (kmh < 40) return 'Moderado'
+  return 'Forte'
+}
+
+// "2026-09-22" -> "terça-feira" (meio-dia fixo pra não cair no dia errado
+// por causa de fuso horário no parse de "AAAA-MM-DD").
+function diaSemanaTexto(dataISO) {
+  return new Date(`${dataISO}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long' })
 }
 
 function media(numeros) {
@@ -236,18 +262,37 @@ function normalizar(dados) {
     precipitacao: atual.precipitation,
     visibilidadeKm: atual.visibility != null ? Number((atual.visibility / 1000).toFixed(1)) : null,
     condicaoTexto: descricaoTempo(atual.weather_code),
-    // Nascer/pôr do sol de hoje é a posição 0 de `daily` (forecast_days=7,
+    // Nascer/pôr do sol de hoje é a posição 0 de `daily` (forecast_days=15,
     // ver buscarClimaAtual).
     nascerSol: dados.daily?.sunrise?.[0] ?? null,
     porSol: dados.daily?.sunset?.[0] ?? null,
-    // Previsão diária (chance de chuva + condição) pros próximos dias — usada
-    // pelo card "Previsão do tempo" (INMET) só pra complementar a chance de
-    // chuva em %, que o INMET não devolve nesse endpoint (ver
-    // components/PrevisaoSemana.jsx, casa por data).
+    // Previsão de 15 dias — fonte única do card "Previsão do tempo"
+    // (components/PrevisaoSemana.jsx): o INMET só dá 5 dias, então a partir
+    // daqui é tudo Open-Meteo (também é de onde vem a rosa dos ventos e os
+    // gráficos, então fica uma fonte só).
     previsaoDiaria: (dados.daily?.time ?? []).map((data, i) => ({
       data,
+      diaSemana: diaSemanaTexto(data),
+      tempMax: dados.daily?.temperature_2m_max?.[i] ?? null,
+      tempMin: dados.daily?.temperature_2m_min?.[i] ?? null,
       chuvaProbabilidade: dados.daily?.precipitation_probability_max?.[i] ?? null,
       weatherCode: dados.daily?.weather_code?.[i] ?? null,
+      condicao: condicaoPorCodigo(dados.daily?.weather_code?.[i]),
+      ventoVelocidade: dados.daily?.wind_speed_10m_max?.[i] ?? null,
+      ventoDirecaoTexto: direcaoTexto(dados.daily?.wind_direction_10m_dominant?.[i]),
+      ventoIntensidade: intensidadeVento(dados.daily?.wind_speed_10m_max?.[i]),
+    })),
+    // Previsão HORA A HORA (passado + futuro, sem cortar) — alimenta o
+    // painel que abre ao clicar num dia em PrevisaoSemana.jsx. É a única
+    // lista aqui que não corta o futuro: é o próprio ponto dela.
+    previsaoHoraria: horas.map((h, i) => ({
+      dataHora: h,
+      data: h.slice(0, 10),
+      hora: horaRotulo(h),
+      temperatura: dados.hourly?.temperature_2m?.[i] ?? null,
+      chuvaProbabilidade: dados.hourly?.precipitation_probability?.[i] ?? null,
+      weatherCode: dados.hourly?.weather_code?.[i] ?? null,
+      condicao: condicaoPorCodigo(dados.hourly?.weather_code?.[i]),
     })),
     atualizadoEm: atual.time,
     resumoDia,
@@ -279,16 +324,25 @@ export async function buscarClimaAtual(coordenadas = COORDENADAS_PADRAO) {
       'relative_humidity_2m',
       'surface_pressure',
       'precipitation',
+      'precipitation_probability',
+      'weather_code',
       'wind_speed_10m',
       'wind_direction_10m',
       'wind_gusts_10m',
     ].join(','),
-    daily: ['sunrise', 'sunset', 'precipitation_probability_max', 'weather_code'].join(','),
+    daily: [
+      'sunrise',
+      'sunset',
+      'precipitation_probability_max',
+      'weather_code',
+      'temperature_2m_max',
+      'temperature_2m_min',
+      'wind_speed_10m_max',
+      'wind_direction_10m_dominant',
+    ].join(','),
     past_days: String(DIAS_HISTORICO_MAXIMO),
-    // 7 pra cobrir a semana inteira da previsão (RF-21) — o card de "Previsão
-    // do tempo" (PrevisaoSemana.jsx) usa `previsaoDiaria` como referência de
-    // chance de chuva pros dias que vêm do INMET, casando pela data.
-    forecast_days: '7',
+    // 15 dias de previsão (pedido explícito) — teto da Open-Meteo é 16.
+    forecast_days: '15',
     timezone: 'America/Sao_Paulo',
   })
 

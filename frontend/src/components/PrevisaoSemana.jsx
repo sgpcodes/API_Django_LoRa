@@ -1,28 +1,26 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Sun, Cloud, CloudRain, CloudLightning, CloudSun, Wind, Droplets, Sunrise, Sunset, Eye, Gauge } from 'lucide-react'
-import StatusMessage from './StatusMessage'
-import { buscarPrevisaoInmet } from '../services/inmetService'
-import { buscarMunicipiosPorUf } from '../services/ibgeService'
+import { Droplets, Sunrise, Sunset, Eye, Gauge, Wind, ChevronDown } from 'lucide-react'
+import { descricaoTempo } from '../services/climaExternoService'
+import iconeSol from '../assets/clima/sol.png'
+import iconeNublado from '../assets/clima/nublado.png'
+import iconeParcialmenteNublado from '../assets/clima/parcialmente-nublado.png'
+import iconeChuva from '../assets/clima/chuva.png'
+import iconeNoite from '../assets/clima/noite.png'
 import styles from './PrevisaoSemana.module.css'
 
-const ICONE_CONDICAO = {
-  sol: Sun,
-  nublado: Cloud,
-  'parcialmente-nublado': CloudSun,
-  chuva: CloudRain,
-  tempestade: CloudLightning,
-}
-
-// Cada condição tem sua própria cor de ícone (theme.css, --condicao-*) —
-// pra "chuva"/"tempestade" ficarem visualmente óbvias, não só um ícone
-// diferente do mesmo tom neutro.
-const COR_CONDICAO = {
-  sol: 'var(--condicao-sol)',
-  nublado: 'var(--condicao-nublado)',
-  'parcialmente-nublado': 'var(--condicao-parcialmente-nublado)',
-  chuva: 'var(--condicao-chuva)',
-  tempestade: 'var(--condicao-tempestade)',
+// Ícones "bonitos" (assets/clima/*.png, recortados e com fundo removido de
+// icones_clima.png) em vez do lucide-react genérico — pedido explícito. O
+// material não tem um ícone de tempestade separado, então tempestade
+// reaproveita o de chuva (mesma decisão que o backend já toma pra
+// condição, ver clima_externo/views.py).
+const IMAGEM_CONDICAO = {
+  sol: iconeSol,
+  nublado: iconeNublado,
+  'parcialmente-nublado': iconeParcialmenteNublado,
+  chuva: iconeChuva,
+  tempestade: iconeChuva,
+  noite: iconeNoite,
 }
 
 const ABREVIACAO_DIA_SEMANA = {
@@ -39,29 +37,8 @@ function abreviarDiaSemana(diaSemana) {
   return ABREVIACAO_DIA_SEMANA[chave] ?? diaSemana
 }
 
-function formatarDataCurta(data) {
-  const [mes, dia] = (data ?? '').split('/')
-  return dia && mes ? `${dia}/${mes}` : data
-}
-
-// Reduz um dia da previsão do INMET (pode vir dividido em manhã/tarde/
-// noite, ou como resumo único) a um só objeto pro card compacto — mesma
-// lógica que existia em ClimaInmet.jsx.
-function resumirDia(dia) {
-  if (dia.dia_inteiro) return dia.dia_inteiro
-  const periodos = [dia.manha, dia.tarde, dia.noite].filter(Boolean)
-  if (periodos.length === 0) return null
-  const base = dia.tarde ?? periodos[0]
-  return {
-    resumo: base.resumo,
-    condicao: base.condicao,
-    dir_vento: base.dir_vento,
-    int_vento: base.int_vento,
-    temp_max: Math.max(...periodos.map((p) => p.temp_max)),
-    temp_min: Math.min(...periodos.map((p) => p.temp_min)),
-    umidade_max: Math.max(...periodos.map((p) => p.umidade_max)),
-    umidade_min: Math.min(...periodos.map((p) => p.umidade_min)),
-  }
+function formatarDataCurta(dataISO) {
+  return dataISO ? `${dataISO.slice(8, 10)}/${dataISO.slice(5, 7)}` : '—'
 }
 
 function formatarHora(horaISO) {
@@ -69,116 +46,117 @@ function formatarHora(horaISO) {
   return new Date(horaISO).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 }
 
-// Previsão de 5 dias (INMET, por município) + painel "Hoje" com o que o
-// INMET não tem (ponto de orvalho, UV, visibilidade, nascer/pôr do sol —
-// tudo isso vem de `clima`, a mesma fonte que já alimenta a tira de tempo
-// real e os gráficos). É a fusão pedida entre o Dashboard e a aba Clima
-// INMET. `uf`/`cidade` vêm do seletor de Estado/Cidade do cabeçalho (ver
-// pages/Dashboard.jsx) — refaz a busca sempre que a cidade escolhida muda.
-//
-// A chance de chuva (%) de cada card vem de `clima.previsaoDiaria`
-// (Open-Meteo), não do INMET — esse endpoint do INMET não devolve
-// probabilidade nenhuma. Casa pelo ÍNDICE (dia 0 = hoje nos dois, em
-// ordem), não por texto de data — os dois provedores não usam o mesmo
-// formato de data, e casar por posição evita esse problema de vez.
-function PrevisaoSemana({ clima, uf, cidade }) {
+// Sol à noite não faz sentido visualmente — troca pelo ícone de lua fora do
+// horário aproximado de dia (06h-18h), só pra condição "sol"/céu limpo;
+// as outras condições (nuvem, chuva...) valem de dia ou de noite.
+function iconeParaHora(condicao, dataHoraISO) {
+  // só considera noite quando `dataHoraISO` tem hora de verdade (formato
+  // "AAAA-MM-DDTHH:mm", 16+ caracteres) — os cards de dia passam só a data
+  // ("AAAA-MM-DD", 10 caracteres), que não tem hora pra checar.
+  if (condicao === 'sol' && dataHoraISO?.length > 10) {
+    const hora = Number(dataHoraISO.slice(11, 13))
+    if (hora < 6 || hora >= 18) return IMAGEM_CONDICAO.noite
+  }
+  return IMAGEM_CONDICAO[condicao] ?? IMAGEM_CONDICAO.sol
+}
+
+// Previsão de 15 dias (RF-21, Open-Meteo — o INMET só cobre 5) + painel
+// "Hoje" com o que só o Open-Meteo tem (ponto de orvalho, UV, visibilidade,
+// nascer/pôr do sol). Clicar num dia expande um painel hora a hora embaixo
+// dele (pedido explícito) — vem de `clima.previsaoHoraria`, casado pela
+// data (AAAA-MM-DD) contra `clima.previsaoDiaria[i].data`, os dois já
+// vêm do mesmo provedor então o formato bate direto, sem parse frágil.
+function PrevisaoSemana({ clima, cidade }) {
   const { t } = useTranslation()
-  const [previsao, setPrevisao] = useState(null)
-  const [nomeMunicipio, setNomeMunicipio] = useState(null)
-  const [erro, setErro] = useState(null)
-  const [carregando, setCarregando] = useState(true)
-  const [diaSelecionadoIndice, setDiaSelecionadoIndice] = useState(0)
+  const [diaExpandidoIndice, setDiaExpandidoIndice] = useState(null)
 
-  useEffect(() => {
-    let cancelado = false
-    setCarregando(true)
+  const dias = clima?.previsaoDiaria ?? []
+  const diaHoje = dias[0] ?? null
+  const iconeHoje = diaHoje ? iconeParaHora(diaHoje.condicao, clima?.atualizadoEm) : IMAGEM_CONDICAO.sol
 
-    async function carregar() {
-      try {
-        const municipios = await buscarMunicipiosPorUf(uf)
-        if (municipios.length === 0) throw new Error('sem municípios')
+  const diaExpandido = diaExpandidoIndice != null ? dias[diaExpandidoIndice] : null
+  const horasDoDiaExpandido = useMemo(() => {
+    if (!diaExpandido) return []
+    const agora = new Date()
+    return (clima?.previsaoHoraria ?? []).filter(
+      (ponto) => ponto.data === diaExpandido.data && new Date(ponto.dataHora) >= agora,
+    )
+  }, [clima, diaExpandido])
 
-        const cidadeNormalizada = normalizarTexto(cidade)
-        const municipio = municipios.find((m) => normalizarTexto(m.nome) === cidadeNormalizada) ?? municipios[0]
-        const dados = await buscarPrevisaoInmet(municipio.codigo)
-
-        if (!cancelado) {
-          setPrevisao(dados)
-          setNomeMunicipio(municipio.nome)
-          setErro(null)
-          setDiaSelecionadoIndice(0)
-        }
-      } catch {
-        if (!cancelado) setErro(t('estacaoPagina.previsaoIndisponivel'))
-      } finally {
-        if (!cancelado) setCarregando(false)
-      }
-    }
-
-    carregar()
-    return () => {
-      cancelado = true
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [uf, cidade])
-
-  const diaHoje = useMemo(() => (previsao?.dias?.[0] ? resumirDia(previsao.dias[0]) : null), [previsao])
-  const IconeHoje = ICONE_CONDICAO[diaHoje?.condicao] ?? CloudSun
-  const corHoje = COR_CONDICAO[diaHoje?.condicao] ?? 'var(--color-accent)'
+  function aoClicarDia(indice) {
+    setDiaExpandidoIndice((atual) => (atual === indice ? null : indice))
+  }
 
   return (
     <div className={styles.container}>
       <div className={styles.blocoSemana}>
         <div className={styles.cabecalhoPrevisao}>
-          <span className={styles.iconeCabecalho} style={{ color: corHoje, backgroundColor: `color-mix(in srgb, ${corHoje} 14%, transparent)` }}>
-            <IconeHoje size={30} />
+          <span className={styles.iconeCabecalho}>
+            <img src={iconeHoje} alt="" className={styles.imagemIconeGrande} />
           </span>
           <div>
             <h2 className={styles.titulo}>
               {t('estacaoPagina.previsaoTitulo')}
-              {nomeMunicipio && ` — ${nomeMunicipio}`}
+              {cidade && ` — ${cidade}`}
             </h2>
             <p className={styles.subtitulo}>{t('estacaoPagina.previsaoSubtitulo')}</p>
           </div>
         </div>
 
-        {carregando ? (
-          <StatusMessage texto={t('estacaoPagina.carregandoPrevisao')} />
-        ) : erro || !previsao || previsao.dias.length === 0 ? (
-          <p className={styles.vazio}>{erro ?? t('estacaoPagina.previsaoIndisponivel')}</p>
+        {dias.length === 0 ? (
+          <p className={styles.vazio}>{t('estacaoPagina.previsaoIndisponivel')}</p>
         ) : (
           <div className={styles.diasSemana}>
-            {previsao.dias.map((dia, indice) => {
-              const resumo = resumirDia(dia)
-              if (!resumo) return null
-              const Icone = ICONE_CONDICAO[resumo.condicao] ?? Sun
-              const cor = COR_CONDICAO[resumo.condicao] ?? 'var(--color-accent)'
-              const chuvaProbabilidade = clima?.previsaoDiaria?.[indice]?.chuvaProbabilidade
-              return (
-                <button
-                  key={dia.data}
-                  type="button"
-                  className={`${styles.diaCard} ${indice === diaSelecionadoIndice ? styles.diaCardAtivo : ''}`}
-                  onClick={() => setDiaSelecionadoIndice(indice)}
-                >
-                  <span className={styles.diaCardNome}>
-                    {indice === 0 ? t('dashboard.periodoHoje') : abreviarDiaSemana(dia.dia_semana)}
-                  </span>
-                  <span className={styles.diaCardData}>{formatarDataCurta(dia.data)}</span>
-                  <Icone size={36} className={styles.diaCardIcone} style={{ color: cor }} />
-                  <span className={styles.diaCardTemp}>
-                    {resumo.temp_min}° / {resumo.temp_max}°
-                  </span>
-                  <span className={styles.diaCardResumo}>{resumo.resumo}</span>
-                  <span className={styles.diaCardMetrica}>
-                    <Droplets size={12} /> {chuvaProbabilidade != null ? `${chuvaProbabilidade}%` : '—'}
-                  </span>
-                  <span className={styles.diaCardMetrica}>
-                    <Wind size={12} /> {resumo.dir_vento} {resumo.int_vento}
-                  </span>
-                </button>
-              )
-            })}
+            {dias.map((dia, indice) => (
+              <button
+                key={dia.data}
+                type="button"
+                className={`${styles.diaCard} ${diaExpandidoIndice === indice ? styles.diaCardAtivo : ''}`}
+                onClick={() => aoClicarDia(indice)}
+                aria-expanded={diaExpandidoIndice === indice}
+              >
+                <span className={styles.diaCardNome}>
+                  {indice === 0 ? t('dashboard.periodoHoje') : abreviarDiaSemana(dia.diaSemana)}
+                </span>
+                <span className={styles.diaCardData}>{formatarDataCurta(dia.data)}</span>
+                <img src={iconeParaHora(dia.condicao, dia.data)} alt={descricaoTempo(dia.weatherCode)} className={styles.diaCardIcone} />
+                <span className={styles.diaCardTemp}>
+                  {Math.round(dia.tempMin)}° / {Math.round(dia.tempMax)}°
+                </span>
+                <span className={styles.diaCardResumo}>{descricaoTempo(dia.weatherCode)}</span>
+                <span className={styles.diaCardMetrica}>
+                  <Droplets size={12} /> {dia.chuvaProbabilidade != null ? `${dia.chuvaProbabilidade}%` : '—'}
+                </span>
+                <span className={styles.diaCardMetrica}>
+                  <Wind size={12} /> {dia.ventoDirecaoTexto} {dia.ventoIntensidade}
+                </span>
+                <ChevronDown size={14} className={`${styles.diaCardSeta} ${diaExpandidoIndice === indice ? styles.diaCardSetaAberta : ''}`} />
+              </button>
+            ))}
+          </div>
+        )}
+
+        {diaExpandido && (
+          <div className={styles.painelHoras}>
+            <h3 className={styles.painelHorasTitulo}>
+              {t('estacaoPagina.previsaoPorHora')} — {diaExpandidoIndice === 0 ? t('dashboard.periodoHoje') : abreviarDiaSemana(diaExpandido.diaSemana)}, {formatarDataCurta(diaExpandido.data)}
+            </h3>
+            {horasDoDiaExpandido.length === 0 ? (
+              <p className={styles.vazio}>{t('estacaoPagina.previsaoIndisponivel')}</p>
+            ) : (
+              <div className={styles.horas}>
+                {horasDoDiaExpandido.map((ponto) => (
+                  <div key={ponto.dataHora} className={styles.horaCard}>
+                    <span className={styles.horaRotulo}>{ponto.hora}</span>
+                    <img src={iconeParaHora(ponto.condicao, ponto.dataHora)} alt="" className={styles.horaIcone} />
+                    <span className={styles.horaTemp}>{Math.round(ponto.temperatura)}°</span>
+                    <span className={styles.horaChuva}>
+                      <Droplets size={11} /> {ponto.chuvaProbabilidade != null ? `${ponto.chuvaProbabilidade}%` : '—'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -190,7 +168,7 @@ function PrevisaoSemana({ clima, uf, cidade }) {
             <span className={styles.rotuloDetalhe}>
               <Gauge size={14} /> {t('dashboard.temperatura')}
             </span>
-            <span className={styles.valorDetalhe}>{diaHoje ? `${diaHoje.temp_min}° / ${diaHoje.temp_max}°C` : '—'}</span>
+            <span className={styles.valorDetalhe}>{diaHoje ? `${Math.round(diaHoje.tempMin)}° / ${Math.round(diaHoje.tempMax)}°C` : '—'}</span>
           </li>
           <li>
             <span className={styles.rotuloDetalhe}>
@@ -200,13 +178,13 @@ function PrevisaoSemana({ clima, uf, cidade }) {
           </li>
           <li>
             <span className={styles.rotuloDetalhe}>
-              <Sun size={14} /> {t('estacaoPagina.indiceUV')}
+              <Gauge size={14} /> {t('estacaoPagina.indiceUV')}
             </span>
             <span className={styles.valorDetalhe}>{clima?.indiceUV ?? '—'}</span>
           </li>
           <li>
             <span className={styles.rotuloDetalhe}>
-              <CloudRain size={14} /> {t('estacaoPagina.precipitacao24h')}
+              <Droplets size={14} /> {t('estacaoPagina.precipitacao24h')}
             </span>
             <span className={styles.valorDetalhe}>{clima?.precipitacao != null ? `${clima.precipitacao} mm` : '—'}</span>
           </li>
@@ -236,7 +214,7 @@ function PrevisaoSemana({ clima, uf, cidade }) {
         </div>
 
         <div className={styles.condicaoAtual}>
-          <CloudSun size={20} />
+          <img src={iconeHoje} alt="" className={styles.imagemIconePequena} />
           <div>
             <span className={styles.rotuloSol}>{t('estacaoPagina.condicaoAtual')}</span>
             <span className={styles.valorSol}>{clima?.condicaoTexto ?? '—'}</span>

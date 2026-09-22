@@ -247,7 +247,7 @@ function Dashboard() {
         />
       </div>
 
-      <PrevisaoSemana clima={clima} uf={uf} cidade={cidade} />
+      <PrevisaoSemana clima={clima} cidade={cidade} />
 
       <div className={styles.seletorPeriodoTopo}>
         <span className={styles.seletorPeriodoRotulo}>
