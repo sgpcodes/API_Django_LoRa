@@ -75,6 +75,10 @@ export default {
     expandirGrafico: 'Expandir — {{metrica}}',
     periodoDoGrafico: 'Período — {{metrica}}',
     periodoPersonalizado: 'Período diferente do resto da página',
+    rosaSemDados: 'Sem leituras de vento nesse período ainda.',
+    rosaAriaLabel: 'Rosa dos ventos: direção e velocidade do vento no período selecionado',
+    velocidadeVento: 'Velocidade do vento',
+    calmaria: 'Calmaria',
   },
   adminDashboard: {
     bannerTitulo: 'Visão geral do sistema',

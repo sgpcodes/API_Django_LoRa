@@ -295,6 +295,24 @@ function dataISODeslocada(diasAtras) {
   return data.toISOString().slice(0, 10)
 }
 
+// Pontos crus de vento (velocidade + direção) pro período escolhido — pra
+// rosa dos ventos (components/VentoRosa.jsx), que precisa da direção de
+// cada leitura, não só da velocidade agregada que `derivarVisaoPeriodo`
+// devolve em `grafico.vento`. Mesmo filtro de período que aquela função
+// usa por baixo, só sem descartar a direção no meio do caminho.
+export function derivarPontosVento(clima, periodo) {
+  const ehHoraAHora = periodo === 'hoje' || periodo === 'ontem'
+
+  if (ehHoraAHora) {
+    const dataAlvo = dataISODeslocada(periodo === 'hoje' ? 0 : 1)
+    return clima.horaria.vento
+      .filter((ponto) => ponto.dataHora.startsWith(dataAlvo))
+      .map((p) => ({ velocidade: p.velocidade, direcaoGraus: p.direcaoGraus }))
+  }
+
+  return clima.diaria.vento.slice(-periodo).map((d) => ({ velocidade: d.velocidadeMedia, direcaoGraus: d.direcaoGraus }))
+}
+
 // Deriva o que o gráfico/tabela do Dashboard devem mostrar pro período
 // escolhido — 'hoje'/'ontem' (granularidade hora, sem médias) ou 7/30
 // (granularidade dia, com médias — RN: só faz média quando mais de um dia

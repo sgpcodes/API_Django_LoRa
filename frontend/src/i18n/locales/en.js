@@ -75,6 +75,10 @@ export default {
     expandirGrafico: 'Expand — {{metrica}}',
     periodoDoGrafico: 'Period — {{metrica}}',
     periodoPersonalizado: 'Different period than the rest of the page',
+    rosaSemDados: 'No wind readings for this period yet.',
+    rosaAriaLabel: 'Wind rose: wind direction and speed for the selected period',
+    velocidadeVento: 'Wind speed',
+    calmaria: 'Calm',
   },
   adminDashboard: {
     bannerTitulo: 'System overview',
