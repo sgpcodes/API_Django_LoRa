@@ -192,7 +192,7 @@ function Dashboard() {
       <div className={styles.cardsPrincipais}>
         <SummaryStatCard
           icone={Thermometer}
-          cor="var(--color-accent)"
+          cor="var(--metrica-temperatura)"
           rotulo={t('dashboard.temperatura')}
           valor={resumoTopo.temperatura != null ? `${resumoTopo.temperatura}°C` : '—'}
           legenda={
@@ -206,7 +206,7 @@ function Dashboard() {
         />
         <SummaryStatCard
           icone={Droplets}
-          cor="var(--color-accent)"
+          cor="var(--metrica-umidade)"
           rotulo={t('dashboard.umidade')}
           valor={resumoTopo.umidade != null ? `${resumoTopo.umidade}%` : '—'}
           legenda={
@@ -218,7 +218,7 @@ function Dashboard() {
         />
         <SummaryStatCard
           icone={Gauge}
-          cor="var(--color-accent)"
+          cor="var(--metrica-pressao)"
           rotulo={t('dashboard.pressao')}
           valor={resumoTopo.pressao != null ? `${resumoTopo.pressao} hPa` : '—'}
           legenda={
@@ -230,7 +230,7 @@ function Dashboard() {
         />
         <SummaryStatCard
           icone={Wind}
-          cor="var(--color-accent)"
+          cor="var(--metrica-vento)"
           rotulo={t('dashboard.vento')}
           valor={resumoTopo.vento.velocidade != null ? `${resumoTopo.vento.velocidade} km/h` : '—'}
           legenda={`${resumoTopo.vento.direcaoTexto} · ${t('dashboard.rajadas')} ${resumoTopo.vento.rajada ?? '—'} km/h`}
@@ -239,7 +239,7 @@ function Dashboard() {
         />
         <SummaryStatCard
           icone={CloudRain}
-          cor="var(--color-accent)"
+          cor="var(--metrica-chuva)"
           rotulo={t('dashboard.chuva')}
           valor={resumoTopo.chuva != null ? `${resumoTopo.chuva} mm` : '—'}
           horarioAtualizacao={horarioUltimaLeitura}

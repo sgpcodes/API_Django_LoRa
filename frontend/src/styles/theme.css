@@ -60,6 +60,7 @@
   --metrica-umidade: #1baf7a;
   --metrica-pressao: #4a3aa7;
   --metrica-chuva: #2a78d6;
+  --metrica-vento: #eb6834;
 }
 
 [data-theme='noite'] {
@@ -105,6 +106,7 @@
   --metrica-umidade: #199e70;
   --metrica-pressao: #9085e9;
   --metrica-chuva: #3987e5;
+  --metrica-vento: #d95926;
 }
 
 /*

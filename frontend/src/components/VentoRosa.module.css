@@ -1,14 +1,97 @@
 .container {
+  position: relative;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 1.25rem;
   width: 100%;
 }
 
 .svg {
-  flex-shrink: 0;
-  width: auto;
+  flex: 0 1 auto;
   max-width: 100%;
+}
+
+/* Tooltip de verdade ao passar o mouse numa fatia — segue o cursor dentro
+   do card. O <title> nativo do SVG continua existindo como reforço de
+   acessibilidade, mas sozinho é lento/pouco visível pra "brincar com o
+   gráfico". */
+.tooltip {
+  position: absolute;
+  z-index: 5;
+  transform: translate(-50%, -115%);
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
+  background-color: var(--color-text);
+  color: var(--color-card-bg);
+  font-size: 0.74rem;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: var(--shadow-card);
+}
+
+.botaoAlternarVisao {
+  align-self: flex-start;
+  margin-left: auto;
+  padding: 0.3rem 0.65rem;
+  border-radius: 7px;
+  border: 1px solid var(--color-card-border);
+  background-color: var(--color-input-bg);
+  color: var(--color-text-secondary);
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.botaoAlternarVisao:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.tabelaContainer {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.tabela th,
+.tabela td {
+  padding: 0.4rem 0.5rem;
+  text-align: right;
+  border-bottom: 1px solid var(--color-card-border);
+  white-space: nowrap;
+}
+
+.tabela th:first-child,
+.tabela td:first-child {
+  text-align: left;
+}
+
+.tabela thead th {
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.tabela tbody tr:last-child td {
+  border-bottom: none;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.tabelaChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .grade circle,
@@ -72,7 +155,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  min-width: 118px;
+  flex: 1 1 140px;
+  min-width: 0;
 }
 
 .legendaTitulo {

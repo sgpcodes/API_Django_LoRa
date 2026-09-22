@@ -79,6 +79,10 @@ export default {
     rosaAriaLabel: 'Rosa dos ventos: direção e velocidade do vento no período selecionado',
     velocidadeVento: 'Velocidade do vento',
     calmaria: 'Calmaria',
+    verComoTabela: 'Ver como tabela',
+    verComoGrafico: 'Ver como gráfico',
+    direcao: 'Direção',
+    total: 'Total',
   },
   adminDashboard: {
     bannerTitulo: 'Visão geral do sistema',

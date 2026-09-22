@@ -79,6 +79,10 @@ export default {
     rosaAriaLabel: 'Wind rose: wind direction and speed for the selected period',
     velocidadeVento: 'Wind speed',
     calmaria: 'Calm',
+    verComoTabela: 'View as table',
+    verComoGrafico: 'View as chart',
+    direcao: 'Direction',
+    total: 'Total',
   },
   adminDashboard: {
     bannerTitulo: 'System overview',
