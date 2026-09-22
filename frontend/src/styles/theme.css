@@ -61,6 +61,16 @@
   --metrica-pressao: #4a3aa7;
   --metrica-chuva: #2a78d6;
   --metrica-vento: #eb6834;
+
+  /* Cor do ícone de condição na "Previsão do tempo" (sol/chuva/tempestade/
+     nublado) — pra ele ficar visualmente óbvio, não só o formato do ícone
+     (pedido explícito: "quero que apareça o ícone chovendo quando tiver
+     previsão de chuva"). */
+  --condicao-sol: #eda100;
+  --condicao-chuva: #2a78d6;
+  --condicao-tempestade: #4a3aa7;
+  --condicao-nublado: #8593ad;
+  --condicao-parcialmente-nublado: #5598e7;
 }
 
 [data-theme='noite'] {
@@ -107,6 +117,12 @@
   --metrica-pressao: #9085e9;
   --metrica-chuva: #3987e5;
   --metrica-vento: #d95926;
+
+  --condicao-sol: #c98500;
+  --condicao-chuva: #3987e5;
+  --condicao-tempestade: #9085e9;
+  --condicao-nublado: #6c7ba3;
+  --condicao-parcialmente-nublado: #6da7ec;
 }
 
 /*

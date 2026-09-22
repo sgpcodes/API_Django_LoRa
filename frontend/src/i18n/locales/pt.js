@@ -63,6 +63,7 @@ export default {
     carregandoCidades: 'Carregando cidades...',
     localizando: 'Localizando...',
     previsaoTitulo: 'Previsão do tempo',
+    previsaoSubtitulo: 'Previsão dos próximos dias com base na estação meteorológica mais próxima.',
     carregandoPrevisao: 'Carregando previsão...',
     previsaoIndisponivel: 'Previsão indisponível no momento.',
     pontoOrvalho: 'Ponto de orvalho',

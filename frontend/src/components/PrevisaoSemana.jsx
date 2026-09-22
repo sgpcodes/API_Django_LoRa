@@ -14,6 +14,17 @@ const ICONE_CONDICAO = {
   tempestade: CloudLightning,
 }
 
+// Cada condição tem sua própria cor de ícone (theme.css, --condicao-*) —
+// pra "chuva"/"tempestade" ficarem visualmente óbvias, não só um ícone
+// diferente do mesmo tom neutro.
+const COR_CONDICAO = {
+  sol: 'var(--condicao-sol)',
+  nublado: 'var(--condicao-nublado)',
+  'parcialmente-nublado': 'var(--condicao-parcialmente-nublado)',
+  chuva: 'var(--condicao-chuva)',
+  tempestade: 'var(--condicao-tempestade)',
+}
+
 const ABREVIACAO_DIA_SEMANA = {
   domingo: 'Dom', 'segunda-feira': 'Seg', 'terca-feira': 'Ter', 'quarta-feira': 'Qua',
   'quinta-feira': 'Qui', 'sexta-feira': 'Sex', sabado: 'Sáb',
@@ -64,6 +75,12 @@ function formatarHora(horaISO) {
 // real e os gráficos). É a fusão pedida entre o Dashboard e a aba Clima
 // INMET. `uf`/`cidade` vêm do seletor de Estado/Cidade do cabeçalho (ver
 // pages/Dashboard.jsx) — refaz a busca sempre que a cidade escolhida muda.
+//
+// A chance de chuva (%) de cada card vem de `clima.previsaoDiaria`
+// (Open-Meteo), não do INMET — esse endpoint do INMET não devolve
+// probabilidade nenhuma. Casa pelo ÍNDICE (dia 0 = hoje nos dois, em
+// ordem), não por texto de data — os dois provedores não usam o mesmo
+// formato de data, e casar por posição evita esse problema de vez.
 function PrevisaoSemana({ clima, uf, cidade }) {
   const { t } = useTranslation()
   const [previsao, setPrevisao] = useState(null)
@@ -106,15 +123,24 @@ function PrevisaoSemana({ clima, uf, cidade }) {
   }, [uf, cidade])
 
   const diaHoje = useMemo(() => (previsao?.dias?.[0] ? resumirDia(previsao.dias[0]) : null), [previsao])
+  const IconeHoje = ICONE_CONDICAO[diaHoje?.condicao] ?? CloudSun
+  const corHoje = COR_CONDICAO[diaHoje?.condicao] ?? 'var(--color-accent)'
 
   return (
     <div className={styles.container}>
       <div className={styles.blocoSemana}>
-        <h2 className={styles.titulo}>
-          <CloudSun size={17} />
-          {t('estacaoPagina.previsaoTitulo')}
-          {nomeMunicipio && ` — ${nomeMunicipio}`}
-        </h2>
+        <div className={styles.cabecalhoPrevisao}>
+          <span className={styles.iconeCabecalho} style={{ color: corHoje, backgroundColor: `color-mix(in srgb, ${corHoje} 14%, transparent)` }}>
+            <IconeHoje size={30} />
+          </span>
+          <div>
+            <h2 className={styles.titulo}>
+              {t('estacaoPagina.previsaoTitulo')}
+              {nomeMunicipio && ` — ${nomeMunicipio}`}
+            </h2>
+            <p className={styles.subtitulo}>{t('estacaoPagina.previsaoSubtitulo')}</p>
+          </div>
+        </div>
 
         {carregando ? (
           <StatusMessage texto={t('estacaoPagina.carregandoPrevisao')} />
@@ -126,6 +152,8 @@ function PrevisaoSemana({ clima, uf, cidade }) {
               const resumo = resumirDia(dia)
               if (!resumo) return null
               const Icone = ICONE_CONDICAO[resumo.condicao] ?? Sun
+              const cor = COR_CONDICAO[resumo.condicao] ?? 'var(--color-accent)'
+              const chuvaProbabilidade = clima?.previsaoDiaria?.[indice]?.chuvaProbabilidade
               return (
                 <button
                   key={dia.data}
@@ -137,16 +165,16 @@ function PrevisaoSemana({ clima, uf, cidade }) {
                     {indice === 0 ? t('dashboard.periodoHoje') : abreviarDiaSemana(dia.dia_semana)}
                   </span>
                   <span className={styles.diaCardData}>{formatarDataCurta(dia.data)}</span>
-                  <Icone size={28} className={styles.diaCardIcone} />
+                  <Icone size={36} className={styles.diaCardIcone} style={{ color: cor }} />
                   <span className={styles.diaCardTemp}>
                     {resumo.temp_min}° / {resumo.temp_max}°
                   </span>
                   <span className={styles.diaCardResumo}>{resumo.resumo}</span>
                   <span className={styles.diaCardMetrica}>
-                    <Droplets size={11} /> {resumo.umidade_min}–{resumo.umidade_max}%
+                    <Droplets size={12} /> {chuvaProbabilidade != null ? `${chuvaProbabilidade}%` : '—'}
                   </span>
                   <span className={styles.diaCardMetrica}>
-                    <Wind size={11} /> {resumo.dir_vento} {resumo.int_vento}
+                    <Wind size={12} /> {resumo.dir_vento} {resumo.int_vento}
                   </span>
                 </button>
               )

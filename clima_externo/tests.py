@@ -39,17 +39,20 @@ PREVISAO_BRUTO = {
     '3304557': {
         '08/16/2026': {
             'manha': {
-                'resumo': 'Nublado', 'temp_max': 28, 'temp_min': 22,
+                'resumo': 'Muitas nuvens com possibilidade de chuva isolada', 'temp_max': 28, 'temp_min': 22,
                 'umidade_max': 90, 'umidade_min': 60,
                 'dir_vento': 'NE', 'int_vento': 'Fraco',
-                'cod_icone': 'pn', 'dia_semana': 'domingo',
+                # `cod_icone` real do INMET é numérico (conferido direto na API — "87",
+                # "34", "51" etc.), não as letras que o código antigo esperava; a
+                # condição do ícone é decidida pelo `resumo`, não por esse campo.
+                'cod_icone': '36', 'dia_semana': 'domingo',
             },
         },
         '08/18/2026': {
             'resumo': 'Sol com algumas nuvens', 'temp_max': 30, 'temp_min': 21,
             'umidade_max': 85, 'umidade_min': 55,
             'dir_vento': 'E', 'int_vento': 'Moderado',
-            'cod_icone': 'cn', 'dia_semana': 'terça-feira',
+            'cod_icone': '51', 'dia_semana': 'terça-feira',
         },
     },
 }

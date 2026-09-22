@@ -63,6 +63,7 @@ export default {
     carregandoCidades: 'Loading cities...',
     localizando: 'Locating...',
     previsaoTitulo: 'Weather forecast',
+    previsaoSubtitulo: 'Forecast for the coming days based on the nearest weather station.',
     carregandoPrevisao: 'Loading forecast...',
     previsaoIndisponivel: 'Forecast unavailable right now.',
     pontoOrvalho: 'Dew point',

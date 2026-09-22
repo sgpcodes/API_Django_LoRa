@@ -71,19 +71,29 @@ class EstacoesInmetView(APIView):
         return Response(estacoes)
 
 
-def _icone_para_condicao(codigo_icone):
-    """Mapeia o `cod_icone` do INMET pra uma condição textual simples, que o
-    front usa pra escolher um ícone do lucide-react — em vez de renderizar
-    a imagem base64 que o INMET manda, mantendo consistência visual com o
-    resto do sistema."""
-    codigo = (codigo_icone or '').lower()
-    if 'pn' in codigo or 'pc' in codigo:
-        return 'chuva'
-    if 'tc' in codigo or 'ts' in codigo:
+def _icone_para_condicao(resumo):
+    """Mapeia o `resumo` (texto livre) do INMET pra uma condição textual
+    simples, que o front usa pra escolher um ícone do lucide-react — em vez
+    de renderizar a imagem base64 que o INMET manda, mantendo consistência
+    visual com o resto do sistema.
+
+    Era baseado no `cod_icone` antes (via substring tipo 'pn'/'tc'/'nv'),
+    só que o `cod_icone` real que o INMET manda é numérico puro (ex.: "87",
+    "34", "51" — conferido direto na API) — nenhum desses códigos batia com
+    letra nenhuma, então a condição caía sempre no `sol` por padrão,
+    independente do tempo de verdade (bug: o ícone de chuva nunca aparecia,
+    mesmo com "pancadas de chuva e trovoadas" no resumo). Reescrito pra ler
+    o texto do `resumo`, que é sempre português livre e mais estável que
+    tentar documentar uma tabela completa (e não-documentada publicamente)
+    de códigos numéricos do INMET."""
+    texto = (resumo or '').lower()
+    if 'trovoada' in texto or 'tempestade' in texto:
         return 'tempestade'
-    if 'nv' in codigo or 'en' in codigo:
+    if 'chuva' in texto or 'pancada' in texto or 'garoa' in texto or 'chuvisco' in texto:
+        return 'chuva'
+    if 'muitas nuvens' in texto or 'nublado' in texto or 'encoberto' in texto:
         return 'nublado'
-    if 'cn' in codigo:
+    if 'nuvens' in texto:  # "poucas nuvens", "parcialmente nublado" etc.
         return 'parcialmente-nublado'
     return 'sol'
 
@@ -97,7 +107,7 @@ def _normalizar_periodo(bruto, chave_prefixo):
         'umidade_min': bruto.get('umidade_min'),
         'dir_vento': bruto.get('dir_vento'),
         'int_vento': bruto.get('int_vento'),
-        'condicao': _icone_para_condicao(bruto.get('cod_icone')),
+        'condicao': _icone_para_condicao(bruto.get('resumo')),
     }
 
 

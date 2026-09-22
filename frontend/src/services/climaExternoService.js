@@ -236,11 +236,19 @@ function normalizar(dados) {
     precipitacao: atual.precipitation,
     visibilidadeKm: atual.visibility != null ? Number((atual.visibility / 1000).toFixed(1)) : null,
     condicaoTexto: descricaoTempo(atual.weather_code),
-    // `daily` só é pedido com forecast_days=1 (ver buscarClimaAtual) — o
-    // nascer/pôr do sol de hoje já vem na posição 0 sem precisar de outra
-    // chamada.
+    // Nascer/pôr do sol de hoje é a posição 0 de `daily` (forecast_days=7,
+    // ver buscarClimaAtual).
     nascerSol: dados.daily?.sunrise?.[0] ?? null,
     porSol: dados.daily?.sunset?.[0] ?? null,
+    // Previsão diária (chance de chuva + condição) pros próximos dias — usada
+    // pelo card "Previsão do tempo" (INMET) só pra complementar a chance de
+    // chuva em %, que o INMET não devolve nesse endpoint (ver
+    // components/PrevisaoSemana.jsx, casa por data).
+    previsaoDiaria: (dados.daily?.time ?? []).map((data, i) => ({
+      data,
+      chuvaProbabilidade: dados.daily?.precipitation_probability_max?.[i] ?? null,
+      weatherCode: dados.daily?.weather_code?.[i] ?? null,
+    })),
     atualizadoEm: atual.time,
     resumoDia,
     horaria: { temperatura: horariaTemperatura, umidade: horariaUmidade, pressao: horariaPressao, chuva: horariaChuva, vento: horariaVento },
@@ -275,9 +283,12 @@ export async function buscarClimaAtual(coordenadas = COORDENADAS_PADRAO) {
       'wind_direction_10m',
       'wind_gusts_10m',
     ].join(','),
-    daily: ['sunrise', 'sunset'].join(','),
+    daily: ['sunrise', 'sunset', 'precipitation_probability_max', 'weather_code'].join(','),
     past_days: String(DIAS_HISTORICO_MAXIMO),
-    forecast_days: '1',
+    // 7 pra cobrir a semana inteira da previsão (RF-21) — o card de "Previsão
+    // do tempo" (PrevisaoSemana.jsx) usa `previsaoDiaria` como referência de
+    // chance de chuva pros dias que vêm do INMET, casando pela data.
+    forecast_days: '7',
     timezone: 'America/Sao_Paulo',
   })
 
