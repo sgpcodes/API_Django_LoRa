@@ -41,15 +41,25 @@
   --color-badge-off-bg: #eef1f6;
   --color-badge-off-texto: #8593ad;
 
-  /* Escala sequencial (uma cor só, do claro pro escuro) pras faixas de
-     velocidade da rosa dos ventos — validada com scripts/validate_palette.js
-     da skill de dataviz (--ordinal, contra a superfície clara do card). */
+  /* Faixas de velocidade da rosa dos ventos: colorida de propósito (pedido
+     explícito, "igual a imagem" de referência) — paleta categórica (não
+     sequencial) validada com scripts/validate_palette.js da skill de
+     dataviz, ordem oficial da skill (é essa ordem que garante a separação
+     de daltonismo, reordenar quebra a validação). */
   --vento-calma: #c7ced9;
-  --vento-f1: #86b6ef;
-  --vento-f2: #5598e7;
-  --vento-f3: #2a78d6;
-  --vento-f4: #1c5cab;
-  --vento-f5: #0d366b;
+  --vento-f1: #2a78d6;
+  --vento-f2: #eb6834;
+  --vento-f3: #1baf7a;
+  --vento-f4: #eda100;
+  --vento-f5: #e87ba4;
+
+  /* Uma cor por variável nos 4 gráficos de linha/barra (temperatura,
+     umidade, pressão, chuva) — também pedido explícito, pra não ficar tudo
+     no mesmo azul do --color-accent. Mesma paleta categórica da skill. */
+  --metrica-temperatura: #e34948;
+  --metrica-umidade: #1baf7a;
+  --metrica-pressao: #4a3aa7;
+  --metrica-chuva: #2a78d6;
 }
 
 [data-theme='noite'] {
@@ -81,15 +91,20 @@
   --color-badge-off-bg: rgba(255, 255, 255, 0.06);
   --color-badge-off-texto: #93a5c9;
 
-  /* Mesma escala da faixa de vento, com passos revalidados contra o fundo
-     escuro do card (--surface #161b33) — não é o mesmo degradê invertido,
-     é uma escala própria pro modo noturno (ver skill de dataviz). */
+  /* Mesma paleta categórica colorida da faixa de vento, com os passos
+     próprios da skill pro modo escuro (revalidados contra o fundo
+     --color-card-bg #161b33, não é um "escurece tudo" automático). */
   --vento-calma: #3a4159;
-  --vento-f1: #184f95;
-  --vento-f2: #256abf;
-  --vento-f3: #3987e5;
-  --vento-f4: #6da7ec;
-  --vento-f5: #9ec5f4;
+  --vento-f1: #3987e5;
+  --vento-f2: #d95926;
+  --vento-f3: #199e70;
+  --vento-f4: #c98500;
+  --vento-f5: #d55181;
+
+  --metrica-temperatura: #e66767;
+  --metrica-umidade: #199e70;
+  --metrica-pressao: #9085e9;
+  --metrica-chuva: #3987e5;
 }
 
 /*
