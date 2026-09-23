@@ -68,12 +68,20 @@
   color: var(--color-pill-ativo-texto);
 }
 
+/* Flex em vez de grid de propósito: com grid (`repeat(auto-fit, ...)`),
+   as colunas são fixadas pra fileira inteira, então um card sozinho na
+   última fileira (6 não divide igual em nenhuma contagem de colunas
+   comuns) fica pregado à esquerda com um vão vazio do lado — "um
+   sobrando embaixo". Com flex-wrap, cada fileira redistribui o espaço
+   sobrando só entre quem está nela, então o último card cresce e ocupa
+   a fileira toda sozinho em vez de deixar vão. */
 .cardsPrincipais {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 0.75rem;
 }
 
 .cardsPrincipais > * {
+  flex: 1 1 190px;
   min-width: 0;
 }
