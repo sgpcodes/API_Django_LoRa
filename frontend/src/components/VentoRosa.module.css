@@ -3,8 +3,15 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: 1.25rem;
   width: 100%;
+  /* Espaço reservado pro botão "Ver como tabela", que agora é posicionado
+     sozinho (ver .botaoAlternarVisao) em vez de disputar espaço no fluxo
+     flex com o SVG — era isso que deixava um vão enorme e a rosa jogada
+     pro canto quando o card ficou largura cheia (pedido explícito: "tá
+     feia e muito vago"). */
+  padding-top: 2.4rem;
 }
 
 .svg {
@@ -32,8 +39,9 @@
 }
 
 .botaoAlternarVisao {
-  align-self: flex-start;
-  margin-left: auto;
+  position: absolute;
+  top: 0;
+  right: 0;
   padding: 0.3rem 0.65rem;
   border-radius: 7px;
   border: 1px solid var(--color-card-border);
