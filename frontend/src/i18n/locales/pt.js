@@ -68,6 +68,8 @@ export default {
     turnoManha: 'Manhã',
     turnoTarde: 'Tarde',
     turnoNoite: 'Noite',
+    proximasHoras: 'Próximas horas',
+    agora: 'Agora',
     carregandoPrevisao: 'Carregando previsão...',
     previsaoIndisponivel: 'Previsão indisponível no momento.',
     pontoOrvalho: 'Ponto de orvalho',

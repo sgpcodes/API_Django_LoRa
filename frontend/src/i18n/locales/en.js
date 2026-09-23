@@ -68,6 +68,8 @@ export default {
     turnoManha: 'Morning',
     turnoTarde: 'Afternoon',
     turnoNoite: 'Night',
+    proximasHoras: 'Next hours',
+    agora: 'Now',
     carregandoPrevisao: 'Loading forecast...',
     previsaoIndisponivel: 'Forecast unavailable right now.',
     pontoOrvalho: 'Dew point',

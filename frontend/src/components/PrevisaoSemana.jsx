@@ -116,14 +116,14 @@ function PrevisaoSemana({ clima, cidade }) {
   const iconeHoje = diaHoje ? iconeParaHora(diaHoje.condicao, clima?.atualizadoEm) : IMAGEM_CONDICAO.sol
 
   const diaExpandido = diaExpandidoIndice != null ? dias[diaExpandidoIndice] : null
-  const turnosDoDiaExpandido = useMemo(() => {
+  const horasDoDiaExpandido = useMemo(() => {
     if (!diaExpandido) return []
     const agora = new Date()
-    const horasDoDia = (clima?.previsaoHoraria ?? []).filter(
+    return (clima?.previsaoHoraria ?? []).filter(
       (ponto) => ponto.data === diaExpandido.data && new Date(ponto.dataHora) >= agora,
     )
-    return agruparPorTurno(horasDoDia)
   }, [clima, diaExpandido])
+  const turnosDoDiaExpandido = useMemo(() => agruparPorTurno(horasDoDiaExpandido), [horasDoDiaExpandido])
 
   function aoClicarDia(indice) {
     setDiaExpandidoIndice((atual) => (atual === indice ? null : indice))
@@ -186,18 +186,37 @@ function PrevisaoSemana({ clima, cidade }) {
             {turnosDoDiaExpandido.length === 0 ? (
               <p className={styles.vazio}>{t('estacaoPagina.previsaoIndisponivel')}</p>
             ) : (
-              <div className={styles.turnos}>
-                {turnosDoDiaExpandido.map((turno) => (
-                  <div key={turno.chave} className={styles.turnoCard}>
-                    <span className={styles.turnoRotulo}>{t(turno.rotulo)}</span>
-                    <img src={turno.icone} alt="" className={styles.turnoIcone} />
-                    <span className={styles.turnoTemp}>{turno.temperatura != null ? `${turno.temperatura}°` : '—'}</span>
-                    <span className={styles.turnoChuva}>
-                      <Droplets size={12} /> {turno.chuvaProbabilidade != null ? `${turno.chuvaProbabilidade}%` : '—'}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              <>
+                <div className={styles.turnos}>
+                  {turnosDoDiaExpandido.map((turno) => (
+                    <div key={turno.chave} className={styles.turnoCard}>
+                      <span className={styles.turnoRotulo}>{t(turno.rotulo)}</span>
+                      <img src={turno.icone} alt="" className={styles.turnoIcone} />
+                      <span className={styles.turnoTemp}>{turno.temperatura != null ? `${turno.temperatura}°` : '—'}</span>
+                      <span className={styles.turnoChuva}>
+                        <Droplets size={12} /> {turno.chuvaProbabilidade != null ? `${turno.chuvaProbabilidade}%` : '—'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <h4 className={styles.proximasHorasTitulo}>{t('estacaoPagina.proximasHoras')}</h4>
+                <div className={styles.horas}>
+                  {horasDoDiaExpandido.map((ponto, indice) => {
+                    const ehAgora = diaExpandidoIndice === 0 && indice === 0
+                    return (
+                    <div key={ponto.dataHora} className={`${styles.horaCard} ${ehAgora ? styles.horaCardAgora : ''}`}>
+                      <span className={styles.horaRotulo}>{ehAgora ? t('estacaoPagina.agora') : ponto.hora}</span>
+                      <img src={iconeParaHora(ponto.condicao, ponto.dataHora)} alt="" className={styles.horaIcone} />
+                      <span className={styles.horaTemp}>{Math.round(ponto.temperatura)}°</span>
+                      <span className={styles.horaChuva}>
+                        <Droplets size={12} /> {ponto.chuvaProbabilidade != null ? `${ponto.chuvaProbabilidade}%` : '—'}
+                      </span>
+                    </div>
+                    )
+                  })}
+                </div>
+              </>
             )}
           </div>
         )}
