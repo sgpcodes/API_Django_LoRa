@@ -95,9 +95,16 @@ function GraficoMetrica({ metrica, dados, altura = 280 }) {
         {ehPressao && (
           <ReferenceLine
             y={PRESSAO_PADRAO_NIVEL_DO_MAR}
-            stroke="var(--color-text-secondary)"
-            strokeDasharray="4 4"
-            label={{ value: '1.013,25 hPa (padrão)', position: 'insideBottomRight', fill: 'var(--color-text-secondary)', fontSize: 11 }}
+            stroke="var(--color-text)"
+            strokeWidth={2}
+            strokeDasharray="6 3"
+            label={{
+              value: '1.013,25 hPa (padrão)',
+              position: 'insideBottomRight',
+              fill: 'var(--color-text)',
+              fontSize: 12,
+              fontWeight: 700,
+            }}
           />
         )}
       </AreaChart>
