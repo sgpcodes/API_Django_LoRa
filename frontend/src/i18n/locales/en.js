@@ -99,6 +99,7 @@ export default {
     menorVelocidade: 'Lowest speed',
     doTempo: '{{pct}}% of the time',
     emRelacaoPeriodoAnterior: 'vs. the previous period',
+    pressaoPadraoLegenda: 'Dashed line: standard atmospheric pressure at sea level ({{valor}} hPa)',
   },
   exportacao: {
     titulo: 'Export data',

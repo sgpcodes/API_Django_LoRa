@@ -99,6 +99,7 @@ export default {
     menorVelocidade: 'Menor velocidade',
     doTempo: '{{pct}}% do tempo',
     emRelacaoPeriodoAnterior: 'em relação ao período anterior',
+    pressaoPadraoLegenda: 'Linha tracejada: pressão atmosférica padrão ao nível do mar ({{valor}} hPa)',
   },
   exportacao: {
     titulo: 'Exportar dados',

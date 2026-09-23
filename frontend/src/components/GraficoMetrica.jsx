@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import {
   ResponsiveContainer,
   AreaChart,
@@ -10,16 +11,41 @@ import {
   Tooltip,
   ReferenceLine,
 } from 'recharts'
+import styles from './GraficoMetrica.module.css'
 
 // Pressão sempre no mesmo intervalo (980–1.040 hPa, pedido explícito) em
 // vez de escala automática — assim uma leitura de 1013 hPa não estica o
 // eixo inteiro do jeito que a variação natural do dia (poucos hPa) faria
 // com auto-scale, e dá pra comparar visualmente dias diferentes na mesma
 // régua. A linha pontilhada marca a pressão atmosférica padrão ao nível
-// do mar (1.013,25 hPa) como referência.
+// do mar (1.013,25 hPa) como referência — a legenda dela fica numa
+// legendinha ABAIXO do gráfico (não mais como rótulo em cima da linha:
+// colidia com os pontos de dado, "texto no meio do gráfico").
 const PRESSAO_MINIMA = 980
 const PRESSAO_MAXIMA = 1040
 const PRESSAO_PADRAO_NIVEL_DO_MAR = 1013.25
+
+// Escala do eixo Y da temperatura se adapta aos dados visíveis (pedido
+// explícito: NÃO fixar 18–22°C no código, senão um dia de 32°C fica todo
+// cortado) — arredonda o mínimo pra baixo e o máximo pra cima, com pelo
+// menos 1°C de folga de cada lado. Quando o dado já bate exatamente num
+// número inteiro (ex.: mínima do dia = 30,0°C), só arredondar não dá
+// folga nenhuma (30 vira 30), por isso soma mais 1°C nesse caso.
+function calcularDominioTemperatura(dados) {
+  const valores = dados.map((p) => p.valor).filter((v) => v != null)
+  if (valores.length === 0) return undefined
+
+  const minDado = Math.min(...valores)
+  const maxDado = Math.max(...valores)
+
+  const minBase = Math.floor(minDado)
+  const minEscala = minBase === minDado ? minBase - 1 : minBase
+
+  const maxBase = Math.ceil(maxDado)
+  const maxEscala = maxBase === maxDado ? maxBase + 1 : maxBase
+
+  return [minEscala, maxEscala]
+}
 
 // Um gráfico de uma métrica só (área ou barra, ver `metrica.tipo` em
 // services/metricasClima.js) — reaproveitado pelo carrossel do Dashboard,
@@ -31,8 +57,10 @@ const PRESSAO_PADRAO_NIVEL_DO_MAR = 1013.25
 // explícito — "gráficos coloridos, cores diferentes") em vez de todas
 // usarem o mesmo --chart-line azul.
 function GraficoMetrica({ metrica, dados, altura = 280 }) {
+  const { t } = useTranslation()
   const cor = `var(--metrica-${metrica.chave})`
   const ehPressao = metrica.chave === 'pressao'
+  const ehTemperatura = metrica.chave === 'temperatura'
 
   if (metrica.tipo === 'barra') {
     return (
@@ -57,58 +85,55 @@ function GraficoMetrica({ metrica, dados, altura = 280 }) {
     )
   }
 
-  return (
-    <ResponsiveContainer width="100%" height={altura}>
-      <AreaChart data={dados} margin={{ top: 10, right: 20, bottom: 0, left: 0 }}>
-        <defs>
-          <linearGradient id={`corArea-${metrica.chave}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={cor} stopOpacity={0.35} />
-            <stop offset="100%" stopColor={cor} stopOpacity={0} />
-          </linearGradient>
-        </defs>
+  let dominioY
+  if (ehPressao) dominioY = [PRESSAO_MINIMA, PRESSAO_MAXIMA]
+  else if (ehTemperatura) dominioY = calcularDominioTemperatura(dados)
 
-        <CartesianGrid strokeDasharray="4 8" vertical={false} stroke="var(--color-grid)" />
-        <XAxis dataKey="rotulo" tick={{ fontSize: 12, fill: 'var(--color-text-secondary)' }} axisLine={false} tickLine={false} />
-        <YAxis
-          unit={metrica.unidade}
-          domain={ehPressao ? [PRESSAO_MINIMA, PRESSAO_MAXIMA] : undefined}
-          tick={{ fontSize: 12, fill: 'var(--color-text-secondary)' }}
-          axisLine={false}
-          tickLine={false}
-          width={60}
-        />
-        <Tooltip
-          formatter={(valor) => [`${valor}${metrica.unidade}`, metrica.titulo]}
-          contentStyle={{ borderRadius: 12, border: 'none', boxShadow: 'var(--shadow-card)' }}
-        />
-        <Area
-          type="monotone"
-          dataKey="valor"
-          stroke={cor}
-          strokeWidth={3}
-          fill={`url(#corArea-${metrica.chave})`}
-          dot={{ r: 4, strokeWidth: 0, fill: cor }}
-          activeDot={{ r: 6 }}
-          animationDuration={500}
-          isAnimationActive
-        />
-        {ehPressao && (
-          <ReferenceLine
-            y={PRESSAO_PADRAO_NIVEL_DO_MAR}
-            stroke="var(--color-text)"
-            strokeWidth={2}
-            strokeDasharray="6 3"
-            label={{
-              value: '1.013,25 hPa (padrão)',
-              position: 'insideBottomRight',
-              fill: 'var(--color-text)',
-              fontSize: 12,
-              fontWeight: 700,
-            }}
+  return (
+    <div>
+      <ResponsiveContainer width="100%" height={altura}>
+        <AreaChart data={dados} margin={{ top: 10, right: 20, bottom: 0, left: 0 }}>
+          <defs>
+            <linearGradient id={`corArea-${metrica.chave}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={cor} stopOpacity={0.35} />
+              <stop offset="100%" stopColor={cor} stopOpacity={0} />
+            </linearGradient>
+          </defs>
+
+          <CartesianGrid strokeDasharray="4 8" vertical={false} stroke="var(--color-grid)" />
+          <XAxis dataKey="rotulo" tick={{ fontSize: 12, fill: 'var(--color-text-secondary)' }} axisLine={false} tickLine={false} />
+          <YAxis
+            unit={metrica.unidade}
+            domain={dominioY}
+            tick={{ fontSize: 12, fill: 'var(--color-text-secondary)' }}
+            axisLine={false}
+            tickLine={false}
+            width={60}
           />
-        )}
-      </AreaChart>
-    </ResponsiveContainer>
+          <Tooltip
+            formatter={(valor) => [`${valor}${metrica.unidade}`, metrica.titulo]}
+            contentStyle={{ borderRadius: 12, border: 'none', boxShadow: 'var(--shadow-card)' }}
+          />
+          <Area
+            type="monotone"
+            dataKey="valor"
+            stroke={cor}
+            strokeWidth={3}
+            fill={`url(#corArea-${metrica.chave})`}
+            dot={{ r: 4, strokeWidth: 0, fill: cor }}
+            activeDot={{ r: 6 }}
+            animationDuration={500}
+            isAnimationActive
+          />
+          {ehPressao && <ReferenceLine y={PRESSAO_PADRAO_NIVEL_DO_MAR} stroke="var(--color-text)" strokeWidth={2} strokeDasharray="6 3" />}
+        </AreaChart>
+      </ResponsiveContainer>
+      {ehPressao && (
+        <p className={styles.legendaLinha}>
+          <span className={styles.amostraLinha} /> {t('estacaoPagina.pressaoPadraoLegenda', { valor: '1.013,25' })}
+        </p>
+      )}
+    </div>
   )
 }
 

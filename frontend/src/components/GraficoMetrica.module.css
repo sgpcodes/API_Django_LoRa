@@ -1,0 +1,16 @@
+.legendaLinha {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.4rem 0 0;
+  font-size: 0.74rem;
+  color: var(--color-text-secondary);
+}
+
+.amostraLinha {
+  display: inline-block;
+  width: 16px;
+  height: 0;
+  border-top: 2px dashed var(--color-text);
+  flex-shrink: 0;
+}
