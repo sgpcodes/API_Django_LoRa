@@ -66,7 +66,7 @@ function iconeParaHora(condicao, dataHoraISO) {
 // dele (pedido explícito) — vem de `clima.previsaoHoraria`, casado pela
 // data (AAAA-MM-DD) contra `clima.previsaoDiaria[i].data`, os dois já
 // vêm do mesmo provedor então o formato bate direto, sem parse frágil.
-function PrevisaoSemana({ clima, cidade }) {
+function PrevisaoSemana({ clima, cidade, coordenadas }) {
   const { t } = useTranslation()
   const [diaExpandidoIndice, setDiaExpandidoIndice] = useState(null)
 
@@ -223,6 +223,17 @@ function PrevisaoSemana({ clima, cidade }) {
             <span className={styles.valorSol}>{clima?.condicaoTexto ?? '—'}</span>
           </div>
         </div>
+
+        {coordenadas && (
+          <div className={styles.mapaMeteorologico}>
+            <iframe
+              src={`https://embed.windy.com/embed2.html?lat=${coordenadas.latitude}&lon=${coordenadas.longitude}&detailLat=${coordenadas.latitude}&detailLon=${coordenadas.longitude}&width=650&height=450&zoom=7&level=surface&overlay=wind&product=ecmwf&menu=&message=true&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1`}
+              title={t('estacaoPagina.mapaMeteorologicoTitulo')}
+              loading="lazy"
+              frameBorder="0"
+            />
+          </div>
+        )}
       </div>
     </div>
   )

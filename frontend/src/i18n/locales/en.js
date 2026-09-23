@@ -78,6 +78,7 @@ export default {
     nascerSol: 'Sunrise',
     porSol: 'Sunset',
     condicaoAtual: 'Current condition',
+    mapaMeteorologicoTitulo: 'Interactive weather map — rain and wind',
     expandirGrafico: 'Expand — {{metrica}}',
     periodoDoGrafico: 'Period — {{metrica}}',
     periodoPersonalizado: 'Different period than the rest of the page',
