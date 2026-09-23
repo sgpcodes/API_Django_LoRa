@@ -17,6 +17,7 @@ import GerenciamentoPlano from './pages/GerenciamentoPlano'
 import Checkout from './pages/Checkout'
 import Perfil from './pages/Perfil'
 import Estacao from './pages/Estacao'
+import ExportacaoDados from './pages/ExportacaoDados'
 // Dashboard antigo (estação LoRa real) — fora do menu por enquanto, mas
 // as rotas continuam existindo (ver pages/DashboardLora.jsx).
 import DashboardLora from './pages/DashboardLora'
@@ -65,6 +66,7 @@ function App() {
               <Route path="notificacoes" element={<Notificacoes />} />
               <Route path="perfil" element={<Perfil />} />
               <Route path="estacao" element={<Estacao />} />
+              <Route path="exportar" element={<ExportacaoDados />} />
               <Route path="configuracoes" element={<Configuracoes />} />
               <Route path="plano" element={<GerenciamentoPlano />} />
               <Route path="checkout" element={<Checkout />} />

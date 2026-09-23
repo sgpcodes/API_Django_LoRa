@@ -25,6 +25,7 @@ export default {
     estacaoConectada: 'Connected station',
     painelAdministrativo: 'Admin panel',
     lacopSubtitulo: 'LACOP UFF · Agroclimatic Monitoring',
+    exportarDados: 'Export data',
   },
   cabecalho: {
     ola: 'Hi, {{nome}}! 👋',
@@ -96,6 +97,20 @@ export default {
     menorVelocidade: 'Lowest speed',
     doTempo: '{{pct}}% of the time',
     emRelacaoPeriodoAnterior: 'vs. the previous period',
+  },
+  exportacao: {
+    titulo: 'Export data',
+    subtitulo: 'Download your station\'s climate data as a file.',
+    carregando: 'Loading data...',
+    erroCarregar: 'Could not load the data right now. Try again shortly.',
+    selecioneVariaveis: 'Variables',
+    periodo: 'Period',
+    formato: 'File format',
+    formatoTxt: 'Text (.txt)',
+    formatoCsv: 'Spreadsheet (.csv)',
+    formatoPdf: 'PDF (.pdf)',
+    semVariaveis: 'Select at least one variable to download.',
+    baixarArquivo: 'Download file',
   },
   adminDashboard: {
     bannerTitulo: 'System overview',

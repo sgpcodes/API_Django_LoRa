@@ -10,6 +10,7 @@ import { buscarClimaAtual, derivarVisaoPeriodo } from '../services/climaExternoS
 import { UFS, buscarMunicipiosPorUf } from '../services/ibgeService'
 import { geocodificarCidade } from '../services/geocodingService'
 import { tendenciaUltimaHora } from '../services/metricasClima'
+import { CHAVE_UF_SELECIONADA, CHAVE_CIDADE_SELECIONADA, obterLocalizacaoSelecionada } from '../services/localizacaoSelecionada'
 import styles from './Dashboard.module.css'
 
 // Dashboard da conta Standard — página da estação (Tela 4 da especificação
@@ -30,10 +31,6 @@ import styles from './Dashboard.module.css'
 // qualquer conta Standard pode escolher qualquer cidade do Brasil (fica
 // pra quando existir cadastro de estação virtual de verdade, RF-03).
 const INTERVALO_ATUALIZACAO_MS = 60_000
-const CHAVE_UF = 'lacop:ufSelecionada'
-const CHAVE_CIDADE = 'lacop:cidadeSelecionada'
-const UF_PADRAO = 'RJ'
-const CIDADE_PADRAO = 'Maricá'
 
 function Dashboard() {
   const { t, i18n } = useTranslation()
@@ -43,8 +40,9 @@ function Dashboard() {
     { valor: 7, rotulo: t('dashboard.periodo7dias') },
     { valor: 30, rotulo: t('dashboard.periodo30dias') },
   ]
-  const [uf, setUf] = useState(() => localStorage.getItem(CHAVE_UF) ?? UF_PADRAO)
-  const [cidade, setCidade] = useState(() => localStorage.getItem(CHAVE_CIDADE) ?? CIDADE_PADRAO)
+  const localizacaoInicial = obterLocalizacaoSelecionada()
+  const [uf, setUf] = useState(localizacaoInicial.uf)
+  const [cidade, setCidade] = useState(localizacaoInicial.cidade)
   const [municipios, setMunicipios] = useState([])
   const [coordenadas, setCoordenadas] = useState(null)
   const [carregandoLocalizacao, setCarregandoLocalizacao] = useState(true)
@@ -132,12 +130,12 @@ function Dashboard() {
 
   function aoMudarUf(novaUf) {
     setUf(novaUf)
-    localStorage.setItem(CHAVE_UF, novaUf)
+    localStorage.setItem(CHAVE_UF_SELECIONADA, novaUf)
   }
 
   function aoMudarCidade(novaCidade) {
     setCidade(novaCidade)
-    localStorage.setItem(CHAVE_CIDADE, novaCidade)
+    localStorage.setItem(CHAVE_CIDADE_SELECIONADA, novaCidade)
   }
 
   const visao = useMemo(() => (clima ? derivarVisaoPeriodo(clima, periodo) : null), [clima, periodo])

@@ -6,6 +6,7 @@ import {
   Bell,
   Settings,
   CreditCard,
+  Download,
   HelpCircle,
   LogOut,
   Sun,
@@ -34,6 +35,7 @@ import styles from './Sidebar.module.css'
 const ITENS_NAV = [
   { to: '/app', chave: 'dashboard', icone: LayoutGrid, fim: true },
   { to: '/app/notificacoes', chave: 'notificacoes', icone: Bell },
+  { to: '/app/exportar', chave: 'exportarDados', icone: Download },
   { to: '/app/configuracoes', chave: 'configuracoes', icone: Settings },
   { to: '/app/plano', chave: 'gerenciamentoPlano', icone: CreditCard },
 ]

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Clock, Download, ChevronDown } from 'lucide-react'
+import { Clock, Download } from 'lucide-react'
 import { obterClaimsDoToken } from '../services/authService'
 import styles from './CabecalhoStandard.module.css'
 
@@ -40,7 +41,6 @@ function CabecalhoStandard({
 }) {
   const { t, i18n } = useTranslation()
   const [agora, setAgora] = useState(new Date())
-  const [menuAberto, setMenuAberto] = useState(false)
   const username = obterClaimsDoToken()?.username
 
   useEffect(() => {
@@ -82,30 +82,10 @@ function CabecalhoStandard({
         )}
 
         {mostrarExportar && (
-          <div className={styles.menuExportar}>
-            <button
-              type="button"
-              className={styles.botaoExportar}
-              onClick={() => setMenuAberto((atual) => !atual)}
-            >
-              <Download size={16} />
-              {t('cabecalho.exportarRelatorio')}
-              <ChevronDown size={14} />
-            </button>
-            {menuAberto && (
-              <div className={styles.dropdown}>
-                <button type="button" className={styles.itemDropdown}>
-                  {t('cabecalho.relatorioCompleto')}
-                </button>
-                <button type="button" className={styles.itemDropdown}>
-                  {t('cabecalho.dadosBrutos')}
-                </button>
-                <button type="button" className={styles.itemDropdown}>
-                  {t('cabecalho.planilha')}
-                </button>
-              </div>
-            )}
-          </div>
+          <Link to="/app/exportar" className={styles.botaoExportar}>
+            <Download size={16} />
+            {t('cabecalho.exportarRelatorio')}
+          </Link>
         )}
       </div>
     </header>

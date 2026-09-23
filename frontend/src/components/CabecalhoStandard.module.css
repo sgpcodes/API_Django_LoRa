@@ -68,10 +68,6 @@
   background-color: var(--color-status-offline, #dc2626);
 }
 
-.menuExportar {
-  position: relative;
-}
-
 .botaoExportar {
   display: flex;
   align-items: center;
@@ -83,35 +79,7 @@
   color: #ffffff;
   font-weight: 600;
   font-size: 0.85rem;
+  text-decoration: none;
   cursor: pointer;
   white-space: nowrap;
-}
-
-.dropdown {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 6px);
-  display: flex;
-  flex-direction: column;
-  min-width: 190px;
-  background-color: var(--color-card-bg);
-  border: 1px solid var(--color-card-border);
-  border-radius: 10px;
-  box-shadow: var(--shadow-card);
-  overflow: hidden;
-  z-index: 5;
-}
-
-.itemDropdown {
-  text-align: left;
-  padding: 0.6rem 0.85rem;
-  font-size: 0.82rem;
-  color: var(--color-text);
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-
-.itemDropdown:hover {
-  background-color: var(--color-pill-bg);
 }
