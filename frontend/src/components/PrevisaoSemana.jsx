@@ -67,13 +67,16 @@ function iconeParaHora(condicao, dataHoraISO) {
 // dele (pedido explícito) — vem de `clima.previsaoHoraria`, casado pela
 // data (AAAA-MM-DD) contra `clima.previsaoDiaria[i].data`, os dois já
 // vêm do mesmo provedor então o formato bate direto, sem parse frágil.
-// Sem `marker`/`detail`/`detailLat`/`detailLon` de propósito — com eles, o
-// Windy abre sozinho aquele painel de tabela hora a hora por cima do mapa
-// (pedido explícito pra tirar: "não precisa aparecer isso aqui"). Só o
-// mapa mesmo, pra pan/zoom e trocar de camada (vento/chuva) pelo menu.
+// `marker=true` + `detailLat`/`detailLon` marcam a cidade escolhida no
+// mapa (pedido explícito — "marca a localização selecionada, tipo
+// Niterói") — mas `detail=false` evita que o Windy abra sozinho aquele
+// painel de tabela hora a hora por cima do mapa (pedido anterior, "não
+// precisa aparecer isso aqui"). `overlay=rain` começa mostrando chuva
+// (pedido explícito, com exemplo de imagem) — o menu ainda deixa trocar
+// pra vento/outras camadas.
 function urlMapaMeteorologico(coordenadas) {
   const { latitude, longitude } = coordenadas
-  return `https://embed.windy.com/embed2.html?lat=${latitude}&lon=${longitude}&zoom=7&level=surface&overlay=wind&product=ecmwf&menu=&message=true&calendar=now&pressure=&type=map&location=coordinates&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1`
+  return `https://embed.windy.com/embed2.html?lat=${latitude}&lon=${longitude}&detailLat=${latitude}&detailLon=${longitude}&marker=true&detail=false&zoom=7&level=surface&overlay=rain&product=ecmwf&menu=&message=true&calendar=now&pressure=&type=map&location=coordinates&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1`
 }
 
 function PrevisaoSemana({ clima, cidade, coordenadas }) {
