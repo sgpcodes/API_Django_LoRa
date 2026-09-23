@@ -79,6 +79,7 @@ export default {
     porSol: 'Pôr do sol',
     condicaoAtual: 'Condição atual',
     mapaMeteorologicoTitulo: 'Mapa meteorológico interativo — chuva e vento',
+    expandirMapaMeteorologico: 'Expandir mapa meteorológico',
     expandirGrafico: 'Expandir — {{metrica}}',
     periodoDoGrafico: 'Período — {{metrica}}',
     periodoPersonalizado: 'Período diferente do resto da página',

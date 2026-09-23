@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Droplets, Sunrise, Sunset, Eye, Gauge, Wind, ChevronDown } from 'lucide-react'
+import { Droplets, Sunrise, Sunset, Eye, Gauge, Wind, ChevronDown, Maximize2, CloudRain } from 'lucide-react'
 import { descricaoTempo } from '../services/climaExternoService'
+import Modal from './Modal'
 import iconeSol from '../assets/clima/sol.png'
 import iconeNublado from '../assets/clima/nublado.png'
 import iconeParcialmenteNublado from '../assets/clima/parcialmente-nublado.png'
@@ -66,9 +67,15 @@ function iconeParaHora(condicao, dataHoraISO) {
 // dele (pedido explícito) — vem de `clima.previsaoHoraria`, casado pela
 // data (AAAA-MM-DD) contra `clima.previsaoDiaria[i].data`, os dois já
 // vêm do mesmo provedor então o formato bate direto, sem parse frágil.
+function urlMapaMeteorologico(coordenadas) {
+  const { latitude, longitude } = coordenadas
+  return `https://embed.windy.com/embed2.html?lat=${latitude}&lon=${longitude}&detailLat=${latitude}&detailLon=${longitude}&width=650&height=450&zoom=7&level=surface&overlay=wind&product=ecmwf&menu=&message=true&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1`
+}
+
 function PrevisaoSemana({ clima, cidade, coordenadas }) {
   const { t } = useTranslation()
   const [diaExpandidoIndice, setDiaExpandidoIndice] = useState(null)
+  const [mapaExpandido, setMapaExpandido] = useState(false)
 
   const dias = clima?.previsaoDiaria ?? []
   const diaHoje = dias[0] ?? null
@@ -226,8 +233,16 @@ function PrevisaoSemana({ clima, cidade, coordenadas }) {
 
         {coordenadas && (
           <div className={styles.mapaMeteorologico}>
+            <button
+              type="button"
+              className={styles.botaoExpandirMapa}
+              onClick={() => setMapaExpandido(true)}
+              aria-label={t('estacaoPagina.expandirMapaMeteorologico')}
+            >
+              <Maximize2 size={14} />
+            </button>
             <iframe
-              src={`https://embed.windy.com/embed2.html?lat=${coordenadas.latitude}&lon=${coordenadas.longitude}&detailLat=${coordenadas.latitude}&detailLon=${coordenadas.longitude}&width=650&height=450&zoom=7&level=surface&overlay=wind&product=ecmwf&menu=&message=true&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1`}
+              src={urlMapaMeteorologico(coordenadas)}
               title={t('estacaoPagina.mapaMeteorologicoTitulo')}
               loading="lazy"
               frameBorder="0"
@@ -235,6 +250,19 @@ function PrevisaoSemana({ clima, cidade, coordenadas }) {
           </div>
         )}
       </div>
+
+      {coordenadas && (
+        <Modal
+          aberto={mapaExpandido}
+          onFechar={() => setMapaExpandido(false)}
+          titulo={t('estacaoPagina.mapaMeteorologicoTitulo')}
+          icone={CloudRain}
+        >
+          <div className={styles.mapaMeteorologicoGrande}>
+            <iframe src={urlMapaMeteorologico(coordenadas)} title={t('estacaoPagina.mapaMeteorologicoTitulo')} frameBorder="0" />
+          </div>
+        </Modal>
+      )}
     </div>
   )
 }
