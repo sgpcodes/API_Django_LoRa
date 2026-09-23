@@ -61,6 +61,7 @@
   --metrica-pressao: #4a3aa7;
   --metrica-chuva: #2a78d6;
   --metrica-vento: #eb6834;
+  --metrica-radiacao: #eda100;
 
   /* Cor do ícone de condição na "Previsão do tempo" (sol/chuva/tempestade/
      nublado) — pra ele ficar visualmente óbvio, não só o formato do ícone
@@ -117,6 +118,7 @@
   --metrica-pressao: #9085e9;
   --metrica-chuva: #3987e5;
   --metrica-vento: #d95926;
+  --metrica-radiacao: #c98500;
 
   --condicao-sol: #c98500;
   --condicao-chuva: #3987e5;

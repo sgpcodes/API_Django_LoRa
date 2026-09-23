@@ -70,22 +70,10 @@
 
 .cardsPrincipais {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 0.75rem;
 }
 
 .cardsPrincipais > * {
   min-width: 0;
-}
-
-@media (max-width: 1023px) {
-  .cardsPrincipais {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-@media (max-width: 640px) {
-  .cardsPrincipais {
-    grid-template-columns: repeat(2, 1fr);
-  }
 }

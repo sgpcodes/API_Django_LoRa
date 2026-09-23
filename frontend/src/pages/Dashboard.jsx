@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Thermometer, Droplets, Gauge, Wind, CloudRain, Calendar } from 'lucide-react'
+import { Thermometer, Droplets, Gauge, Wind, CloudRain, Sun, Calendar } from 'lucide-react'
 import EstacaoCabecalho from '../components/EstacaoCabecalho'
 import PrevisaoSemana from '../components/PrevisaoSemana'
 import GradeGraficosMetricas from '../components/GradeGraficosMetricas'
@@ -182,6 +182,7 @@ function Dashboard() {
   const tendenciaTemperatura = tendenciaUltimaHora(clima.horaria.temperatura)
   const tendenciaUmidade = tendenciaUltimaHora(clima.horaria.umidade)
   const tendenciaPressao = tendenciaUltimaHora(clima.horaria.pressao)
+  const tendenciaRadiacao = tendenciaUltimaHora(clima.horaria.radiacao)
 
   return (
     <div className={styles.pagina}>
@@ -242,6 +243,18 @@ function Dashboard() {
           valor={resumoTopo.chuva != null ? `${resumoTopo.chuva} mm` : '—'}
           horarioAtualizacao={horarioUltimaLeitura}
           maxMin={{ ...resumoTopo.maxMin?.chuva, unidade: ' mm' }}
+        />
+        <SummaryStatCard
+          icone={Sun}
+          cor="var(--metrica-radiacao)"
+          rotulo={t('dashboard.radiacao')}
+          valor={resumoTopo.radiacao != null ? `${resumoTopo.radiacao} W/m²` : '—'}
+          legenda={
+            tendenciaRadiacao.delta == null ? undefined : t('dashboard.ultimaHoraRadiacao', { valor: Math.abs(tendenciaRadiacao.delta) })
+          }
+          tendencia={tendenciaRadiacao.tendencia}
+          horarioAtualizacao={horarioUltimaLeitura}
+          maxMin={{ ...resumoTopo.maxMin?.radiacao, unidade: ' W/m²' }}
         />
       </div>
 

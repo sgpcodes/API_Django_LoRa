@@ -58,18 +58,24 @@ function GradeGraficosMetricas({ clima, periodoGlobal }) {
     })
   }
 
+  const metricasEmGrade = METRICAS_CLIMA.filter((metrica) => metrica.chave !== 'vento')
+
   return (
     <div className={styles.grade}>
-      {METRICAS_CLIMA.filter((metrica) => metrica.chave !== 'vento').map((metrica) => {
+      {metricasEmGrade.map((metrica, indice) => {
         const Icone = metrica.icone
         const periodo = periodoDoGrafico(metrica.chave)
         const visao = derivarVisaoPeriodo(clima, periodo)
         const dados = visao.grafico[metrica.chave] ?? []
         const { maximo, minimo } = maxMinDaSerie(visao.resumoTopo, metrica.chave, dados)
         const personalizado = periodosIndividuais[metrica.chave] != null
+        // Número ímpar de cartões deixa o último sozinho numa fileira de 2 —
+        // em vez de um vão vazio do lado, esse último vira largura cheia.
+        const ultimoImpar = indice === metricasEmGrade.length - 1 && metricasEmGrade.length % 2 !== 0
+        const classeSpan = ultimoImpar ? styles.spanCheio : styles.spanDeMeio
 
         return (
-          <div key={metrica.chave} className={`${styles.cartao} ${styles.spanDeMeio}`}>
+          <div key={metrica.chave} className={`${styles.cartao} ${classeSpan}`}>
             <div className={styles.cabecalhoCartao}>
               <h3 className={styles.tituloCartao}>
                 <Icone size={16} />

@@ -50,9 +50,11 @@ export default {
     pressao: 'Pressão',
     vento: 'Vento',
     chuva: 'Chuva',
+    radiacao: 'Radiação solar',
     ultimaHoraTemperatura: '{{valor}}°C na última hora',
     ultimaHoraUmidade: '{{valor}}% na última hora',
     ultimaHoraPressao: '{{valor}} hPa na última hora',
+    ultimaHoraRadiacao: '{{valor}} W/m² na última hora',
     rajadas: 'Rajadas',
   },
   estacaoPagina: {
