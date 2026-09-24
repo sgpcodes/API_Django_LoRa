@@ -382,10 +382,21 @@ export async function buscarClimaAtual(coordenadas = COORDENADAS_PADRAO) {
   return normalizar(dados)
 }
 
+// "AAAA-MM-DD" de hoje (ou `diasAtras` dias antes) NO FUSO LOCAL do
+// navegador — bug real encontrado testando às 23:5x no Brasil (UTC-3):
+// `.toISOString()` converte pra UTC antes de cortar a data, e UTC àquela
+// hora já virou o dia seguinte. Com isso, "hoje" virava amanhã, o filtro
+// de hora a hora não encontrava nenhum ponto (todos os dados são de
+// HOJE de verdade) e os gráficos de Hoje/Ontem ficavam vazios — só o
+// resumo do dia (Máx./Mín., de outra fonte) continuava aparecendo.
+// `getFullYear`/`getMonth`/`getDate` leem no fuso local, sem esse risco.
 function dataISODeslocada(diasAtras) {
   const data = new Date()
   data.setDate(data.getDate() - diasAtras)
-  return data.toISOString().slice(0, 10)
+  const ano = data.getFullYear()
+  const mes = String(data.getMonth() + 1).padStart(2, '0')
+  const dia = String(data.getDate()).padStart(2, '0')
+  return `${ano}-${mes}-${dia}`
 }
 
 // Pontos crus de vento (velocidade + direção) pro período escolhido — pra
