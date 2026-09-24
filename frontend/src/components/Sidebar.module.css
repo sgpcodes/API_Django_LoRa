@@ -363,7 +363,11 @@
 @media (max-width: 900px) {
   .sidebar {
     position: fixed;
-    z-index: 20;
+    /* Acima dos controles do Leaflet (z-index 1000 por padrão no CSS
+       deles — ver EstacaoCabecalho.jsx) — mesmo bug já visto no Modal
+       (Modal.module.css): sem isso, o mapa da estação furava por cima
+       da gaveta do menu no mobile. */
+    z-index: 1200;
     transform: translateX(-100%);
   }
 
@@ -399,7 +403,7 @@
     display: block;
     position: fixed;
     inset: 0;
-    z-index: 19;
+    z-index: 1199;
     background-color: rgba(10, 15, 30, 0.5);
   }
 }
