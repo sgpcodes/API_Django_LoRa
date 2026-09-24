@@ -110,9 +110,9 @@ function PainelVento({ clima, periodo, onMudarPeriodo, personalizado }) {
           </div>
 
           <div className={styles.graficoWrapper}>
-            {aba === 'rosa' && <VentoRosa pontos={pontos} altura={440} ocultarLegenda />}
-            {aba === 'velocidade' && <GraficoMetrica metrica={METRICA_VENTO} dados={dadosVelocidade} altura={380} />}
-            {aba === 'direcao' && <GraficoDirecaoVento porDirecao={rosa.porDirecao} altura={380} />}
+            {aba === 'rosa' && <VentoRosa pontos={pontos} altura={300} ocultarLegenda />}
+            {aba === 'velocidade' && <GraficoMetrica metrica={METRICA_VENTO} dados={dadosVelocidade} altura={260} />}
+            {aba === 'direcao' && <GraficoDirecaoVento porDirecao={rosa.porDirecao} altura={260} />}
           </div>
         </div>
 

@@ -2,10 +2,8 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Maximize2 } from 'lucide-react'
 import { METRICAS_CLIMA } from '../services/metricasClima'
-import { derivarVisaoPeriodo, derivarPontosVento, derivarResumoVento } from '../services/climaExternoService'
-import { calcularRosaDosVentos } from '../services/ventoRosa'
+import { derivarVisaoPeriodo } from '../services/climaExternoService'
 import GraficoMetrica from './GraficoMetrica'
-import VentoRosa from './VentoRosa'
 import PainelVento from './PainelVento'
 import Modal from './Modal'
 import styles from './GradeGraficosMetricas.module.css'
@@ -29,22 +27,20 @@ function maxMinDaSerie(resumoTopo, chave, dados) {
   return { maximo: Math.max(...valores), minimo: chave === 'chuva' ? 0 : Math.min(...valores) }
 }
 
-// Os 6 gráficos hora a hora (temperatura, umidade, pressão, vento, chuva,
-// radiação) lado a lado — substitui o carrossel "um de cada vez" na
-// página da estação (RF-18: todos juntos, não um de cada vez). O período
-// de cada um segue o seletor global da página (`periodoGlobal`) por
-// padrão, mas pode ser trocado individualmente sem afetar os demais
+// Os 5 gráficos hora a hora genéricos (temperatura, umidade, pressão,
+// chuva, radiação) lado a lado — substitui o carrossel "um de cada vez"
+// na página da estação (RF-18: todos juntos, não um de cada vez). O
+// período de cada um segue o seletor global da página (`periodoGlobal`)
+// por padrão, mas pode ser trocado individualmente sem afetar os demais
 // (RF-22) — `clima` (o objeto bruto, com todo o histórico já buscado) é
 // recalculado localmente pra cada período diferente que algum gráfico
 // esteja usando, sem nenhuma chamada de rede nova.
 //
-// Vento é o único que não é um GraficoMetrica genérico: mostra a rosa dos
-// ventos (compacta, do mesmo tamanho dos outros cartões — pedido
-// explícito, "não deixa a rosa muito pequena" mas também "não muito
-// grande") em vez de uma linha, e o cartãozinho lateral vira direção
-// predominante + rajada máxima em vez de máx./mín.. A versão rica (abas
-// rosa/velocidade/direção, os 4 cartões de estatística, legenda) mora no
-// modal de expandir — ver PainelVento.jsx.
+// Vento não entra nessa grade genérica — tentei encaixar ele como um
+// cartão comum (rosa pequena ao lado da radiação), mas ficou pequeno
+// demais ("quero ela maior"); voltou a ser um bloco próprio, largura
+// cheia, com abas (rosa/velocidade/direção) e as 4 estatísticas — só que
+// menor do que a primeira versão desse bloco (ver PainelVento.jsx).
 function GradeGraficosMetricas({ clima, periodoGlobal }) {
   const { t } = useTranslation()
   const [metricaExpandida, setMetricaExpandida] = useState(null)
@@ -68,66 +64,21 @@ function GradeGraficosMetricas({ clima, periodoGlobal }) {
     })
   }
 
-  const ventoExpandido = metricaExpandida?.chave === 'vento'
+  const metricasEmGrade = METRICAS_CLIMA.filter((metrica) => metrica.chave !== 'vento')
 
   return (
     <div className={styles.grade}>
-      {METRICAS_CLIMA.map((metrica, indice) => {
+      {metricasEmGrade.map((metrica, indice) => {
         const Icone = metrica.icone
-        const ehVento = metrica.chave === 'vento'
         const periodo = periodoDoGrafico(metrica.chave)
         const visao = derivarVisaoPeriodo(clima, periodo)
         const dados = visao.grafico[metrica.chave] ?? []
+        const { maximo, minimo } = maxMinDaSerie(visao.resumoTopo, metrica.chave, dados)
         const personalizado = periodosIndividuais[metrica.chave] != null
         // Número ímpar de cartões deixa o último sozinho numa fileira de 2 —
         // em vez de um vão vazio do lado, esse último vira largura cheia.
-        const ultimoImpar = indice === METRICAS_CLIMA.length - 1 && METRICAS_CLIMA.length % 2 !== 0
+        const ultimoImpar = indice === metricasEmGrade.length - 1 && metricasEmGrade.length % 2 !== 0
         const classeSpan = ultimoImpar ? styles.spanCheio : styles.spanDeMeio
-
-        let corpo
-        if (ehVento) {
-          const pontosVento = derivarPontosVento(clima, periodo)
-          const rosaVento = calcularRosaDosVentos(pontosVento)
-          const resumoVento = derivarResumoVento(clima, periodo)
-          const predominante = rosaVento.porDirecao.reduce((maior, atual) => (atual.totalPct > maior.totalPct ? atual : maior), rosaVento.porDirecao[0])
-
-          corpo = (
-            <div className={styles.corpoCartao}>
-              <div className={styles.areaGrafico}>
-                <VentoRosa pontos={pontosVento} altura={230} ocultarLegenda />
-              </div>
-              <div className={styles.colunaMaxMin}>
-                <span>
-                  {t('estacaoPagina.direcaoPredominante')}
-                  <strong>{rosaVento.total > 0 ? predominante.direcao : '—'}</strong>
-                </span>
-                <span>
-                  {t('estacaoPagina.rajadaMaxima')}
-                  <strong>{resumoVento.rajadaMaxima != null ? `${resumoVento.rajadaMaxima} km/h` : '—'}</strong>
-                </span>
-              </div>
-            </div>
-          )
-        } else {
-          const { maximo, minimo } = maxMinDaSerie(visao.resumoTopo, metrica.chave, dados)
-          corpo = (
-            <div className={styles.corpoCartao}>
-              <div className={styles.areaGrafico}>
-                <GraficoMetrica metrica={metrica} dados={dados} altura={260} />
-              </div>
-              <div className={styles.colunaMaxMin}>
-                <span>
-                  {t('comum.maximoDoDia')}
-                  <strong>{maximo != null ? `${maximo}${metrica.unidade}` : '—'}</strong>
-                </span>
-                <span>
-                  {t('comum.minimoDoDia')}
-                  <strong>{minimo != null ? `${minimo}${metrica.unidade}` : '—'}</strong>
-                </span>
-              </div>
-            </div>
-          )
-        }
 
         return (
           <div key={metrica.chave} className={`${styles.cartao} ${classeSpan}`}>
@@ -167,26 +118,41 @@ function GradeGraficosMetricas({ clima, periodoGlobal }) {
               </div>
             </div>
 
-            {corpo}
+            <div className={styles.corpoCartao}>
+              <div className={styles.areaGrafico}>
+                <GraficoMetrica metrica={metrica} dados={dados} altura={260} />
+              </div>
+              <div className={styles.colunaMaxMin}>
+                <span>
+                  {t('comum.maximoDoDia')}
+                  <strong>{maximo != null ? `${maximo}${metrica.unidade}` : '—'}</strong>
+                </span>
+                <span>
+                  {t('comum.minimoDoDia')}
+                  <strong>{minimo != null ? `${minimo}${metrica.unidade}` : '—'}</strong>
+                </span>
+              </div>
+            </div>
           </div>
         )
       })}
 
+      <div className={styles.spanCheio}>
+        <PainelVento
+          clima={clima}
+          periodo={periodoDoGrafico('vento')}
+          onMudarPeriodo={(valor) => aoMudarPeriodoDoGrafico('vento', valor)}
+          personalizado={periodosIndividuais.vento != null}
+        />
+      </div>
+
       <Modal
         aberto={metricaExpandida != null}
         onFechar={() => setMetricaExpandida(null)}
-        titulo={ventoExpandido ? undefined : metricaExpandida?.titulo}
-        icone={ventoExpandido ? undefined : metricaExpandida?.icone}
+        titulo={metricaExpandida?.titulo}
+        icone={metricaExpandida?.icone}
       >
-        {metricaExpandida && ventoExpandido && (
-          <PainelVento
-            clima={clima}
-            periodo={periodoDoGrafico('vento')}
-            onMudarPeriodo={(valor) => aoMudarPeriodoDoGrafico('vento', valor)}
-            personalizado={periodosIndividuais.vento != null}
-          />
-        )}
-        {metricaExpandida && !ventoExpandido && (
+        {metricaExpandida && (
           <GraficoMetrica
             metrica={metricaExpandida}
             dados={derivarVisaoPeriodo(clima, periodoDoGrafico(metricaExpandida.chave)).grafico[metricaExpandida.chave] ?? []}
