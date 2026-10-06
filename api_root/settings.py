@@ -137,6 +137,20 @@ DATABASES = {
     'default': dj_database_url.parse(_database_url, conn_max_age=_conn_max_age)
 }
 
+# Alias extra 'nuvem', só existe quando CLOUD_DATABASE_URL está definida —
+# usado na instalação local (Raspberry Pi), onde 'default' é o Postgres
+# local e 'nuvem' é o Supabase de produção. O comando
+# `sincronizar_leituras` (api_rest) usa esse alias pra empurrar os dados
+# guardados offline pra nuvem quando a internet volta. Em qualquer outro
+# ambiente (Render, Mac) a variável não existe e o alias nem é criado.
+_cloud_database_url = os.environ.get('CLOUD_DATABASE_URL')
+if _cloud_database_url:
+    DATABASES['nuvem'] = dj_database_url.parse(_cloud_database_url, conn_max_age=0)
+    # Timeout curto: sem isso, tentar conectar sem internet trava o
+    # comando de sincronização até o timeout default do TCP (pode passar
+    # de 1 minuto) em vez de simplesmente desistir e tentar de novo depois.
+    DATABASES['nuvem'].setdefault('OPTIONS', {})['connect_timeout'] = 5
+
 # Limite de armazenamento do plano do banco (painel de Manutenção mostra
 # "X GB usado / DATABASE_QUOTA_GB GB"). Sem essa variável no ambiente,
 # fica None e a tela mostra só o tamanho usado, sem inventar uma cota.

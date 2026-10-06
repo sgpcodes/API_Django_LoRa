@@ -66,3 +66,42 @@ Depois de puxar atualizações do repositório:
 ```bash
 docker compose --env-file .env.docker up -d --build
 ```
+
+## Backup local + sincronização com a nuvem
+
+Quando o ESP32 (RX) está apontado pra Raspberry em vez de direto pra
+nuvem (ver `esp32-lora-climate/rx/src/config_Wifi.h` no repositório do
+firmware), as leituras continuam chegando mesmo sem internet — ficam
+guardadas no Postgres local até a conexão voltar.
+
+Isso só funciona se `CLOUD_DATABASE_URL` estiver preenchida em
+`.env.docker` (mesma connection string do Supabase usada no Render, em
+`DATABASE_URL`). Com isso configurado, o backend passa a:
+
+1. Tentar, a cada `SYNC_INTERVAL_SECONDS` (padrão 5 min), enviar pra
+   nuvem as leituras que só existem localmente.
+2. Apagar cada leitura do banco local só depois de confirmar que ela foi
+   salva com sucesso na nuvem — o banco local nunca vira uma cópia
+   permanente, é só um buffer enquanto durar a queda de conexão.
+3. Se a nuvem estiver inacessível, não faz nada (sem erro) e tenta de
+   novo no próximo ciclo — seguro deixar rodando o tempo todo.
+
+**Antes de ligar a sincronização**, a Raspberry precisa conhecer
+localmente a Estação (e o Usuário vinculado a ela) que ela vai operar —
+isso é feito uma vez, puxando da nuvem:
+
+```bash
+docker compose --env-file .env.docker exec backend python manage.py importar_estacao_da_nuvem ESP32_01
+```
+
+(troque `ESP32_01` pelo identificador real da estação, já cadastrada
+pelo Gestor no sistema web). Isso copia a Estação e seus Usuários pra
+dentro do banco local — sem isso, a ligação de uma leitura recebida
+localmente com sua Estação/Usuário correto não acontece.
+
+Pra sincronizar manualmente a qualquer momento (sem esperar o ciclo
+automático):
+
+```bash
+docker compose --env-file .env.docker exec backend python manage.py sincronizar_leituras
+```
