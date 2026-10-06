@@ -16,8 +16,9 @@ Uso:
 from django.core.management.base import BaseCommand
 from django.db import connections
 from django.db.utils import OperationalError
+from django.utils import timezone
 
-from api_rest.models import Estacao, Leitura
+from api_rest.models import Estacao, EstadoSincronizacao, Leitura
 
 
 def nuvem_disponivel():
@@ -38,19 +39,29 @@ class Command(BaseCommand):
             self.stdout.write('CLOUD_DATABASE_URL não configurada — nada a sincronizar.')
             return
 
+        estado = EstadoSincronizacao.atual()
+        estado.ultima_tentativa_em = timezone.now()
+
         if not nuvem_disponivel():
+            estado.nuvem_alcancavel = False
+            estado.save(update_fields=['nuvem_alcancavel', 'ultima_tentativa_em'])
             self.stdout.write('Nuvem inacessível agora — tentando de novo no próximo ciclo.')
             return
+
+        estado.nuvem_alcancavel = True
 
         pendentes = Leitura.objects.using('default').select_related('estacao').order_by('data_hora')
         total_pendentes = pendentes.count()
         if total_pendentes == 0:
+            estado.ultima_sincronizacao_com_sucesso_em = timezone.now()
+            estado.save(update_fields=['nuvem_alcancavel', 'ultima_tentativa_em', 'ultima_sincronizacao_com_sucesso_em'])
             self.stdout.write('Nada pendente para sincronizar.')
             return
 
         cache_estacoes = {}
         sincronizadas = 0
         falhas = 0
+        conexao_caiu_no_meio = False
 
         for leitura in pendentes.iterator():
             try:
@@ -76,11 +87,21 @@ class Command(BaseCommand):
                 # Conexão com a nuvem caiu no meio do lote — para por aqui;
                 # o que já foi sincronizado e apagado fica assim mesmo, o
                 # resto tenta de novo no próximo ciclo.
+                conexao_caiu_no_meio = True
                 self.stdout.write(self.style.WARNING('Conexão com a nuvem caiu durante a sincronização.'))
                 break
             except Exception as erro:
                 falhas += 1
                 self.stdout.write(self.style.WARNING(f'Falha ao sincronizar leitura id={leitura.id}: {erro}'))
+
+        if conexao_caiu_no_meio:
+            estado.nuvem_alcancavel = False
+            estado.save(update_fields=['nuvem_alcancavel', 'ultima_tentativa_em'])
+        else:
+            estado.ultima_sincronizacao_com_sucesso_em = timezone.now()
+            estado.save(update_fields=[
+                'nuvem_alcancavel', 'ultima_tentativa_em', 'ultima_sincronizacao_com_sucesso_em',
+            ])
 
         self.stdout.write(self.style.SUCCESS(
             f'{sincronizadas}/{total_pendentes} leitura(s) sincronizada(s) e removida(s) do banco local.'

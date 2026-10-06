@@ -7,6 +7,11 @@ export default {
     maximoDoDia: 'Today\'s max',
     minimoDoDia: 'Today\'s min',
   },
+  avisoOffline: {
+    titulo: 'Operating offline',
+    descricao: 'No connection to the cloud — {{count}} reading waiting to sync.',
+    descricao_other: 'No connection to the cloud — {{count}} readings waiting to sync.',
+  },
   nav: {
     dashboard: 'Dashboard',
     notificacoes: 'Notifications',

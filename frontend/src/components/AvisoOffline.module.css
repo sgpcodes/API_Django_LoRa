@@ -1,0 +1,18 @@
+.aviso {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: rgba(239, 68, 68, 0.14);
+  color: var(--color-status-offline, #ef4444);
+  font-size: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.titulo {
+  font-weight: 700;
+}
+
+.descricao {
+  color: var(--color-text-secondary);
+}

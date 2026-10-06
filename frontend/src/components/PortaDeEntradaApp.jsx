@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { obterPapelDoToken } from '../services/authService'
+import AvisoOffline from './AvisoOffline'
 
 // Decide o que aparece logo após o login. Gestor (conta credenciada/
 // administrativa) cai no Painel Administrativo (/app/adm/*) — nunca vê o
@@ -16,7 +17,12 @@ function PortaDeEntradaApp() {
     return <Navigate to="/app/adm/estacoes" replace />
   }
 
-  return <Outlet />
+  return (
+    <>
+      <AvisoOffline />
+      <Outlet />
+    </>
+  )
 }
 
 export default PortaDeEntradaApp

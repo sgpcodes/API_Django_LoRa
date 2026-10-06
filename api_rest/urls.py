@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 
 from .views import (
     EstacaoViewSet,
+    EstadoSincronizacaoView,
     LeituraDetailView,
     LeituraListCreateView,
     LeiturasOrfasPorSensorView,
@@ -33,6 +34,9 @@ urlpatterns = [
     # POST /api/rssi/solicitar/      -> o botão "Analisar" do dashboard marca um pedido como pendente
     path('rssi/status/', RssiStatusView.as_view(), name='rssi-status'),
     path('rssi/solicitar/', RssiSolicitarView.as_view(), name='rssi-solicitar'),
+
+    # GET /api/sincronizacao/status/ -> o dashboard consulta pra mostrar o aviso de "operando offline"
+    path('sincronizacao/status/', EstadoSincronizacaoView.as_view(), name='sincronizacao-status'),
 
     path('', include(router.urls)),
 ]

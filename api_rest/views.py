@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.db import DatabaseError
+from django.db import DatabaseError, connections
 from django.db.models import Prefetch
 from django.utils import timezone
 from rest_framework import status, viewsets
@@ -8,7 +8,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Estacao, Leitura, SolicitacaoRssi
+from .models import Estacao, EstadoSincronizacao, Leitura, SolicitacaoRssi
 from .permissions import EhGestor, EhGestorOuDonoDaEstacao
 from .serializers import EstacaoSerializer, LeituraSerializer, _leitura_resumo
 from .validacao import detectar_inconsistencia
@@ -111,6 +111,32 @@ class LeituraListCreateView(APIView):
             {'status': 'success', 'message': 'Leitura salva com sucesso.'},
             status=status.HTTP_201_CREATED,
         )
+
+
+class EstadoSincronizacaoView(APIView):
+    """GET: o dashboard consulta isso pra mostrar o aviso de "operando
+    offline" quando esta instalação é uma Raspberry Pi com backup local
+    (CLOUD_DATABASE_URL configurada) e a última tentativa de
+    sincronização não conseguiu falar com a nuvem. Em qualquer outra
+    instalação (Render, sem sincronização configurada),
+    `sincronizacao_configurada` vem False e o resto é ignorado — não
+    existe conceito de "offline" nesse caso."""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        configurada = 'nuvem' in connections.databases
+        if not configurada:
+            return Response({'sincronizacao_configurada': False})
+
+        estado = EstadoSincronizacao.atual()
+        return Response({
+            'sincronizacao_configurada': True,
+            'nuvem_alcancavel': estado.nuvem_alcancavel,
+            'ultima_tentativa_em': estado.ultima_tentativa_em,
+            'ultima_sincronizacao_com_sucesso_em': estado.ultima_sincronizacao_com_sucesso_em,
+            'leituras_pendentes': Leitura.objects.using('default').count(),
+        })
 
 
 class RssiStatusView(APIView):

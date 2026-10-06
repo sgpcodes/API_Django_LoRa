@@ -153,6 +153,27 @@ class SolicitacaoRssi(models.Model):
         return f'{self.sensor_id}: ' + ('pendente' if self.pendente else 'sem pedido pendente')
 
 
+class EstadoSincronizacao(models.Model):
+    """Uma única linha (sempre pk=1) com o resultado da ÚLTIMA tentativa de
+    sincronização local -> nuvem (ver comando `sincronizar_leituras` e
+    CLOUD_DATABASE_URL). É só isso que a tela do dashboard consulta pra
+    mostrar "operando offline" — não faz nenhuma conexão nova com a nuvem
+    na hora de responder, só lê o que a última tentativa (rodada em
+    segundo plano a cada alguns minutos) deixou registrado aqui."""
+
+    nuvem_alcancavel = models.BooleanField(default=False)
+    ultima_tentativa_em = models.DateTimeField(null=True, blank=True)
+    ultima_sincronizacao_com_sucesso_em = models.DateTimeField(null=True, blank=True)
+
+    @classmethod
+    def atual(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def __str__(self):
+        return 'nuvem alcançável' if self.nuvem_alcancavel else 'nuvem inacessível'
+
+
 class Leitura(models.Model):
     """Uma leitura de temperatura/umidade enviada pela ESP32 receptora."""
 
