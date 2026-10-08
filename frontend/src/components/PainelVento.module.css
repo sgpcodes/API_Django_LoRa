@@ -102,6 +102,18 @@
   justify-content: center;
 }
 
+/* O gráfico de velocidade (Recharts) precisa de um pai com largura
+   definida pra medir o `ResponsiveContainer` — sem isso, como item flex
+   sem `flex`/largura própria, ele colapsa pra largura 0 e o gráfico
+   nunca aparece (bug visto na prática: aba "Velocidade" ficava em
+   branco, só as abas de SVG/div fixos — rosa dos ventos e direção —
+   continuavam aparecendo). Mesmo ajuste já usado em
+   GradeGraficosMetricas.module.css (.areaGrafico). */
+.graficoVelocidade {
+  flex: 1;
+  min-width: 0;
+}
+
 .abas {
   display: inline-flex;
   flex-wrap: wrap;
