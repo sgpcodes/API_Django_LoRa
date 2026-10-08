@@ -328,6 +328,106 @@ function normalizar(dados) {
   }
 }
 
+// `Leitura.data_hora` vem em UTC do backend (api_rest/open_meteo.py pede
+// timezone=UTC de propósito, pra não lidar com DST na hora de salvar) —
+// mas o resto deste arquivo trabalha em horário de Brasília (a própria
+// Open-Meteo, do lado do navegador, já é pedida com
+// timezone=America/Sao_Paulo). Sem converter antes de agrupar por
+// dia/hora, bate errado perto da meia-noite — mesmo tipo de bug já visto
+// e corrigido antes neste arquivo (`dataISODeslocada`, fuso do
+// navegador). Devolve uma string "AAAA-MM-DDTHH:mm:ss" (sem offset),
+// no mesmo formato que `hourly.time` da Open-Meteo já chega.
+function paraDataHoraLocalBR(dataHoraUTCISO) {
+  const partes = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+  }).formatToParts(new Date(dataHoraUTCISO))
+  const obter = (tipo) => partes.find((p) => p.type === tipo).value
+  return `${obter('year')}-${obter('month')}-${obter('day')}T${obter('hour')}:${obter('minute')}:${obter('second')}`
+}
+
+// Monta o MESMO formato de objeto `clima` que `normalizar()` produz (ver
+// acima), só que a partir de `Leitura` já salvas no nosso banco (estação
+// tipo=online, ver api_rest/management/commands/coletar_dados_online.py)
+// em vez de uma resposta ao vivo da Open-Meteo — é o que permite o
+// Dashboard mostrar o histórico de uma estação sem fazer nenhuma chamada
+// nova pra Open-Meteo. `derivarVisaoPeriodo` e todo componente de
+// gráfico continuam exatamente iguais, porque só consomem a FORMA deste
+// objeto, nunca a origem do dado.
+//
+// `leituras` chega como a API devolve (`_leitura_para_dict`, mais novas
+// primeiro) — reordena e agrupa por hora, pegando a leitura mais recente
+// de cada hora como representante (a estação manda a cada ~10 min, viram
+// vários pontos por hora; aqui vira 1, igual a Open-Meteo também dá 1
+// ponto por hora).
+export function montarClimaDeLeituras(leituras) {
+  const ordenadas = [...leituras].sort((a, b) => new Date(a.data_hora) - new Date(b.data_hora))
+
+  const porHora = new Map()
+  ordenadas.forEach((leitura) => {
+    const dataHoraLocal = paraDataHoraLocalBR(leitura.data_hora)
+    porHora.set(dataHoraLocal.slice(0, 13), { ...leitura, dataHoraLocal })
+  })
+  const representantes = Array.from(porHora.values())
+
+  const horas = representantes.map((l) => l.dataHoraLocal)
+  const valTemperatura = representantes.map((l) => l.temperatura ?? null)
+  const valUmidade = representantes.map((l) => l.umidade ?? null)
+  const valPressao = representantes.map((l) => l.pressao ?? null)
+  const valChuva = representantes.map((l) => l.dados_adicionais?.chuva ?? null)
+  const valRadiacao = representantes.map((l) => l.dados_adicionais?.radiacao ?? null)
+  const valVentoVelocidade = representantes.map((l) => l.dados_adicionais?.vento?.velocidade ?? null)
+  const valVentoRajada = representantes.map((l) => l.dados_adicionais?.vento?.rajada ?? null)
+  const valVentoDirecao = representantes.map((l) => l.dados_adicionais?.vento?.direcao ?? null)
+
+  const ponto = (valores) => horas.map((h, i) => ({ dataHora: h, rotulo: horaRotulo(h), valor: valores[i] }))
+
+  const horariaVento = horas.map((h, i) => ({
+    dataHora: h,
+    rotulo: horaRotulo(h),
+    velocidade: valVentoVelocidade[i],
+    rajada: valVentoRajada[i],
+    direcaoGraus: valVentoDirecao[i],
+    direcaoTexto: direcaoTexto(valVentoDirecao[i]),
+  }))
+
+  const diariaVento = agruparVentoPorDia(horas, valVentoVelocidade, valVentoRajada, valVentoDirecao)
+
+  const ultima = representantes.at(-1)
+
+  return {
+    temperatura: ultima?.temperatura ?? null,
+    umidade: ultima?.umidade ?? null,
+    pressao: ultima?.pressao ?? null,
+    precipitacao: ultima?.dados_adicionais?.chuva ?? null,
+    radiacao: ultima?.dados_adicionais?.radiacao ?? null,
+    vento: {
+      velocidade: ultima?.dados_adicionais?.vento?.velocidade ?? null,
+      rajada: ultima?.dados_adicionais?.vento?.rajada ?? null,
+      direcaoGraus: ultima?.dados_adicionais?.vento?.direcao ?? null,
+      direcaoTexto: direcaoTexto(ultima?.dados_adicionais?.vento?.direcao),
+    },
+    atualizadoEm: ultima?.dataHoraLocal ?? null,
+    horaria: {
+      temperatura: ponto(valTemperatura),
+      umidade: ponto(valUmidade),
+      pressao: ponto(valPressao),
+      chuva: ponto(valChuva),
+      radiacao: ponto(valRadiacao),
+      vento: horariaVento,
+    },
+    diaria: {
+      temperatura: agruparPorDia(horas, valTemperatura),
+      umidade: agruparPorDia(horas, valUmidade),
+      pressao: agruparPorDia(horas, valPressao),
+      chuva: agruparPorDia(horas, valChuva),
+      radiacao: agruparPorDia(horas, valRadiacao),
+      vento: diariaVento,
+    },
+  }
+}
+
 export async function buscarClimaAtual(coordenadas = COORDENADAS_PADRAO) {
   const parametros = new URLSearchParams({
     latitude: coordenadas.latitude,

@@ -24,6 +24,7 @@ import {
   X,
 } from 'lucide-react'
 import { estaOnline } from '../services/leiturasService'
+import IndicadorTipoEstacao from './IndicadorTipoEstacao'
 import styles from './DispositivoLoraCard.module.css'
 import adminStyles from './EstacaoAdminCard.module.css'
 
@@ -109,6 +110,7 @@ function EstacaoAdminCard({
     intervaloEnvioMinutos,
     limiteOfflineMinutos,
     ativa,
+    tipo,
     temperatura,
     umidade,
     pressao,
@@ -120,8 +122,11 @@ function EstacaoAdminCard({
   } = dispositivo
   const online = Boolean(dataHora) && estaOnline(dataHora)
   const uidRemoto = ultimaConfiguracao?.dados_adicionais?.uid_remoto
-  const velocidadeVento = dispositivo.dados_adicionais?.velocidade_vento
-  const direcaoVento = dispositivo.dados_adicionais?.direcao_vento
+  // Estação online (ver Estacao.tipo em api_rest/models.py) grava vento
+  // aninhado em dados_adicionais.vento (ver api_rest/open_meteo.py) — é a
+  // única fonte real de vento hoje, por isso é esse o formato seguido.
+  const velocidadeVento = dispositivo.dados_adicionais?.vento?.velocidade
+  const direcaoVento = dispositivo.dados_adicionais?.vento?.direcao
 
   const dadosAdicionais = ultimaAnaliseRssi?.dados_adicionais
   const rssiIda = dadosAdicionais?.rssi_ida
@@ -165,6 +170,7 @@ function EstacaoAdminCard({
           </div>
           <div>
             <div className={styles.nomeLinha}>
+              <IndicadorTipoEstacao tipo={tipo} />
               <span className={styles.nome}>{nome || sensorId}</span>
               <span className={`${styles.statusPill} ${online ? styles.statusOnline : styles.statusOffline}`}>
                 {online ? 'Online' : 'Offline'}

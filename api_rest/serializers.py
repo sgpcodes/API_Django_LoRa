@@ -61,7 +61,7 @@ class EstacaoSerializer(serializers.ModelSerializer):
         model = Estacao
         fields = [
             'id', 'identificador', 'nome', 'localizacao', 'usuarios', 'usuarios_info',
-            'intervalo_envio_minutos', 'limite_offline_minutos',
+            'intervalo_envio_minutos', 'limite_offline_minutos', 'tipo', 'latitude', 'longitude',
             'ultima_transmissao_em', 'ativa', 'criado_em', 'esta_offline', 'ultima_leitura',
         ]
         read_only_fields = ['id', 'ultima_transmissao_em', 'criado_em']
@@ -93,6 +93,18 @@ class EstacaoSerializer(serializers.ModelSerializer):
         estação que 4 pessoas já compartilham não gasta cota de ninguém
         além de quem está entrando agora; editar outros campos sem mexer
         em `usuarios` não dispara nada disso)."""
+        tipo = attrs.get('tipo', getattr(self.instance, 'tipo', Estacao.Tipo.FISICA))
+        if tipo == Estacao.Tipo.ONLINE:
+            latitude = attrs.get('latitude', getattr(self.instance, 'latitude', None))
+            longitude = attrs.get('longitude', getattr(self.instance, 'longitude', None))
+            if latitude is None or longitude is None:
+                raise serializers.ValidationError({'latitude': 'Estação online precisa de latitude e longitude.'})
+        else:
+            # Física não usa coordenada — zera em vez de deixar lixo de uma
+            # eventual troca de tipo (online -> física) pra trás.
+            attrs['latitude'] = None
+            attrs['longitude'] = None
+
         usuarios_novos = attrs.get('usuarios')
         if usuarios_novos is None:
             return attrs

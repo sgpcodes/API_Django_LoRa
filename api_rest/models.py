@@ -38,6 +38,10 @@ class Estacao(models.Model):
         DEZ_MIN = 10, '10 minutos'
         QUINZE_MIN = 15, '15 minutos'
 
+    class Tipo(models.TextChoices):
+        FISICA = 'fisica', 'Física'
+        ONLINE = 'online', 'Online'
+
     identificador = models.CharField(
         max_length=100, unique=True,
         help_text='Mesmo valor que o firmware envia como "sensor" (ex.: ESP32_01). '
@@ -70,6 +74,21 @@ class Estacao(models.Model):
     )
     ativa = models.BooleanField(default=True)
     criado_em = models.DateTimeField(auto_now_add=True)
+    tipo = models.CharField(
+        max_length=10, choices=Tipo.choices, default=Tipo.FISICA,
+        help_text='Define de onde vêm os dados: "fisica" é hardware real (ESP32/LoRa) enviando via '
+                  'POST /api/leituras/; "online" é uma estação virtual, sem hardware, cujas leituras são '
+                  'coletadas periodicamente da Open-Meteo pelo comando coletar_dados_online (ver '
+                  'api_rest/management/commands/). NÃO confundir com `esta_offline` abaixo — aquela '
+                  'propriedade é sobre CONECTIVIDADE (RN17, se parou de transmitir recentemente) e existe '
+                  'igualmente para os dois tipos; esta aqui é sobre a FONTE do dado.',
+    )
+    latitude = models.FloatField(
+        null=True, blank=True, help_text='Só preenchido para tipo=online — coordenada usada para consultar a Open-Meteo.',
+    )
+    longitude = models.FloatField(
+        null=True, blank=True, help_text='Só preenchido para tipo=online — coordenada usada para consultar a Open-Meteo.',
+    )
 
     class Meta:
         verbose_name = 'Estação'

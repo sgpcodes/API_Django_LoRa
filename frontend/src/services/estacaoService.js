@@ -32,12 +32,15 @@ export async function buscarSensoresOrfaos() {
 // Estacao nasce com pelo menos uma conta vinculada, nunca fica solta).
 // Não existe "dono" único: a mesma estação pode ter quantas contas o
 // Gestor quiser, todas com o mesmo nível de acesso.
-export async function atribuirEstacao({ identificador, usuarioIds, nome, localizacao }) {
+export async function atribuirEstacao({ identificador, usuarioIds, nome, localizacao, tipo, latitude, longitude }) {
   const resposta = await api.post('/api/estacoes/', {
     identificador,
     usuarios: usuarioIds,
     nome: nome ?? '',
     localizacao: localizacao ?? '',
+    tipo: tipo ?? 'fisica',
+    latitude: latitude ?? null,
+    longitude: longitude ?? null,
   })
   return resposta.data
 }

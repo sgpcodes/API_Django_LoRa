@@ -7,37 +7,34 @@ import GradeGraficosMetricas from '../components/GradeGraficosMetricas'
 import SummaryStatCard from '../components/SummaryStatCard'
 import StatusMessage from '../components/StatusMessage'
 import PaginaEmBranco from '../components/PaginaEmBranco'
-import {
-  buscarClimaAtual,
-  derivarVisaoPeriodo,
-  dataISODeslocada,
-  DIAS_HISTORICO_MAXIMO,
-  DIAS_PREVISAO_MAXIMO,
-} from '../services/climaExternoService'
-import { UFS, buscarMunicipiosPorUf } from '../services/ibgeService'
-import { geocodificarCidade } from '../services/geocodingService'
+import { useMinhaEstacao } from '../hooks/useMinhaEstacao'
+import { buscarLeituras } from '../services/leiturasService'
+import { buscarClimaAtual, derivarVisaoPeriodo, montarClimaDeLeituras, dataISODeslocada } from '../services/climaExternoService'
 import { tendenciaUltimaHora } from '../services/metricasClima'
-import { CHAVE_UF_SELECIONADA, CHAVE_CIDADE_SELECIONADA, obterLocalizacaoSelecionada } from '../services/localizacaoSelecionada'
 import styles from './Dashboard.module.css'
 
 // Dashboard da conta Standard — página da estação (Tela 4 da especificação
-// de fluxo, redesenhada: RF-15 a RF-22). Une o que antes eram duas telas
-// separadas — o Dashboard e a aba "Clima INMET" (previsão de 5 dias por
-// município) — numa página só: cabeçalho com seletor de Estado/Cidade
-// (catálogo do IBGE) + mapa, tira de tempo real, previsão da semana +
-// painel "Hoje", seletor de período único e os 5 gráficos lado a lado.
-//
-// Não existe "estação" nem nome fictício aqui: o Open-Meteo não tem
-// estação nenhuma, só responde clima por coordenada (ver conversa no
-// parecer) — então a identidade da página é a própria cidade escolhida.
-// A coordenada dessa cidade é resolvida na hora via geocodingService.js
-// (mesmo provedor do clima); o INMET usa o código de município que o
-// próprio IBGE já devolve na lista. Também não depende mais de leitura
-// bruta da ESP32 (intermitente, só manda temperatura/umidade) nem de
-// estação atribuída pelo admin, e não tem bloqueio por plano ainda —
-// qualquer conta Standard pode escolher qualquer cidade do Brasil (fica
-// pra quando existir cadastro de estação virtual de verdade, RF-03).
+// de fluxo, RF-15 a RF-22). Mostra os dados da ESTAÇÃO ATRIBUÍDA à conta
+// pelo Gestor (física ou online — ver Estacao.tipo em api_rest/models.py),
+// lidos do nosso próprio banco (Leitura), não mais ao vivo da Open-Meteo
+// no navegador — isso é o que permite ver qualquer período (15/30/60+
+// dias) sem depender da Open-Meteo estar no ar, e o que faz o backup
+// local da Raspberry Pi funcionar de verdade (ver docs/rodando-na-
+// raspberry.md). Sem estação atribuída, mostra aviso pedindo pro Gestor
+// atribuir uma — não existe mais escolha livre de cidade aqui (isso saiu
+// de propósito; ver histórico do projeto se precisar entender o antigo
+// comportamento).
 const INTERVALO_ATUALIZACAO_MS = 60_000
+
+// Janela desde/até (datas "AAAA-MM-DD") que o período escolhido cobre —
+// o próprio backend filtra por isso (LeituraListCreateView.get), em vez
+// de buscar a tabela inteira e cortar no navegador.
+function calcularJanela(periodo, rangePersonalizado) {
+  if (periodo === 'hoje') return { desde: dataISODeslocada(0), ate: dataISODeslocada(0) }
+  if (periodo === 'ontem') return { desde: dataISODeslocada(1), ate: dataISODeslocada(1) }
+  if (periodo === 'personalizado') return { desde: rangePersonalizado.inicio, ate: rangePersonalizado.fim }
+  return { desde: dataISODeslocada(periodo - 1), ate: dataISODeslocada(0) } // 7 ou 30
+}
 
 function Dashboard() {
   const { t, i18n } = useTranslation()
@@ -48,89 +45,43 @@ function Dashboard() {
     { valor: 30, rotulo: t('dashboard.periodo30dias') },
     { valor: 'personalizado', rotulo: t('dashboard.periodoPersonalizado') },
   ]
-  // Datas selecionáveis no período personalizado — limitadas à mesma
-  // janela que `buscarClimaAtual` já busca de uma vez só (30 dias pra
-  // trás, RN09/RN21; 15 pra frente, previsão) — escolher um dia fora
-  // disso exigiria uma busca nova na API, que esta tela não faz.
-  const DATA_MINIMA_PERSONALIZADA = dataISODeslocada(DIAS_HISTORICO_MAXIMO)
-  const DATA_MAXIMA_PERSONALIZADA = dataISODeslocada(-DIAS_PREVISAO_MAXIMO)
+  // Sem teto técnico de 30 dias pra trás (diferente da Open-Meteo ao vivo):
+  // o histórico é nosso agora, cresce sem parar. Só um limite generoso pra
+  // não deixar escolher uma data absurda; "até" não passa de hoje, já que
+  // isto não é mais previsão, é leitura real já registrada.
+  const DATA_MINIMA_PERSONALIZADA = dataISODeslocada(730)
+  const DATA_MAXIMA_PERSONALIZADA = dataISODeslocada(0)
   const ABAS = [
     { valor: 'elementos', rotulo: t('dashboard.abaElementos'), icone: Thermometer },
     { valor: 'previsao', rotulo: t('dashboard.abaPrevisao'), icone: Cloud },
     { valor: 'balanco', rotulo: t('dashboard.abaBalancoHidrico'), icone: Droplet },
   ]
-  const localizacaoInicial = obterLocalizacaoSelecionada()
-  const [uf, setUf] = useState(localizacaoInicial.uf)
-  const [cidade, setCidade] = useState(localizacaoInicial.cidade)
-  const [municipios, setMunicipios] = useState([])
-  const [coordenadas, setCoordenadas] = useState(null)
-  const [carregandoLocalizacao, setCarregandoLocalizacao] = useState(true)
+
+  const { estacao, carregando: carregandoEstacao } = useMinhaEstacao()
   const [clima, setClima] = useState(null)
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState(null)
   const [periodo, setPeriodo] = useState('hoje')
   const [rangePersonalizado, setRangePersonalizado] = useState({ inicio: dataISODeslocada(0), fim: dataISODeslocada(0) })
   const [abaAtiva, setAbaAtiva] = useState('elementos')
+  const [climaPrevisao, setClimaPrevisao] = useState(null)
+  const [erroPrevisao, setErroPrevisao] = useState(null)
 
-  // Troca de estado: busca a lista de municípios dele (IBGE). Se a cidade
-  // atual não existir nessa lista (trocou de estado, ou é a carga inicial
-  // e "Maricá" não existe no estado escolhido), cai na primeira da lista.
+  // Busca as Leituras já salvas da estação atribuída, pra janela do
+  // período escolhido — a cada 1 min, pra acompanhar a coleta automática
+  // (coletar_dados_online, a cada ~10 min) sem precisar recarregar a
+  // página. Troca de período/estação refaz na hora.
   useEffect(() => {
-    let cancelado = false
-    buscarMunicipiosPorUf(uf)
-      .then((lista) => {
-        if (cancelado) return
-        setMunicipios(lista)
-        if (!lista.some((m) => m.nome === cidade)) {
-          setCidade(lista[0]?.nome ?? '')
-        }
-      })
-      .catch(() => {
-        if (!cancelado) setMunicipios([])
-      })
-    return () => {
-      cancelado = true
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [uf])
-
-  // Troca de cidade: geocodifica pra ter uma coordenada de verdade —
-  // o IBGE não dá latitude/longitude, só nome/código (ver geocodingService.js).
-  useEffect(() => {
-    if (!cidade) return
-    let cancelado = false
-    setCarregandoLocalizacao(true)
-    geocodificarCidade(cidade, uf)
-      .then((coords) => {
-        if (!cancelado) setCoordenadas(coords)
-      })
-      .catch(() => {
-        if (!cancelado) {
-          setCoordenadas(null)
-          setErro(t('dashboard.erroBusca'))
-        }
-      })
-      .finally(() => {
-        if (!cancelado) setCarregandoLocalizacao(false)
-      })
-    return () => {
-      cancelado = true
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cidade, uf])
-
-  // Busca o clima (Open-Meteo) pra coordenada já resolvida, a cada 1 min —
-  // troca de cidade refaz na hora, sem esperar o próximo ciclo.
-  useEffect(() => {
-    if (!coordenadas) return
+    if (!estacao) return
     let cancelado = false
     setCarregando(true)
 
     async function carregar() {
       try {
-        const dados = await buscarClimaAtual(coordenadas)
+        const { desde, ate } = calcularJanela(periodo, rangePersonalizado)
+        const leituras = await buscarLeituras({ sensorId: estacao.identificador, desde, ate })
         if (!cancelado) {
-          setClima(dados)
+          setClima(montarClimaDeLeituras(leituras))
           setErro(null)
         }
       } catch {
@@ -147,36 +98,50 @@ function Dashboard() {
       clearInterval(intervalo)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [coordenadas])
+  }, [estacao, periodo, rangePersonalizado])
 
-  function aoMudarUf(novaUf) {
-    setUf(novaUf)
-    localStorage.setItem(CHAVE_UF_SELECIONADA, novaUf)
-  }
-
-  function aoMudarCidade(novaCidade) {
-    setCidade(novaCidade)
-    localStorage.setItem(CHAVE_CIDADE_SELECIONADA, novaCidade)
-  }
+  // Previsão só existe pra estação online (dado futuro não existe pra
+  // hardware físico) — busca ao vivo na Open-Meteo com a coordenada
+  // salva da estação, só quando a aba é aberta (não vale a pena buscar
+  // isso toda hora se ninguém olha pra aba).
+  useEffect(() => {
+    if (abaAtiva !== 'previsao' || estacao?.tipo !== 'online' || climaPrevisao) return
+    let cancelado = false
+    buscarClimaAtual({ latitude: estacao.latitude, longitude: estacao.longitude })
+      .then((dados) => {
+        if (!cancelado) setClimaPrevisao(dados)
+      })
+      .catch(() => {
+        if (!cancelado) setErroPrevisao(t('dashboard.erroBusca'))
+      })
+    return () => {
+      cancelado = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [abaAtiva, estacao])
 
   const visao = useMemo(
     () => (clima ? derivarVisaoPeriodo(clima, periodo, rangePersonalizado) : null),
     [clima, periodo, rangePersonalizado],
   )
 
-  const cabecalho = (
-    <EstacaoCabecalho
-      cidade={cidade}
-      uf={uf}
-      online={!erro}
-      coordenadas={coordenadas}
-      carregandoLocalizacao={carregandoLocalizacao}
-      ufs={UFS}
-      municipios={municipios}
-      onMudarUf={aoMudarUf}
-      onMudarCidade={aoMudarCidade}
-    />
-  )
+  if (carregandoEstacao) {
+    return (
+      <div className={styles.pagina}>
+        <StatusMessage texto={t('dashboard.carregando')} />
+      </div>
+    )
+  }
+
+  if (!estacao) {
+    return (
+      <div className={styles.pagina}>
+        <PaginaEmBranco icone={Thermometer} titulo={t('dashboard.semEstacaoTitulo')} mensagem={t('dashboard.semEstacaoTexto')} />
+      </div>
+    )
+  }
+
+  const cabecalho = <EstacaoCabecalho estacao={estacao} />
 
   if (carregando) {
     return (
@@ -227,7 +192,13 @@ function Dashboard() {
         })}
       </div>
 
-      {abaAtiva === 'previsao' && <PrevisaoSemana clima={clima} cidade={cidade} coordenadas={coordenadas} />}
+      {abaAtiva === 'previsao' && estacao.tipo !== 'online' && <StatusMessage texto={t('dashboard.previsaoIndisponivelFisica')} />}
+      {abaAtiva === 'previsao' && estacao.tipo === 'online' && climaPrevisao && (
+        <PrevisaoSemana clima={climaPrevisao} cidade={estacao.nome} coordenadas={{ latitude: estacao.latitude, longitude: estacao.longitude }} />
+      )}
+      {abaAtiva === 'previsao' && estacao.tipo === 'online' && !climaPrevisao && (
+        <StatusMessage texto={erroPrevisao ?? t('dashboard.carregando')} />
+      )}
 
       {abaAtiva === 'balanco' && <PaginaEmBranco icone={Droplet} titulo={t('dashboard.abaBalancoHidrico')} />}
 
@@ -349,11 +320,7 @@ function Dashboard() {
             )}
           </div>
 
-          <GradeGraficosMetricas
-            clima={clima}
-            periodoGlobal={periodo}
-            rangePersonalizadoGlobal={rangePersonalizado}
-          />
+          <GradeGraficosMetricas clima={clima} periodoGlobal={periodo} rangePersonalizadoGlobal={rangePersonalizado} />
         </>
       )}
     </div>

@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
-import { Radio, Maximize2, ChevronDown } from 'lucide-react'
+import { Radio, Maximize2 } from 'lucide-react'
 import Modal from './Modal'
+import IndicadorTipoEstacao from './IndicadorTipoEstacao'
 import styles from './EstacaoCabecalho.module.css'
 
 // Formata grau decimal em "22.9256° S" / "42.8156° W" — convenção comum de
@@ -13,14 +14,11 @@ function formatarCoordenada(valor, positivo, negativo) {
   return `${Math.abs(valor).toFixed(4)}° ${letra}`
 }
 
-function Mapa({ coordenadas, nome, altura }) {
+function Mapa({ latitude, longitude, nome, altura }) {
   return (
     <MapContainer
-      // `key` força o Leaflet a remontar (e recentralizar) quando a
-      // coordenada muda — `center` sozinho só vale na primeira montagem,
-      // trocar de cidade não move o mapa sem isso.
-      key={`${coordenadas.latitude},${coordenadas.longitude}`}
-      center={[coordenadas.latitude, coordenadas.longitude]}
+      key={`${latitude},${longitude}`}
+      center={[latitude, longitude]}
       zoom={11}
       scrollWheelZoom={false}
       className={styles.mapa}
@@ -30,40 +28,29 @@ function Mapa({ coordenadas, nome, altura }) {
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      <CircleMarker
-        center={[coordenadas.latitude, coordenadas.longitude]}
-        radius={9}
-        pathOptions={{ color: 'var(--color-accent)', fillOpacity: 0.85 }}
-      >
+      <CircleMarker center={[latitude, longitude]} radius={9} pathOptions={{ color: 'var(--color-accent)', fillOpacity: 0.85 }}>
         <Popup>{nome}</Popup>
       </CircleMarker>
     </MapContainer>
   )
 }
 
-// Cabeçalho da página da estação: seletor de localização (Estado/Cidade,
-// catálogo do IBGE) + status + mapa. Não existe "nome de estação" fictício
-// aqui — o Open-Meteo não tem estação nenhuma, só responde clima por
-// coordenada (ver conversa no parecer: a "identidade" que existe é a
-// própria cidade escolhida, geocodificada na hora — ver
-// services/geocodingService.js). `coordenadas` fica null enquanto a
-// geocodificação da cidade escolhida ainda não voltou.
-function EstacaoCabecalho({
-  cidade,
-  uf,
-  online,
-  coordenadas,
-  carregandoLocalizacao,
-  ufs,
-  municipios,
-  onMudarUf,
-  onMudarCidade,
-}) {
+// Cabeçalho da página da estação: nome + indicador de tipo (física/online,
+// ver IndicadorTipoEstacao.jsx) + status de conectividade (RN17,
+// `esta_offline` já vem calculado do backend) + localização + mapa. Não
+// tem mais seletor de Estado/Cidade — isso existia quando esta tela
+// deixava escolher qualquer cidade livremente; agora mostra sempre a
+// estação ATRIBUÍDA à conta (ver pages/Dashboard.jsx). O mapa só aparece
+// se a estação tiver latitude/longitude — só estação tipo=online tem
+// (física não tem coordenada, só `localizacao` em texto livre).
+function EstacaoCabecalho({ estacao }) {
   const { t } = useTranslation()
   const [mapaExpandido, setMapaExpandido] = useState(false)
-  const coordenadaTexto = coordenadas
-    ? `${formatarCoordenada(coordenadas.latitude, 'N', 'S')}, ${formatarCoordenada(coordenadas.longitude, 'L', 'O')}`
-    : t('estacaoPagina.localizando')
+  const temCoordenadas = estacao.latitude != null && estacao.longitude != null
+  const online = !estacao.esta_offline
+  const coordenadaTexto = temCoordenadas
+    ? `${formatarCoordenada(estacao.latitude, 'N', 'S')}, ${formatarCoordenada(estacao.longitude, 'L', 'O')}`
+    : estacao.localizacao || '—'
 
   return (
     <div className={styles.cabecalho}>
@@ -73,43 +60,8 @@ function EstacaoCabecalho({
         </span>
         <div className={styles.textos}>
           <div className={styles.linhaNome}>
-            <div className={styles.seletoresLocalizacao}>
-              <span className={styles.chip}>
-                <select
-                  id="cidade-selecionada"
-                  className={styles.chipSelect}
-                  value={cidade}
-                  onChange={(evento) => onMudarCidade(evento.target.value)}
-                  disabled={municipios.length === 0}
-                  aria-label={t('estacaoPagina.escolherCidade')}
-                >
-                  {municipios.length === 0 && <option value="">{t('estacaoPagina.carregandoCidades')}</option>}
-                  {municipios.map((municipio) => (
-                    <option key={municipio.codigo} value={municipio.nome}>
-                      {municipio.nome}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown size={14} className={styles.chipChevron} />
-              </span>
-
-              <span className={styles.chip}>
-                <select
-                  id="uf-selecionada"
-                  className={`${styles.chipSelect} ${styles.chipSelectUf}`}
-                  value={uf}
-                  onChange={(evento) => onMudarUf(evento.target.value)}
-                  aria-label={t('estacaoPagina.escolherEstado')}
-                >
-                  {ufs.map((sigla) => (
-                    <option key={sigla} value={sigla}>
-                      {sigla}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown size={14} className={styles.chipChevron} />
-              </span>
-            </div>
+            <IndicadorTipoEstacao tipo={estacao.tipo} />
+            <span className={styles.nomeEstacao}>{estacao.nome || estacao.identificador}</span>
 
             <span className={`${styles.status} ${online ? styles.statusOnline : styles.statusOffline}`}>
               <span className={styles.pontoStatus} />
@@ -117,27 +69,28 @@ function EstacaoCabecalho({
             </span>
           </div>
 
-          <span className={styles.coordenadas}>{carregandoLocalizacao ? t('estacaoPagina.localizando') : coordenadaTexto}</span>
+          <span className={styles.coordenadas}>{coordenadaTexto}</span>
         </div>
       </div>
 
-      <div className={styles.mapaContainer}>
-        {coordenadas && <Mapa coordenadas={coordenadas} nome={cidade} altura="100%" />}
-        <button
-          type="button"
-          className={styles.botaoExpandir}
-          onClick={() => setMapaExpandido(true)}
-          aria-label={t('estacaoPagina.expandirMapa')}
-          title={t('estacaoPagina.expandirMapa')}
-          disabled={!coordenadas}
-        >
-          <Maximize2 size={14} />
-        </button>
-      </div>
+      {temCoordenadas && (
+        <div className={styles.mapaContainer}>
+          <Mapa latitude={estacao.latitude} longitude={estacao.longitude} nome={estacao.nome} altura="100%" />
+          <button
+            type="button"
+            className={styles.botaoExpandir}
+            onClick={() => setMapaExpandido(true)}
+            aria-label={t('estacaoPagina.expandirMapa')}
+            title={t('estacaoPagina.expandirMapa')}
+          >
+            <Maximize2 size={14} />
+          </button>
+        </div>
+      )}
 
-      {coordenadas && (
-        <Modal aberto={mapaExpandido} onFechar={() => setMapaExpandido(false)} titulo={cidade} icone={Radio}>
-          <Mapa coordenadas={coordenadas} nome={cidade} altura="60vh" />
+      {temCoordenadas && (
+        <Modal aberto={mapaExpandido} onFechar={() => setMapaExpandido(false)} titulo={estacao.nome} icone={Radio}>
+          <Mapa latitude={estacao.latitude} longitude={estacao.longitude} nome={estacao.nome} altura="60vh" />
         </Modal>
       )}
     </div>

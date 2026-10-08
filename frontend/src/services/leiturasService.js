@@ -1,11 +1,20 @@
 import api from './api'
 
-// Busca todas as leituras cadastradas no backend. O filtro por período
-// (hoje, últimos 7 dias, personalizado etc.) é feito no próprio frontend
-// em cima desse conjunto completo — o backend não precisa saber nada
-// sobre isso.
-export async function buscarLeituras() {
-  const resposta = await api.get('/api/leituras/')
+// Busca leituras do backend. Historicamente buscava a tabela inteira e
+// filtrava tudo no frontend (ok quando só existiam poucas estações
+// físicas) — com as estações online coletando a cada ~10 min
+// indefinidamente, isso não escala mais, então `desde`/`ate` (datas
+// "AAAA-MM-DD") agora filtram no servidor (ver LeituraListCreateView.get
+// em api_rest/views.py). Sem nenhum parâmetro, continua buscando tudo —
+// usado pelas páginas antigas (DadosLora/VisaoGeral) que ainda dependem
+// disso.
+export async function buscarLeituras({ sensorId, desde, ate } = {}) {
+  const params = {}
+  if (sensorId) params.sensor_id = sensorId
+  if (desde) params.desde = desde
+  if (ate) params.ate = ate
+
+  const resposta = await api.get('/api/leituras/', { params })
   return resposta.data
 }
 

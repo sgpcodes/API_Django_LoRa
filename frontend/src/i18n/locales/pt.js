@@ -67,6 +67,9 @@ export default {
     abaElementos: 'Elementos meteorológicos',
     abaPrevisao: 'Previsão',
     abaBalancoHidrico: 'Balanço hídrico',
+    semEstacaoTitulo: 'Nenhuma estação atribuída',
+    semEstacaoTexto: 'Sua conta ainda não tem uma estação vinculada — peça ao Gestor para atribuir uma (física ou online) antes de ver os dados aqui.',
+    previsaoIndisponivelFisica: 'Previsão não disponível para estações físicas.',
   },
   estacaoPagina: {
     online: 'Online',

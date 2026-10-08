@@ -193,6 +193,7 @@ function EstacoesAdmin() {
         intervaloEnvioMinutos: estacao?.intervalo_envio_minutos ?? null,
         limiteOfflineMinutos: estacao?.limite_offline_minutos ?? null,
         ativa: estacao?.ativa ?? null,
+        tipo: estacao?.tipo ?? 'fisica',
       }
     })
 
@@ -220,6 +221,7 @@ function EstacoesAdmin() {
         intervaloEnvioMinutos: estacao.intervalo_envio_minutos,
         limiteOfflineMinutos: estacao.limite_offline_minutos,
         ativa: estacao.ativa,
+        tipo: estacao.tipo ?? 'fisica',
       }))
 
     return [...dosSensores, ...semLeituraAinda]

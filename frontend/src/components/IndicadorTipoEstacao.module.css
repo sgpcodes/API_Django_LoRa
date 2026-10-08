@@ -1,0 +1,19 @@
+.bolinha {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px var(--color-card-bg);
+}
+
+/* Roxo (mesmo tom de --metrica-pressao) — deliberadamente diferente do
+   verde/vermelho já usados pelo pill de conectividade (Online/Offline),
+   pra nunca ler como a mesma informação. */
+.online {
+  background-color: var(--metrica-pressao);
+}
+
+.fisica {
+  background-color: var(--color-text-secondary);
+}

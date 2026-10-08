@@ -67,6 +67,9 @@ export default {
     abaElementos: 'Weather elements',
     abaPrevisao: 'Forecast',
     abaBalancoHidrico: 'Water balance',
+    semEstacaoTitulo: 'No station assigned',
+    semEstacaoTexto: 'Your account doesn\'t have a station linked yet — ask your Manager to assign one (physical or online) before you can see data here.',
+    previsaoIndisponivelFisica: 'Forecast not available for physical stations.',
   },
   estacaoPagina: {
     online: 'Online',

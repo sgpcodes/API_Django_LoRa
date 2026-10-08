@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.db import DatabaseError, connections
 from django.db.models import Prefetch
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -54,11 +55,17 @@ class LeituraListCreateView(APIView):
 
     def get(self, request):
         sensor_id = request.query_params.get('sensor_id')
+        desde = parse_date(request.query_params.get('desde') or '')
+        ate = parse_date(request.query_params.get('ate') or '')
 
         # Filtro construído aqui como dict para facilitar a futura adição de
         # filtros por período (hoje, ontem, últimos 7/30 dias, intervalo
         # personalizado), que também vão compor esse mesmo `filtro`.
         filtro = {'sensor_id': sensor_id} if sensor_id else {}
+        if desde:
+            filtro['data_hora__date__gte'] = desde
+        if ate:
+            filtro['data_hora__date__lte'] = ate
 
         leituras = Leitura.objects.filter(**filtro).order_by('-data_hora')
         if not request.user.eh_gestor:
@@ -257,14 +264,30 @@ class EstacaoViewSet(viewsets.ModelViewSet):
         return [IsAuthenticated()]
 
     def perform_create(self, serializer):
+        from django.core.management import call_command
+
         from contas.models import LogAuditoria
 
         # RN15: quem cadastra escolhe quais contas ficam vinculadas.
         estacao = serializer.save()
-        LogAuditoria.objects.create(
-            ator=self.request.user, acao='estacao.criada', alvo=estacao,
-            detalhes={'identificador': estacao.identificador, 'usuarios_ids': list(estacao.usuarios.values_list('id', flat=True))},
-        )
+        detalhes = {'identificador': estacao.identificador, 'usuarios_ids': list(estacao.usuarios.values_list('id', flat=True))}
+
+        if estacao.tipo == Estacao.Tipo.ONLINE:
+            # Backfill síncrono (uma chamada à Open-Meteo + bulk_create) —
+            # não existe fila de tarefas no projeto, e isso leva poucos
+            # segundos. Falha aqui não deve impedir a estação de ser criada
+            # (fica sem histórico até alguém rodar o comando de novo na mão).
+            try:
+                call_command('backfill_historico_estacao', str(estacao.id))
+                # O comando atualiza `ultima_transmissao_em` numa instância
+                # própria (outra query) — sem isso, a resposta deste mesmo
+                # request ainda mostraria o valor antigo (null).
+                estacao.refresh_from_db()
+                detalhes['backfill'] = 'ok'
+            except Exception as erro:
+                detalhes['backfill'] = f'falhou: {erro}'
+
+        LogAuditoria.objects.create(ator=self.request.user, acao='estacao.criada', alvo=estacao, detalhes=detalhes)
 
     def perform_update(self, serializer):
         from contas.models import LogAuditoria
