@@ -48,6 +48,9 @@ export default {
     periodoOntem: 'Yesterday',
     periodo7dias: 'Last 7 days',
     periodo30dias: 'Last 30 days',
+    periodoPersonalizado: 'Custom',
+    personalizadoDe: 'From',
+    personalizadoAte: 'To',
     carregando: 'Loading weather data...',
     erroBusca: 'Could not fetch weather data right now. Retrying shortly.',
     temperatura: 'Temperature',
@@ -110,6 +113,8 @@ export default {
     doTempo: '{{pct}}% of the time',
     emRelacaoPeriodoAnterior: 'vs. the previous period',
     pressaoPadraoLegenda: 'Dashed line: standard atmospheric pressure at sea level ({{valor}} hPa)',
+    maximaLegenda: 'Maximum',
+    minimaLegenda: 'Minimum',
   },
   exportacao: {
     titulo: 'Export data',

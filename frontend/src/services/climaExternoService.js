@@ -18,7 +18,8 @@
 // pages/DashboardLora.jsx.
 
 const BASE_URL = 'https://api.open-meteo.com/v1/forecast'
-const DIAS_HISTORICO_MAXIMO = 30 // RN09/RN21 — teto do plano Standard
+export const DIAS_HISTORICO_MAXIMO = 30 // RN09/RN21 — teto do plano Standard
+export const DIAS_PREVISAO_MAXIMO = 15 // mesma janela pedida à Open-Meteo (forecast_days)
 
 // Coordenadas padrão (Maricá-RJ, sede do LACOP/UFF) — usada até a tela de
 // vínculo de estação guardar uma localização própria da conta. Exportada
@@ -369,8 +370,8 @@ export async function buscarClimaAtual(coordenadas = COORDENADAS_PADRAO) {
       'wind_direction_10m_dominant',
     ].join(','),
     past_days: String(DIAS_HISTORICO_MAXIMO),
-    // 15 dias de previsão (pedido explícito) — teto da Open-Meteo é 16.
-    forecast_days: '15',
+    // Dias de previsão (pedido explícito) — teto da Open-Meteo é 16.
+    forecast_days: String(DIAS_PREVISAO_MAXIMO),
     timezone: 'America/Sao_Paulo',
   })
 
@@ -390,7 +391,7 @@ export async function buscarClimaAtual(coordenadas = COORDENADAS_PADRAO) {
 // HOJE de verdade) e os gráficos de Hoje/Ontem ficavam vazios — só o
 // resumo do dia (Máx./Mín., de outra fonte) continuava aparecendo.
 // `getFullYear`/`getMonth`/`getDate` leem no fuso local, sem esse risco.
-function dataISODeslocada(diasAtras) {
+export function dataISODeslocada(diasAtras) {
   const data = new Date()
   data.setDate(data.getDate() - diasAtras)
   const ano = data.getFullYear()
@@ -404,14 +405,22 @@ function dataISODeslocada(diasAtras) {
 // cada leitura, não só da velocidade agregada que `derivarVisaoPeriodo`
 // devolve em `grafico.vento`. Mesmo filtro de período que aquela função
 // usa por baixo, só sem descartar a direção no meio do caminho.
-export function derivarPontosVento(clima, periodo) {
-  const ehHoraAHora = periodo === 'hoje' || periodo === 'ontem'
+export function derivarPontosVento(clima, periodo, rangePersonalizado) {
+  const ehDiaUnicoPersonalizado =
+    periodo === 'personalizado' && rangePersonalizado && rangePersonalizado.inicio === rangePersonalizado.fim
+  const ehHoraAHora = periodo === 'hoje' || periodo === 'ontem' || ehDiaUnicoPersonalizado
 
   if (ehHoraAHora) {
-    const dataAlvo = dataISODeslocada(periodo === 'hoje' ? 0 : 1)
+    const dataAlvo = ehDiaUnicoPersonalizado ? rangePersonalizado.inicio : dataISODeslocada(periodo === 'hoje' ? 0 : 1)
     return clima.horaria.vento
       .filter((ponto) => ponto.dataHora.startsWith(dataAlvo))
       .map((p) => ({ velocidade: p.velocidade, direcaoGraus: p.direcaoGraus }))
+  }
+
+  if (periodo === 'personalizado') {
+    return clima.diaria.vento
+      .filter((d) => d.data >= rangePersonalizado.inicio && d.data <= rangePersonalizado.fim)
+      .map((d) => ({ velocidade: d.velocidadeMedia, direcaoGraus: d.direcaoGraus }))
   }
 
   return clima.diaria.vento.slice(-periodo).map((d) => ({ velocidade: d.velocidadeMedia, direcaoGraus: d.direcaoGraus }))
@@ -454,7 +463,19 @@ function estatisticasDeJanela(pontos) {
 // aconteceram, por isso usa sempre `clima.horaria.vento` (nunca a agregada
 // `clima.diaria.vento`, que perde o horário) mesmo pra períodos de 7/30
 // dias.
-export function derivarResumoVento(clima, periodo) {
+export function derivarResumoVento(clima, periodo, rangePersonalizado) {
+  if (periodo === 'personalizado') {
+    const dentroDoIntervalo = clima.horaria.vento.filter((ponto) => {
+      const dataPonto = ponto.dataHora.slice(0, 10)
+      return dataPonto >= rangePersonalizado.inicio && dataPonto <= rangePersonalizado.fim
+    })
+    // Sem "período anterior" pra comparar num intervalo arbitrário escolhido
+    // à mão (a comparação original só faz sentido pra uma janela de
+    // tamanho fixo terminando hoje) — deltaPct fica null, sem variação
+    // mostrada, em vez de inventar uma comparação que não tem base clara.
+    return { ...estatisticasDeJanela(dentroDoIntervalo), deltaPct: null }
+  }
+
   const quantidadeDias = periodo === 'hoje' || periodo === 'ontem' ? 1 : periodo
   const diasAtras = periodo === 'ontem' ? 1 : 0
 
@@ -477,22 +498,55 @@ function formatarDataBR(dataISO) {
 // – 22/09/2026") — sempre um período PASSADO terminando hoje (mesma janela
 // que `derivarPontosVento`/`derivarVisaoPeriodo` usam pra 7/30 dias; os
 // dados são de monitoramento real, não previsão futura).
-export function intervaloDeDatas(periodo) {
+export function intervaloDeDatas(periodo, rangePersonalizado) {
   if (periodo === 'hoje') return formatarDataBR(dataISODeslocada(0))
   if (periodo === 'ontem') return formatarDataBR(dataISODeslocada(1))
+  if (periodo === 'personalizado' && rangePersonalizado) {
+    return rangePersonalizado.inicio === rangePersonalizado.fim
+      ? formatarDataBR(rangePersonalizado.inicio)
+      : `${formatarDataBR(rangePersonalizado.inicio)} – ${formatarDataBR(rangePersonalizado.fim)}`
+  }
   return `${formatarDataBR(dataISODeslocada(periodo - 1))} – ${formatarDataBR(dataISODeslocada(0))}`
 }
 
+// Máxima/mínima do dia `dataISO` (ex.: "2026-10-01") em `clima.diaria.*`
+// — usado só no resumo de um único dia (granularidade hora); pra
+// 7/30 dias (ou um intervalo personalizado de mais de um dia), cada
+// ponto do gráfico já tem sua própria máxima/mínima (ver
+// `derivarVisaoPeriodo` mais abaixo), não precisa desse helper.
+function maxMinDoDia(clima, dataISO) {
+  const doDia = (lista) => lista.find((d) => d.data === dataISO)
+  return {
+    temperatura: { maximo: doDia(clima.diaria.temperatura)?.maximo, minimo: doDia(clima.diaria.temperatura)?.minimo },
+    umidade: { maximo: doDia(clima.diaria.umidade)?.maximo, minimo: doDia(clima.diaria.umidade)?.minimo },
+    pressao: { maximo: doDia(clima.diaria.pressao)?.maximo, minimo: doDia(clima.diaria.pressao)?.minimo },
+    chuva: { maximo: doDia(clima.diaria.chuva)?.soma, minimo: 0 },
+    radiacao: { maximo: doDia(clima.diaria.radiacao)?.maximo, minimo: doDia(clima.diaria.radiacao)?.minimo },
+    vento: { maximo: doDia(clima.diaria.vento)?.rajadaMaxima, minimo: null },
+  }
+}
+
 // Deriva o que o gráfico/tabela do Dashboard devem mostrar pro período
-// escolhido — 'hoje'/'ontem' (granularidade hora, sem médias) ou 7/30
-// (granularidade dia, com médias — RN: só faz média quando mais de um dia
-// está selecionado). Tudo calculado em cima do que `buscarClimaAtual` já
-// buscou, sem nova chamada de API.
-export function derivarVisaoPeriodo(clima, periodo) {
-  const ehHoraAHora = periodo === 'hoje' || periodo === 'ontem'
+// escolhido — 'hoje'/'ontem'/um dia personalizado único (granularidade
+// hora, sem médias) ou 7/30/um intervalo personalizado de mais de um dia
+// (granularidade dia, com médias — RN: só faz média quando mais de um
+// dia está selecionado). Tudo calculado em cima do que `buscarClimaAtual`
+// já buscou, sem nova chamada de API — por isso o intervalo
+// personalizado só pode ir até onde esse período já cobre (ver
+// DIAS_HISTORICO_MAXIMO/forecast_days em `buscarClimaAtual`).
+//
+// `rangePersonalizado` ({ inicio, fim }, datas ISO "AAAA-MM-DD") só é
+// necessário quando `periodo === 'personalizado'`. `inicio === fim`
+// vira um único dia (granularidade hora, igual Hoje/Ontem); datas
+// diferentes viram um intervalo de dias (granularidade dia, igual
+// 7/30 dias).
+export function derivarVisaoPeriodo(clima, periodo, rangePersonalizado) {
+  const ehDiaUnicoPersonalizado =
+    periodo === 'personalizado' && rangePersonalizado && rangePersonalizado.inicio === rangePersonalizado.fim
+  const ehHoraAHora = periodo === 'hoje' || periodo === 'ontem' || ehDiaUnicoPersonalizado
 
   if (ehHoraAHora) {
-    const dataAlvo = dataISODeslocada(periodo === 'hoje' ? 0 : 1)
+    const dataAlvo = ehDiaUnicoPersonalizado ? rangePersonalizado.inicio : dataISODeslocada(periodo === 'hoje' ? 0 : 1)
     const filtrarDia = (lista) => lista.filter((ponto) => ponto.dataHora.startsWith(dataAlvo))
 
     const temperatura = filtrarDia(clima.horaria.temperatura)
@@ -529,16 +583,12 @@ export function derivarVisaoPeriodo(clima, periodo) {
               chuva: clima.precipitacao,
               radiacao: clima.radiacao,
               vento: clima.vento,
-              maxMin: {
-                temperatura: { maximo: clima.diaria.temperatura.at(-1)?.maximo, minimo: clima.diaria.temperatura.at(-1)?.minimo },
-                umidade: { maximo: clima.diaria.umidade.at(-1)?.maximo, minimo: clima.diaria.umidade.at(-1)?.minimo },
-                pressao: { maximo: clima.diaria.pressao.at(-1)?.maximo, minimo: clima.diaria.pressao.at(-1)?.minimo },
-                chuva: { maximo: clima.diaria.chuva.at(-1)?.soma, minimo: 0 },
-                radiacao: { maximo: clima.diaria.radiacao.at(-1)?.maximo, minimo: clima.diaria.radiacao.at(-1)?.minimo },
-                vento: { maximo: clima.diaria.vento.at(-1)?.rajadaMaxima, minimo: null },
-              },
+              maxMin: maxMinDoDia(clima, dataAlvo),
             }
           : {
+              // "Ontem" e um dia único personalizado não têm uma leitura
+              // "atual" (só fazem sentido pro dia de hoje) — o resumo aqui
+              // é a média das horas daquele dia já encerrado.
               temperatura: media(temperatura.map((p) => p.valor)),
               umidade: media(umidade.map((p) => p.valor)),
               pressao: media(pressao.map((p) => p.valor)),
@@ -549,24 +599,35 @@ export function derivarVisaoPeriodo(clima, periodo) {
                 rajada: vento.length ? Math.max(...vento.map((p) => p.rajada).filter((v) => v != null)) : null,
                 direcaoTexto: direcaoTexto(mediaCircular(vento.map((p) => p.direcaoGraus))),
               },
-              maxMin: null,
+              maxMin: maxMinDoDia(clima, dataAlvo),
             },
     }
   }
 
-  const dias = periodo // 7 ou 30
-  const temperatura = clima.diaria.temperatura.slice(-dias)
-  const umidade = clima.diaria.umidade.slice(-dias)
-  const pressao = clima.diaria.pressao.slice(-dias)
-  const chuva = clima.diaria.chuva.slice(-dias)
-  const radiacao = clima.diaria.radiacao.slice(-dias)
-  const vento = clima.diaria.vento.slice(-dias)
+  let temperatura, umidade, pressao, chuva, radiacao, vento
+  if (periodo === 'personalizado') {
+    const dentroDoIntervalo = (d) => d.data >= rangePersonalizado.inicio && d.data <= rangePersonalizado.fim
+    temperatura = clima.diaria.temperatura.filter(dentroDoIntervalo)
+    umidade = clima.diaria.umidade.filter(dentroDoIntervalo)
+    pressao = clima.diaria.pressao.filter(dentroDoIntervalo)
+    chuva = clima.diaria.chuva.filter(dentroDoIntervalo)
+    radiacao = clima.diaria.radiacao.filter(dentroDoIntervalo)
+    vento = clima.diaria.vento.filter(dentroDoIntervalo)
+  } else {
+    const dias = periodo // 7 ou 30
+    temperatura = clima.diaria.temperatura.slice(-dias)
+    umidade = clima.diaria.umidade.slice(-dias)
+    pressao = clima.diaria.pressao.slice(-dias)
+    chuva = clima.diaria.chuva.slice(-dias)
+    radiacao = clima.diaria.radiacao.slice(-dias)
+    vento = clima.diaria.vento.slice(-dias)
+  }
 
   return {
     granularidade: 'dia',
     grafico: {
-      temperatura: temperatura.map((d) => ({ rotulo: d.rotulo, valor: d.media })),
-      umidade: umidade.map((d) => ({ rotulo: d.rotulo, valor: d.media })),
+      temperatura: temperatura.map((d) => ({ rotulo: d.rotulo, valor: d.media, maximo: d.maximo, minimo: d.minimo })),
+      umidade: umidade.map((d) => ({ rotulo: d.rotulo, valor: d.media, maximo: d.maximo, minimo: d.minimo })),
       pressao: pressao.map((d) => ({ rotulo: d.rotulo, valor: d.media })),
       chuva: chuva.map((d) => ({ rotulo: d.rotulo, valor: d.soma })),
       radiacao: radiacao.map((d) => ({ rotulo: d.rotulo, valor: d.media })),

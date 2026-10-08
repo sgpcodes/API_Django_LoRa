@@ -7,7 +7,13 @@ import GradeGraficosMetricas from '../components/GradeGraficosMetricas'
 import SummaryStatCard from '../components/SummaryStatCard'
 import StatusMessage from '../components/StatusMessage'
 import PaginaEmBranco from '../components/PaginaEmBranco'
-import { buscarClimaAtual, derivarVisaoPeriodo } from '../services/climaExternoService'
+import {
+  buscarClimaAtual,
+  derivarVisaoPeriodo,
+  dataISODeslocada,
+  DIAS_HISTORICO_MAXIMO,
+  DIAS_PREVISAO_MAXIMO,
+} from '../services/climaExternoService'
 import { UFS, buscarMunicipiosPorUf } from '../services/ibgeService'
 import { geocodificarCidade } from '../services/geocodingService'
 import { tendenciaUltimaHora } from '../services/metricasClima'
@@ -40,7 +46,14 @@ function Dashboard() {
     { valor: 'ontem', rotulo: t('dashboard.periodoOntem') },
     { valor: 7, rotulo: t('dashboard.periodo7dias') },
     { valor: 30, rotulo: t('dashboard.periodo30dias') },
+    { valor: 'personalizado', rotulo: t('dashboard.periodoPersonalizado') },
   ]
+  // Datas selecionáveis no período personalizado — limitadas à mesma
+  // janela que `buscarClimaAtual` já busca de uma vez só (30 dias pra
+  // trás, RN09/RN21; 15 pra frente, previsão) — escolher um dia fora
+  // disso exigiria uma busca nova na API, que esta tela não faz.
+  const DATA_MINIMA_PERSONALIZADA = dataISODeslocada(DIAS_HISTORICO_MAXIMO)
+  const DATA_MAXIMA_PERSONALIZADA = dataISODeslocada(-DIAS_PREVISAO_MAXIMO)
   const ABAS = [
     { valor: 'elementos', rotulo: t('dashboard.abaElementos'), icone: Thermometer },
     { valor: 'previsao', rotulo: t('dashboard.abaPrevisao'), icone: Cloud },
@@ -56,6 +69,7 @@ function Dashboard() {
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState(null)
   const [periodo, setPeriodo] = useState('hoje')
+  const [rangePersonalizado, setRangePersonalizado] = useState({ inicio: dataISODeslocada(0), fim: dataISODeslocada(0) })
   const [abaAtiva, setAbaAtiva] = useState('elementos')
 
   // Troca de estado: busca a lista de municípios dele (IBGE). Se a cidade
@@ -145,7 +159,10 @@ function Dashboard() {
     localStorage.setItem(CHAVE_CIDADE_SELECIONADA, novaCidade)
   }
 
-  const visao = useMemo(() => (clima ? derivarVisaoPeriodo(clima, periodo) : null), [clima, periodo])
+  const visao = useMemo(
+    () => (clima ? derivarVisaoPeriodo(clima, periodo, rangePersonalizado) : null),
+    [clima, periodo, rangePersonalizado],
+  )
 
   const cabecalho = (
     <EstacaoCabecalho
@@ -305,9 +322,38 @@ function Dashboard() {
                 </button>
               ))}
             </div>
+
+            {periodo === 'personalizado' && (
+              <div className={styles.rangePersonalizado}>
+                <label className={styles.campoData}>
+                  {t('dashboard.personalizadoDe')}
+                  <input
+                    type="date"
+                    value={rangePersonalizado.inicio}
+                    min={DATA_MINIMA_PERSONALIZADA}
+                    max={rangePersonalizado.fim}
+                    onChange={(evento) => setRangePersonalizado((atual) => ({ ...atual, inicio: evento.target.value }))}
+                  />
+                </label>
+                <label className={styles.campoData}>
+                  {t('dashboard.personalizadoAte')}
+                  <input
+                    type="date"
+                    value={rangePersonalizado.fim}
+                    min={rangePersonalizado.inicio}
+                    max={DATA_MAXIMA_PERSONALIZADA}
+                    onChange={(evento) => setRangePersonalizado((atual) => ({ ...atual, fim: evento.target.value }))}
+                  />
+                </label>
+              </div>
+            )}
           </div>
 
-          <GradeGraficosMetricas clima={clima} periodoGlobal={periodo} />
+          <GradeGraficosMetricas
+            clima={clima}
+            periodoGlobal={periodo}
+            rangePersonalizadoGlobal={rangePersonalizado}
+          />
         </>
       )}
     </div>

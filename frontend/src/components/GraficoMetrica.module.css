@@ -14,3 +14,8 @@
   border-top: 2px dashed var(--color-text);
   flex-shrink: 0;
 }
+
+.amostraLinhaClara {
+  border-top-color: var(--color-text-secondary);
+  margin-left: 0.6rem;
+}

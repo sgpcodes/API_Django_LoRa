@@ -13,6 +13,7 @@ const OPCOES_PERIODO_GRAFICO = [
   { valor: 'ontem', rotulo: 'Ontem' },
   { valor: 7, rotulo: '7 dias' },
   { valor: 30, rotulo: '30 dias' },
+  { valor: 'personalizado', rotulo: 'Personalizado' },
 ]
 
 // Máx./mín. de uma métrica pro cartãozinho ao lado do gráfico: usa o que
@@ -41,7 +42,7 @@ function maxMinDaSerie(resumoTopo, chave, dados) {
 // demais ("quero ela maior"); voltou a ser um bloco próprio, largura
 // cheia, com abas (rosa/velocidade/direção) e as 4 estatísticas — só que
 // menor do que a primeira versão desse bloco (ver PainelVento.jsx).
-function GradeGraficosMetricas({ clima, periodoGlobal }) {
+function GradeGraficosMetricas({ clima, periodoGlobal, rangePersonalizadoGlobal }) {
   const { t } = useTranslation()
   const [metricaExpandida, setMetricaExpandida] = useState(null)
   // Só guarda uma chave aqui quando o período daquele gráfico DIVERGE do
@@ -71,7 +72,7 @@ function GradeGraficosMetricas({ clima, periodoGlobal }) {
       {metricasEmGrade.map((metrica, indice) => {
         const Icone = metrica.icone
         const periodo = periodoDoGrafico(metrica.chave)
-        const visao = derivarVisaoPeriodo(clima, periodo)
+        const visao = derivarVisaoPeriodo(clima, periodo, rangePersonalizadoGlobal)
         const dados = visao.grafico[metrica.chave] ?? []
         const { maximo, minimo } = maxMinDaSerie(visao.resumoTopo, metrica.chave, dados)
         const personalizado = periodosIndividuais[metrica.chave] != null
@@ -94,7 +95,10 @@ function GradeGraficosMetricas({ clima, periodoGlobal }) {
                     value={periodo}
                     onChange={(evento) => {
                       const valorBruto = evento.target.value
-                      const valor = valorBruto === 'hoje' || valorBruto === 'ontem' ? valorBruto : Number(valorBruto)
+                      const valor =
+                        valorBruto === 'hoje' || valorBruto === 'ontem' || valorBruto === 'personalizado'
+                          ? valorBruto
+                          : Number(valorBruto)
                       aoMudarPeriodoDoGrafico(metrica.chave, valor)
                     }}
                     aria-label={t('estacaoPagina.periodoDoGrafico', { metrica: metrica.titulo })}
@@ -120,7 +124,7 @@ function GradeGraficosMetricas({ clima, periodoGlobal }) {
 
             <div className={styles.corpoCartao}>
               <div className={styles.areaGrafico}>
-                <GraficoMetrica metrica={metrica} dados={dados} altura={260} />
+                <GraficoMetrica metrica={metrica} dados={dados} altura={260} maxMin={{ maximo, minimo }} />
               </div>
               <div className={styles.colunaMaxMin}>
                 <span>
@@ -141,6 +145,7 @@ function GradeGraficosMetricas({ clima, periodoGlobal }) {
         <PainelVento
           clima={clima}
           periodo={periodoDoGrafico('vento')}
+          rangePersonalizado={rangePersonalizadoGlobal}
           onMudarPeriodo={(valor) => aoMudarPeriodoDoGrafico('vento', valor)}
           personalizado={periodosIndividuais.vento != null}
         />
@@ -152,13 +157,18 @@ function GradeGraficosMetricas({ clima, periodoGlobal }) {
         titulo={metricaExpandida?.titulo}
         icone={metricaExpandida?.icone}
       >
-        {metricaExpandida && (
-          <GraficoMetrica
-            metrica={metricaExpandida}
-            dados={derivarVisaoPeriodo(clima, periodoDoGrafico(metricaExpandida.chave)).grafico[metricaExpandida.chave] ?? []}
-            altura={420}
-          />
-        )}
+        {metricaExpandida && (() => {
+          const visaoExpandida = derivarVisaoPeriodo(clima, periodoDoGrafico(metricaExpandida.chave), rangePersonalizadoGlobal)
+          const dadosExpandidos = visaoExpandida.grafico[metricaExpandida.chave] ?? []
+          return (
+            <GraficoMetrica
+              metrica={metricaExpandida}
+              dados={dadosExpandidos}
+              altura={420}
+              maxMin={maxMinDaSerie(visaoExpandida.resumoTopo, metricaExpandida.chave, dadosExpandidos)}
+            />
+          )
+        })()}
       </Modal>
     </div>
   )

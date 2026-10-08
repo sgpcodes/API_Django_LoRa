@@ -13,6 +13,7 @@ const OPCOES_PERIODO = [
   { valor: 'ontem', rotulo: 'Ontem' },
   { valor: 7, rotulo: '7 dias' },
   { valor: 30, rotulo: '30 dias' },
+  { valor: 'personalizado', rotulo: 'Personalizado' },
 ]
 
 const METRICA_VENTO = METRICAS_CLIMA.find((m) => m.chave === 'vento')
@@ -49,14 +50,14 @@ function GraficoDirecaoVento({ porDirecao, altura }) {
 // e legenda horizontal embaixo. As 3 abas mostram o MESMO período
 // selecionado, cada uma com uma leitura diferente dos dados já buscados
 // (nenhuma faz chamada de rede nova).
-function PainelVento({ clima, periodo, onMudarPeriodo, personalizado }) {
+function PainelVento({ clima, periodo, rangePersonalizado, onMudarPeriodo, personalizado }) {
   const { t } = useTranslation()
   const [aba, setAba] = useState('rosa')
 
-  const pontos = derivarPontosVento(clima, periodo)
+  const pontos = derivarPontosVento(clima, periodo, rangePersonalizado)
   const rosa = calcularRosaDosVentos(pontos)
-  const resumo = derivarResumoVento(clima, periodo)
-  const dadosVelocidade = derivarVisaoPeriodo(clima, periodo).grafico.vento
+  const resumo = derivarResumoVento(clima, periodo, rangePersonalizado)
+  const dadosVelocidade = derivarVisaoPeriodo(clima, periodo, rangePersonalizado).grafico.vento
 
   const direcaoPredominante = rosa.porDirecao.reduce((maior, atual) => (atual.totalPct > maior.totalPct ? atual : maior), rosa.porDirecao[0])
   const grausPredominante = direcaoPredominante ? DIRECOES.indexOf(direcaoPredominante.direcao) * 45 : 0
@@ -76,13 +77,17 @@ function PainelVento({ clima, periodo, onMudarPeriodo, personalizado }) {
 
         <label className={styles.seletorData}>
           <Calendar size={14} />
-          <span className={styles.intervaloTexto}>{intervaloDeDatas(periodo)}</span>
+          <span className={styles.intervaloTexto}>{intervaloDeDatas(periodo, rangePersonalizado)}</span>
           <select
             className={styles.selectPeriodo}
             value={periodo}
             onChange={(evento) => {
               const valorBruto = evento.target.value
-              onMudarPeriodo(valorBruto === 'hoje' || valorBruto === 'ontem' ? valorBruto : Number(valorBruto))
+              const valor =
+                valorBruto === 'hoje' || valorBruto === 'ontem' || valorBruto === 'personalizado'
+                  ? valorBruto
+                  : Number(valorBruto)
+              onMudarPeriodo(valor)
             }}
             aria-label={t('estacaoPagina.periodoDoGrafico', { metrica: t('dashboard.vento') })}
           >

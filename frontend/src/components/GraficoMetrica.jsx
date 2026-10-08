@@ -3,6 +3,7 @@ import {
   ResponsiveContainer,
   AreaChart,
   Area,
+  Line,
   BarChart,
   Bar,
   XAxis,
@@ -56,11 +57,20 @@ function calcularDominioTemperatura(dados) {
 // Cada métrica tem sua própria cor (--metrica-<chave> no theme.css, pedido
 // explícito — "gráficos coloridos, cores diferentes") em vez de todas
 // usarem o mesmo --chart-line azul.
-function GraficoMetrica({ metrica, dados, altura = 280 }) {
+function GraficoMetrica({ metrica, dados, altura = 280, maxMin }) {
   const { t } = useTranslation()
   const cor = `var(--metrica-${metrica.chave})`
   const ehPressao = metrica.chave === 'pressao'
   const ehTemperatura = metrica.chave === 'temperatura'
+  // Linhas de máxima/mínima — só pedidas pra temperatura e umidade (não
+  // pros outros gráficos). Em "7 dias"/"30 dias" cada ponto já é um dia,
+  // então máxima/mínima variam ponto a ponto (vira uma Line de verdade,
+  // com os dados que `derivarVisaoPeriodo` já anexa em cada ponto). Em
+  // "Hoje"/"Ontem" (dado por hora) não existe "máxima da hora" — ali é
+  // uma única referência constante pro dia inteiro (`maxMin`, vindo de
+  // `resumoTopo.maxMin`), desenhada como ReferenceLine.
+  const mostraMaxMin = metrica.chave === 'temperatura' || metrica.chave === 'umidade'
+  const maxMinPorPonto = mostraMaxMin && dados.some((p) => p.maximo != null)
 
   if (metrica.tipo === 'barra') {
     return (
@@ -126,11 +136,30 @@ function GraficoMetrica({ metrica, dados, altura = 280 }) {
             isAnimationActive
           />
           {ehPressao && <ReferenceLine y={PRESSAO_PADRAO_NIVEL_DO_MAR} stroke="var(--color-text)" strokeWidth={2} strokeDasharray="6 3" />}
+
+          {maxMinPorPonto && (
+            <>
+              <Line type="monotone" dataKey="maximo" stroke="var(--color-text)" strokeWidth={2} strokeDasharray="6 3" dot={false} isAnimationActive={false} />
+              <Line type="monotone" dataKey="minimo" stroke="var(--color-text-secondary)" strokeWidth={2} strokeDasharray="2 3" dot={false} isAnimationActive={false} />
+            </>
+          )}
+          {!maxMinPorPonto && mostraMaxMin && maxMin?.maximo != null && (
+            <ReferenceLine y={maxMin.maximo} stroke="var(--color-text)" strokeWidth={2} strokeDasharray="6 3" />
+          )}
+          {!maxMinPorPonto && mostraMaxMin && maxMin?.minimo != null && (
+            <ReferenceLine y={maxMin.minimo} stroke="var(--color-text-secondary)" strokeWidth={2} strokeDasharray="2 3" />
+          )}
         </AreaChart>
       </ResponsiveContainer>
       {ehPressao && (
         <p className={styles.legendaLinha}>
           <span className={styles.amostraLinha} /> {t('estacaoPagina.pressaoPadraoLegenda', { valor: '1.013,25' })}
+        </p>
+      )}
+      {mostraMaxMin && (maxMinPorPonto || (maxMin?.maximo != null && maxMin?.minimo != null)) && (
+        <p className={styles.legendaLinha}>
+          <span className={styles.amostraLinha} /> {t('estacaoPagina.maximaLegenda')}
+          <span className={`${styles.amostraLinha} ${styles.amostraLinhaClara}`} /> {t('estacaoPagina.minimaLegenda')}
         </p>
       )}
     </div>

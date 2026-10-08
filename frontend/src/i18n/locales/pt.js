@@ -48,6 +48,9 @@ export default {
     periodoOntem: 'Ontem',
     periodo7dias: 'Últimos 7 dias',
     periodo30dias: 'Últimos 30 dias',
+    periodoPersonalizado: 'Personalizado',
+    personalizadoDe: 'De',
+    personalizadoAte: 'Até',
     carregando: 'Carregando dados do clima...',
     erroBusca: 'Não foi possível buscar os dados de clima agora. Tentando de novo em instantes.',
     temperatura: 'Temperatura',
@@ -110,6 +113,8 @@ export default {
     doTempo: '{{pct}}% do tempo',
     emRelacaoPeriodoAnterior: 'em relação ao período anterior',
     pressaoPadraoLegenda: 'Linha tracejada: pressão atmosférica padrão ao nível do mar ({{valor}} hPa)',
+    maximaLegenda: 'Máxima',
+    minimaLegenda: 'Mínima',
   },
   exportacao: {
     titulo: 'Exportar dados',

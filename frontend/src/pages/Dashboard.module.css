@@ -103,6 +103,35 @@
   color: var(--color-pill-ativo-texto);
 }
 
+.rangePersonalizado {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding-left: 0.75rem;
+  margin-left: 0.25rem;
+  border-left: 1px solid var(--color-card-border);
+}
+
+.campoData {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.campoData input {
+  padding: 0.3rem 0.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-card-border);
+  background-color: var(--color-input-bg);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 0.82rem;
+}
+
 /* Flex em vez de grid de propósito: com grid (`repeat(auto-fit, ...)`),
    as colunas são fixadas pra fileira inteira, então um card sozinho na
    última fileira (6 não divide igual em nenhuma contagem de colunas
