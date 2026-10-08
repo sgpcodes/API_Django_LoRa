@@ -16,6 +16,13 @@
 }
 
 .amostraLinhaClara {
-  border-top-color: var(--color-text-secondary);
   margin-left: 0.6rem;
+}
+
+/* Amostra sólida (não tracejada) — usada nas linhas de máxima/mínima,
+   que são coloridas e sólidas, diferente da linha pontilhada cinza da
+   pressão padrão (essa continua usando .amostraLinha sozinha). */
+.amostraLinhaSolida {
+  border-top-style: solid;
+  border-top-width: 3px;
 }
