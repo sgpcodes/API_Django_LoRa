@@ -64,12 +64,10 @@ function calcularDominioTemperatura(dados) {
 // ajuste de claro/escuro desses tokens de graça.
 const COR_MAXIMA = 'var(--metrica-vento)'
 const COR_MINIMA = 'var(--metrica-chuva)'
+const COR_MEDIA = 'var(--metrica-umidade)'
 
 function GraficoMetrica({ metrica, dados, altura = 280, maxMin }) {
   const { t } = useTranslation()
-  const cor = `var(--metrica-${metrica.chave})`
-  const ehPressao = metrica.chave === 'pressao'
-  const ehTemperatura = metrica.chave === 'temperatura'
   // Linhas de máxima/mínima — só pedidas pra temperatura e umidade (não
   // pros outros gráficos), sólidas e coloridas, mesmo peso visual da
   // linha de valor (3 outras "séries" lado a lado no mesmo gráfico, não
@@ -81,6 +79,15 @@ function GraficoMetrica({ metrica, dados, altura = 280, maxMin }) {
   // `resumoTopo.maxMin`), desenhada como ReferenceLine (mesma cor/peso).
   const mostraMaxMin = metrica.chave === 'temperatura' || metrica.chave === 'umidade'
   const maxMinPorPonto = mostraMaxMin && dados.some((p) => p.maximo != null)
+  // Quando o gráfico tem as 3 linhas (média/máxima/mínima), a média
+  // sempre fica verde — pedido explícito, pra ser consistente nos dois
+  // gráficos (temperatura e umidade) em vez de cada um usar a cor
+  // "própria" da métrica (--metrica-temperatura vermelho só pra
+  // temperatura, por exemplo). Nos outros gráficos (sem máxima/mínima),
+  // continua usando a cor própria da métrica, como sempre.
+  const cor = mostraMaxMin ? COR_MEDIA : `var(--metrica-${metrica.chave})`
+  const ehPressao = metrica.chave === 'pressao'
+  const ehTemperatura = metrica.chave === 'temperatura'
 
   if (metrica.tipo === 'barra') {
     return (
