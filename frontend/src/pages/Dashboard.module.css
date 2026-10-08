@@ -15,39 +15,83 @@
   min-width: 0;
 }
 
-/* Abas de topo (Elementos meteorológicos / Previsão / Balanço hídrico) —
+/* Abas de topo (Meteorológico / Previsão do tempo / Balanço hídrico) —
    cada uma troca o que aparece embaixo, sem recarregar o clima já
    buscado (ele continua o mesmo objeto `clima`, só muda o que é
-   mostrado dele). */
+   mostrado dele). Cartão, não sublinhado — cada aba é um "atalho pra
+   página" com ícone + título + legenda, não só um rótulo de navegação. */
 .abas {
   display: flex;
-  gap: 1.5rem;
-  border-bottom: 1px solid var(--color-card-border);
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .aba {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.75rem 0.1rem;
-  border: none;
-  border-bottom: 2px solid transparent;
-  background: none;
-  color: var(--color-text-secondary);
-  font-size: 0.88rem;
-  font-weight: 600;
+  gap: 0.7rem;
+  flex: 1 1 220px;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--color-card-border);
+  background-color: var(--color-card-bg);
+  box-shadow: var(--shadow-card);
   cursor: pointer;
-  transition: var(--transition-theme), color 0.15s ease, border-color 0.15s ease;
+  text-align: left;
+  transition: var(--transition-theme), border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .aba:hover {
+  border-color: var(--color-accent);
+}
+
+.abaIcone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background-color: var(--color-pill-bg);
+  color: var(--color-accent);
+  transition: var(--transition-theme), background-color 0.15s ease, color 0.15s ease;
+}
+
+.abaTextos {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.abaTitulo {
+  font-size: 0.88rem;
+  font-weight: 700;
   color: var(--color-text);
 }
 
-.abaAtiva,
-.abaAtiva:hover {
-  color: var(--color-accent);
-  border-bottom-color: var(--color-accent);
+.abaSubtitulo {
+  font-size: 0.74rem;
+  color: var(--color-text-secondary);
+}
+
+.abaAtiva {
+  border-color: var(--color-accent);
+  background-color: var(--color-accent);
+}
+
+.abaAtiva .abaIcone {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.abaAtiva .abaTitulo {
+  color: #fff;
+}
+
+.abaAtiva .abaSubtitulo {
+  color: rgba(255, 255, 255, 0.85);
 }
 
 /* Seletor de período — único, controla a tira de tempo real e os 5

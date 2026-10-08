@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Thermometer, Droplets, Droplet, Gauge, Wind, CloudRain, Cloud, Sun, Calendar } from 'lucide-react'
-import EstacaoCabecalho from '../components/EstacaoCabecalho'
+import SeletorEstacoes from '../components/SeletorEstacoes'
 import PrevisaoSemana from '../components/PrevisaoSemana'
 import GradeGraficosMetricas from '../components/GradeGraficosMetricas'
 import SummaryStatCard from '../components/SummaryStatCard'
 import StatusMessage from '../components/StatusMessage'
 import PaginaEmBranco from '../components/PaginaEmBranco'
-import { useMinhaEstacao } from '../hooks/useMinhaEstacao'
+import { buscarEstacoes } from '../services/estacaoService'
 import { buscarLeituras } from '../services/leiturasService'
 import { buscarClimaAtual, derivarVisaoPeriodo, montarClimaDeLeituras, dataISODeslocada } from '../services/climaExternoService'
 import { tendenciaUltimaHora } from '../services/metricasClima'
@@ -52,12 +52,42 @@ function Dashboard() {
   const DATA_MINIMA_PERSONALIZADA = dataISODeslocada(730)
   const DATA_MAXIMA_PERSONALIZADA = dataISODeslocada(0)
   const ABAS = [
-    { valor: 'elementos', rotulo: t('dashboard.abaElementos'), icone: Thermometer },
-    { valor: 'previsao', rotulo: t('dashboard.abaPrevisao'), icone: Cloud },
-    { valor: 'balanco', rotulo: t('dashboard.abaBalancoHidrico'), icone: Droplet },
+    { valor: 'elementos', rotulo: t('dashboard.abaElementos'), subtitulo: t('dashboard.abaElementosSubtitulo'), icone: Cloud },
+    { valor: 'previsao', rotulo: t('dashboard.abaPrevisao'), subtitulo: t('dashboard.abaPrevisaoSubtitulo'), icone: Calendar },
+    { valor: 'balanco', rotulo: t('dashboard.abaBalancoHidrico'), subtitulo: t('dashboard.abaBalancoHidricoSubtitulo'), icone: Droplet },
   ]
 
-  const { estacao, carregando: carregandoEstacao } = useMinhaEstacao()
+  // A conta pode ter mais de uma estação atribuída (planos Pro/Plus) — o
+  // seletor (SeletorEstacoes.jsx) mostra um cartão por estação; trocar de
+  // cartão troca qual está selecionada e refaz a busca de Leitura pra
+  // ela, sem mexer em mais nada da página. Começa com a atribuída mais
+  // recentemente (maior id), igual o comportamento de antes
+  // (buscarMinhaEstacaoPrincipal), só que agora dá pra trocar.
+  const [estacoes, setEstacoes] = useState([])
+  const [estacaoSelecionadaId, setEstacaoSelecionadaId] = useState(null)
+  const [carregandoEstacao, setCarregandoEstacao] = useState(true)
+
+  useEffect(() => {
+    let cancelado = false
+    buscarEstacoes()
+      .then((lista) => {
+        if (cancelado) return
+        setEstacoes(lista)
+        if (lista.length > 0) {
+          const maisRecente = lista.reduce((mr, atual) => (atual.id > mr.id ? atual : mr))
+          setEstacaoSelecionadaId((atual) => atual ?? maisRecente.id)
+        }
+      })
+      .finally(() => {
+        if (!cancelado) setCarregandoEstacao(false)
+      })
+    return () => {
+      cancelado = true
+    }
+  }, [])
+
+  const estacao = estacoes.find((e) => e.id === estacaoSelecionadaId) ?? null
+
   const [clima, setClima] = useState(null)
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState(null)
@@ -141,12 +171,12 @@ function Dashboard() {
     )
   }
 
-  const cabecalho = <EstacaoCabecalho estacao={estacao} />
+  const seletor = <SeletorEstacoes estacoes={estacoes} estacaoSelecionadaId={estacaoSelecionadaId} onSelecionar={setEstacaoSelecionadaId} />
 
   if (carregando) {
     return (
       <div className={styles.pagina}>
-        {cabecalho}
+        {seletor}
         <StatusMessage texto={t('dashboard.carregando')} />
       </div>
     )
@@ -155,7 +185,7 @@ function Dashboard() {
   if (erro || !clima) {
     return (
       <div className={styles.pagina}>
-        {cabecalho}
+        {seletor}
         <StatusMessage texto={erro ?? t('dashboard.erroBusca')} />
       </div>
     )
@@ -175,18 +205,26 @@ function Dashboard() {
 
   return (
     <div className={styles.pagina}>
+      {seletor}
+
       <div className={styles.abas}>
         {ABAS.map((aba) => {
           const Icone = aba.icone
+          const ativa = abaAtiva === aba.valor
           return (
             <button
               key={aba.valor}
               type="button"
-              className={`${styles.aba} ${abaAtiva === aba.valor ? styles.abaAtiva : ''}`}
+              className={`${styles.aba} ${ativa ? styles.abaAtiva : ''}`}
               onClick={() => setAbaAtiva(aba.valor)}
             >
-              <Icone size={15} />
-              {aba.rotulo}
+              <span className={styles.abaIcone}>
+                <Icone size={18} />
+              </span>
+              <span className={styles.abaTextos}>
+                <span className={styles.abaTitulo}>{aba.rotulo}</span>
+                <span className={styles.abaSubtitulo}>{aba.subtitulo}</span>
+              </span>
             </button>
           )
         })}
@@ -204,8 +242,6 @@ function Dashboard() {
 
       {abaAtiva === 'elementos' && (
         <>
-          {cabecalho}
-
           <div className={styles.cardsPrincipais}>
             <SummaryStatCard
               icone={Thermometer}
