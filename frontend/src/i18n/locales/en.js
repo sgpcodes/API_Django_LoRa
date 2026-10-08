@@ -61,6 +61,9 @@ export default {
     ultimaHoraPressao: '{{valor}} hPa in the last hour',
     ultimaHoraRadiacao: '{{valor}} W/m² in the last hour',
     rajadas: 'Gusts',
+    abaElementos: 'Weather elements',
+    abaPrevisao: 'Forecast',
+    abaBalancoHidrico: 'Water balance',
   },
   estacaoPagina: {
     online: 'Online',

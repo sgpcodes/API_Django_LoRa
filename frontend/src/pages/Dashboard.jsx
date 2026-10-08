@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Thermometer, Droplets, Gauge, Wind, CloudRain, Sun, Calendar } from 'lucide-react'
+import { Thermometer, Droplets, Droplet, Gauge, Wind, CloudRain, Cloud, Sun, Calendar } from 'lucide-react'
 import EstacaoCabecalho from '../components/EstacaoCabecalho'
 import PrevisaoSemana from '../components/PrevisaoSemana'
 import GradeGraficosMetricas from '../components/GradeGraficosMetricas'
 import SummaryStatCard from '../components/SummaryStatCard'
 import StatusMessage from '../components/StatusMessage'
+import PaginaEmBranco from '../components/PaginaEmBranco'
 import { buscarClimaAtual, derivarVisaoPeriodo } from '../services/climaExternoService'
 import { UFS, buscarMunicipiosPorUf } from '../services/ibgeService'
 import { geocodificarCidade } from '../services/geocodingService'
@@ -40,6 +41,11 @@ function Dashboard() {
     { valor: 7, rotulo: t('dashboard.periodo7dias') },
     { valor: 30, rotulo: t('dashboard.periodo30dias') },
   ]
+  const ABAS = [
+    { valor: 'elementos', rotulo: t('dashboard.abaElementos'), icone: Thermometer },
+    { valor: 'previsao', rotulo: t('dashboard.abaPrevisao'), icone: Cloud },
+    { valor: 'balanco', rotulo: t('dashboard.abaBalancoHidrico'), icone: Droplet },
+  ]
   const localizacaoInicial = obterLocalizacaoSelecionada()
   const [uf, setUf] = useState(localizacaoInicial.uf)
   const [cidade, setCidade] = useState(localizacaoInicial.cidade)
@@ -50,6 +56,7 @@ function Dashboard() {
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState(null)
   const [periodo, setPeriodo] = useState('hoje')
+  const [abaAtiva, setAbaAtiva] = useState('elementos')
 
   // Troca de estado: busca a lista de municípios dele (IBGE). Se a cidade
   // atual não existir nessa lista (trocou de estado, ou é a carga inicial
@@ -186,100 +193,123 @@ function Dashboard() {
 
   return (
     <div className={styles.pagina}>
-      {cabecalho}
-
-      <div className={styles.cardsPrincipais}>
-        <SummaryStatCard
-          icone={Thermometer}
-          cor="var(--metrica-temperatura)"
-          rotulo={t('dashboard.temperatura')}
-          valor={resumoTopo.temperatura != null ? `${resumoTopo.temperatura}°C` : '—'}
-          legenda={
-            tendenciaTemperatura.delta == null
-              ? undefined
-              : t('dashboard.ultimaHoraTemperatura', { valor: Math.abs(tendenciaTemperatura.delta) })
-          }
-          tendencia={tendenciaTemperatura.tendencia}
-          horarioAtualizacao={horarioUltimaLeitura}
-          maxMin={{ ...resumoTopo.maxMin?.temperatura, unidade: '°C' }}
-        />
-        <SummaryStatCard
-          icone={Droplets}
-          cor="var(--metrica-umidade)"
-          rotulo={t('dashboard.umidade')}
-          valor={resumoTopo.umidade != null ? `${resumoTopo.umidade}%` : '—'}
-          legenda={
-            tendenciaUmidade.delta == null ? undefined : t('dashboard.ultimaHoraUmidade', { valor: Math.abs(tendenciaUmidade.delta) })
-          }
-          tendencia={tendenciaUmidade.tendencia}
-          horarioAtualizacao={horarioUltimaLeitura}
-          maxMin={{ ...resumoTopo.maxMin?.umidade, unidade: '%' }}
-        />
-        <SummaryStatCard
-          icone={Gauge}
-          cor="var(--metrica-pressao)"
-          rotulo={t('dashboard.pressao')}
-          valor={resumoTopo.pressao != null ? `${resumoTopo.pressao} hPa` : '—'}
-          legenda={
-            tendenciaPressao.delta == null ? undefined : t('dashboard.ultimaHoraPressao', { valor: Math.abs(tendenciaPressao.delta) })
-          }
-          tendencia={tendenciaPressao.tendencia}
-          horarioAtualizacao={horarioUltimaLeitura}
-          maxMin={{ ...resumoTopo.maxMin?.pressao, unidade: ' hPa' }}
-        />
-        <SummaryStatCard
-          icone={Wind}
-          cor="var(--metrica-vento)"
-          rotulo={t('dashboard.vento')}
-          valor={resumoTopo.vento.velocidade != null ? `${resumoTopo.vento.velocidade} km/h` : '—'}
-          legenda={`${resumoTopo.vento.direcaoTexto} · ${t('dashboard.rajadas')} ${resumoTopo.vento.rajada ?? '—'} km/h`}
-          horarioAtualizacao={horarioUltimaLeitura}
-          maxMin={{ maximo: resumoTopo.maxMin?.vento?.maximo, minimo: null, unidade: ' km/h' }}
-        />
-        <SummaryStatCard
-          icone={CloudRain}
-          cor="var(--metrica-chuva)"
-          rotulo={t('dashboard.chuva')}
-          valor={resumoTopo.chuva != null ? `${resumoTopo.chuva} mm` : '—'}
-          horarioAtualizacao={horarioUltimaLeitura}
-          maxMin={{ ...resumoTopo.maxMin?.chuva, unidade: ' mm' }}
-        />
-        <SummaryStatCard
-          icone={Sun}
-          cor="var(--metrica-radiacao)"
-          rotulo={t('dashboard.radiacao')}
-          valor={resumoTopo.radiacao != null ? `${resumoTopo.radiacao} W/m²` : '—'}
-          legenda={
-            tendenciaRadiacao.delta == null ? undefined : t('dashboard.ultimaHoraRadiacao', { valor: Math.abs(tendenciaRadiacao.delta) })
-          }
-          tendencia={tendenciaRadiacao.tendencia}
-          horarioAtualizacao={horarioUltimaLeitura}
-          maxMin={{ ...resumoTopo.maxMin?.radiacao, unidade: ' W/m²' }}
-        />
-      </div>
-
-      <PrevisaoSemana clima={clima} cidade={cidade} coordenadas={coordenadas} />
-
-      <div className={styles.seletorPeriodoTopo}>
-        <span className={styles.seletorPeriodoRotulo}>
-          <Calendar size={14} />
-          {t('dashboard.periodoLabel')}
-        </span>
-        <div className={styles.seletorPeriodoOpcoes}>
-          {OPCOES_PERIODO_TRADUZIDAS.map((opcao) => (
+      <div className={styles.abas}>
+        {ABAS.map((aba) => {
+          const Icone = aba.icone
+          return (
             <button
-              key={opcao.valor}
+              key={aba.valor}
               type="button"
-              className={`${styles.botaoPeriodoTopo} ${periodo === opcao.valor ? styles.botaoPeriodoTopoAtivo : ''}`}
-              onClick={() => setPeriodo(opcao.valor)}
+              className={`${styles.aba} ${abaAtiva === aba.valor ? styles.abaAtiva : ''}`}
+              onClick={() => setAbaAtiva(aba.valor)}
             >
-              {opcao.rotulo}
+              <Icone size={15} />
+              {aba.rotulo}
             </button>
-          ))}
-        </div>
+          )
+        })}
       </div>
 
-      <GradeGraficosMetricas clima={clima} periodoGlobal={periodo} />
+      {abaAtiva === 'previsao' && <PrevisaoSemana clima={clima} cidade={cidade} coordenadas={coordenadas} />}
+
+      {abaAtiva === 'balanco' && <PaginaEmBranco icone={Droplet} titulo={t('dashboard.abaBalancoHidrico')} />}
+
+      {abaAtiva === 'elementos' && (
+        <>
+          {cabecalho}
+
+          <div className={styles.cardsPrincipais}>
+            <SummaryStatCard
+              icone={Thermometer}
+              cor="var(--metrica-temperatura)"
+              rotulo={t('dashboard.temperatura')}
+              valor={resumoTopo.temperatura != null ? `${resumoTopo.temperatura}°C` : '—'}
+              legenda={
+                tendenciaTemperatura.delta == null
+                  ? undefined
+                  : t('dashboard.ultimaHoraTemperatura', { valor: Math.abs(tendenciaTemperatura.delta) })
+              }
+              tendencia={tendenciaTemperatura.tendencia}
+              horarioAtualizacao={horarioUltimaLeitura}
+              maxMin={{ ...resumoTopo.maxMin?.temperatura, unidade: '°C' }}
+            />
+            <SummaryStatCard
+              icone={Droplets}
+              cor="var(--metrica-umidade)"
+              rotulo={t('dashboard.umidade')}
+              valor={resumoTopo.umidade != null ? `${resumoTopo.umidade}%` : '—'}
+              legenda={
+                tendenciaUmidade.delta == null ? undefined : t('dashboard.ultimaHoraUmidade', { valor: Math.abs(tendenciaUmidade.delta) })
+              }
+              tendencia={tendenciaUmidade.tendencia}
+              horarioAtualizacao={horarioUltimaLeitura}
+              maxMin={{ ...resumoTopo.maxMin?.umidade, unidade: '%' }}
+            />
+            <SummaryStatCard
+              icone={Gauge}
+              cor="var(--metrica-pressao)"
+              rotulo={t('dashboard.pressao')}
+              valor={resumoTopo.pressao != null ? `${resumoTopo.pressao} hPa` : '—'}
+              legenda={
+                tendenciaPressao.delta == null ? undefined : t('dashboard.ultimaHoraPressao', { valor: Math.abs(tendenciaPressao.delta) })
+              }
+              tendencia={tendenciaPressao.tendencia}
+              horarioAtualizacao={horarioUltimaLeitura}
+              maxMin={{ ...resumoTopo.maxMin?.pressao, unidade: ' hPa' }}
+            />
+            <SummaryStatCard
+              icone={Wind}
+              cor="var(--metrica-vento)"
+              rotulo={t('dashboard.vento')}
+              valor={resumoTopo.vento.velocidade != null ? `${resumoTopo.vento.velocidade} km/h` : '—'}
+              legenda={`${resumoTopo.vento.direcaoTexto} · ${t('dashboard.rajadas')} ${resumoTopo.vento.rajada ?? '—'} km/h`}
+              horarioAtualizacao={horarioUltimaLeitura}
+              maxMin={{ maximo: resumoTopo.maxMin?.vento?.maximo, minimo: null, unidade: ' km/h' }}
+            />
+            <SummaryStatCard
+              icone={CloudRain}
+              cor="var(--metrica-chuva)"
+              rotulo={t('dashboard.chuva')}
+              valor={resumoTopo.chuva != null ? `${resumoTopo.chuva} mm` : '—'}
+              horarioAtualizacao={horarioUltimaLeitura}
+              maxMin={{ ...resumoTopo.maxMin?.chuva, unidade: ' mm' }}
+            />
+            <SummaryStatCard
+              icone={Sun}
+              cor="var(--metrica-radiacao)"
+              rotulo={t('dashboard.radiacao')}
+              valor={resumoTopo.radiacao != null ? `${resumoTopo.radiacao} W/m²` : '—'}
+              legenda={
+                tendenciaRadiacao.delta == null ? undefined : t('dashboard.ultimaHoraRadiacao', { valor: Math.abs(tendenciaRadiacao.delta) })
+              }
+              tendencia={tendenciaRadiacao.tendencia}
+              horarioAtualizacao={horarioUltimaLeitura}
+              maxMin={{ ...resumoTopo.maxMin?.radiacao, unidade: ' W/m²' }}
+            />
+          </div>
+
+          <div className={styles.seletorPeriodoTopo}>
+            <span className={styles.seletorPeriodoRotulo}>
+              <Calendar size={14} />
+              {t('dashboard.periodoLabel')}
+            </span>
+            <div className={styles.seletorPeriodoOpcoes}>
+              {OPCOES_PERIODO_TRADUZIDAS.map((opcao) => (
+                <button
+                  key={opcao.valor}
+                  type="button"
+                  className={`${styles.botaoPeriodoTopo} ${periodo === opcao.valor ? styles.botaoPeriodoTopoAtivo : ''}`}
+                  onClick={() => setPeriodo(opcao.valor)}
+                >
+                  {opcao.rotulo}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <GradeGraficosMetricas clima={clima} periodoGlobal={periodo} />
+        </>
+      )}
     </div>
   )
 }

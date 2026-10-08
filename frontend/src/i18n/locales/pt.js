@@ -61,6 +61,9 @@ export default {
     ultimaHoraPressao: '{{valor}} hPa na última hora',
     ultimaHoraRadiacao: '{{valor}} W/m² na última hora',
     rajadas: 'Rajadas',
+    abaElementos: 'Elementos meteorológicos',
+    abaPrevisao: 'Previsão',
+    abaBalancoHidrico: 'Balanço hídrico',
   },
   estacaoPagina: {
     online: 'Online',
