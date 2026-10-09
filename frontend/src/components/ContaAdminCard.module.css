@@ -241,26 +241,12 @@
 /* Linha de 5 painéis: status / estações / dados / ações rápidas / mais ações */
 .linhaPaineis {
   display: grid;
-  /* 3 "encaixes": Status+Estações empilhados na 1ª coluna (mais
-     estreita, pouco conteúdo horizontal), Ações rápidas/Mais ações
-     dividem o resto. A antiga 2ª coluna ("Dados transmitidos pela
-     estação") virou a tabela de Permissões por estação, abaixo desta
-     grade — full-width, porque agora cobre TODAS as estações da conta,
-     não só uma. */
-  grid-template-columns: minmax(200px, 1fr) minmax(190px, 1fr) minmax(190px, 1fr);
+  /* Só "Mais ações" restou aqui (Status da conta já aparece no topo do
+     card, Estações vinculadas e Ações rápidas viraram a tabela de
+     Permissões por estação, logo abaixo) — uma coluna só, estreita, pra
+     não esticar um painel pequeno pela largura toda do card. */
+  grid-template-columns: minmax(190px, 260px);
   gap: 0.75rem;
-  /* "start", não "stretch": cada painel deve ter a altura do próprio
-     conteúdo (um com só um badge fica baixinho, "Mais ações" com 4
-     itens fica mais alto) — só a LARGURA precisa ser igual entre eles,
-     isso já vem do grid em si (mesmo min-width:0 abaixo). */
-  align-items: start;
-}
-
-.colunaStatusEstacoes {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  min-width: 0;
 }
 
 .painel {

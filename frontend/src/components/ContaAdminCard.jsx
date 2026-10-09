@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import {
   Calendar,
   ChevronDown,
   ChevronRight,
   ChevronUp,
   CreditCard,
-  Eye,
   Link2,
   Mail,
   MapPin,
@@ -14,8 +12,6 @@ import {
   Pencil,
   Phone,
   Radio,
-  RefreshCw,
-  Satellite,
   Settings2,
   ShieldOff,
   ShieldCheck,
@@ -24,7 +20,6 @@ import {
   UserRound,
   X,
 } from 'lucide-react'
-import { solicitarAnaliseRssi } from '../services/leiturasService'
 import TabelaPermissoesEstacao from './TabelaPermissoesEstacao'
 import styles from './ContaAdminCard.module.css'
 
@@ -38,11 +33,6 @@ function corDoAvatar(id) {
 
 function formatarData(iso) {
   return new Date(iso).toLocaleDateString('pt-BR')
-}
-
-function formatarDataHora(iso) {
-  if (!iso) return 'nunca'
-  return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
 function formatarEndereco({ rua, numero, cidade, estado, cep }) {
@@ -80,15 +70,12 @@ function ContaAdminCard({
   onExcluir,
   onRemoverEstacaoDaLista,
 }) {
-  const navigate = useNavigate()
   const [detalhesAbertos, setDetalhesAbertos] = useState(false)
   const [sensorEscolhido, setSensorEscolhido] = useState('')
   const [mostrarAtribuir, setMostrarAtribuir] = useState(false)
   const [menuAberto, setMenuAberto] = useState(false)
   const [editando, setEditando] = useState(false)
   const [campos, setCampos] = useState(camposIniciais(conta))
-  const [analisando, setAnalisando] = useState(false)
-  const [avisoAnalise, setAvisoAnalise] = useState('')
   const menuRef = useRef(null)
 
   function camposIniciais(c) {
@@ -158,25 +145,6 @@ function ContaAdminCard({
       )
     ) {
       onExcluir()
-    }
-  }
-
-  function aoVerEstacao() {
-    if (!estacaoPrincipal) return
-    navigate(`/app/adm/estacoes?q=${encodeURIComponent(estacaoPrincipal.identificador)}`)
-  }
-
-  async function aoAtualizarRssi() {
-    if (!estacaoPrincipal) return
-    setAnalisando(true)
-    setAvisoAnalise('')
-    try {
-      await solicitarAnaliseRssi(estacaoPrincipal.identificador)
-      setAvisoAnalise('Solicitado — acompanhe o resultado na aba Estações.')
-    } catch {
-      setAvisoAnalise('Não foi possível solicitar agora. Tente de novo.')
-    } finally {
-      setAnalisando(false)
     }
   }
 
@@ -380,94 +348,6 @@ function ContaAdminCard({
               </div>
 
               <div className={styles.linhaPaineis}>
-                <div className={styles.colunaStatusEstacoes}>
-                  <div className={styles.painel}>
-                    <span className={styles.painelTitulo}>Status da conta</span>
-                    <span className={styles.statusLinha}>
-                      <span className={`${styles.pontoStatus} ${conta.is_active ? styles.pontoAtivo : styles.pontoSuspenso}`} />
-                      <span className={`${styles.statusPill} ${conta.is_active ? styles.statusAtiva : styles.statusSuspensa}`}>
-                        {conta.is_active ? 'Ativa' : 'Suspensa'}
-                      </span>
-                    </span>
-                  </div>
-
-                  <div className={styles.painel}>
-                    <span className={styles.painelTitulo}>Estações vinculadas ({estacoesDaConta.length})</span>
-                    {estacoesDaConta.length === 0 ? (
-                      <div className={styles.estacaoVazia}>
-                        <Satellite size={18} />
-                        <span>Nenhuma estação vinculada ainda.</span>
-                      </div>
-                    ) : (
-                      <ul className={styles.listaEstacoes}>
-                        {estacoesDaConta.map((estacao) => (
-                          <li key={estacao.id} className={styles.itemEstacao}>
-                            <span className={styles.itemEstacaoIcone}>
-                              <Radio size={13} />
-                            </span>
-                            <div className={styles.itemEstacaoTextos}>
-                              <span className={styles.itemEstacaoNome}>
-                                {estacao.nome || estacao.identificador}
-                                <span className={`${styles.statusPillMini} ${estacao.esta_offline ? styles.statusSuspensa : styles.statusAtiva}`}>
-                                  {estacao.esta_offline ? 'Offline' : 'Online'}
-                                </span>
-                              </span>
-                              <span className={styles.itemEstacaoData}>
-                                Última leitura: {formatarDataHora(estacao.ultima_leitura?.data_hora)}
-                              </span>
-                            </div>
-                            <button
-                              type="button"
-                              className={styles.botaoRemoverEstacao}
-                              onClick={() => {
-                                if (window.confirm(`Remover a estação "${estacao.nome || estacao.identificador}" desta conta?`)) {
-                                  onRemoverEstacaoDaLista(estacao)
-                                }
-                              }}
-                              title="Remover estação"
-                              aria-label={`Remover ${estacao.identificador}`}
-                            >
-                              <Trash2 size={13} />
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                </div>
-
-                <div className={styles.painel}>
-                  <span className={styles.painelTitulo}>Ações rápidas</span>
-                  <div className={styles.listaAcoes}>
-                    <button
-                      type="button"
-                      className={`${styles.itemAcao} ${styles.itemAcaoDestaque}`}
-                      onClick={aoVerEstacao}
-                      disabled={!estacaoPrincipal}
-                    >
-                      <Eye size={13} /> Ver detalhes
-                    </button>
-                    <button
-                      type="button"
-                      className={`${styles.itemAcao} ${styles.itemAcaoDestaque}`}
-                      onClick={aoAtualizarRssi}
-                      disabled={!estacaoPrincipal || analisando}
-                    >
-                      <RefreshCw size={13} className={analisando ? styles.girando : undefined} />
-                      {analisando ? 'Solicitando...' : 'Atualizar leitura RSSI'}
-                    </button>
-                    <button
-                      type="button"
-                      className={`${styles.itemAcao} ${styles.itemAcaoDestaque}`}
-                      onClick={aoVerEstacao}
-                      disabled={!estacaoPrincipal}
-                    >
-                      <Settings2 size={13} /> Gerenciar estação
-                    </button>
-                  </div>
-                  {avisoAnalise && <p className={styles.avisoDiscreto}>{avisoAnalise}</p>}
-                </div>
-
                 <div className={styles.painel}>
                   <span className={styles.painelTitulo}>Mais ações</span>
                   <div className={styles.listaAcoes}>
