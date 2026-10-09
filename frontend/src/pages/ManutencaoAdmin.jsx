@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
 import StatusMessage from '../components/StatusMessage'
+import { IndicadorAtualizando } from '../components/Spinner'
 import {
   buscarInfoSistema,
   buscarResumoLimpeza,

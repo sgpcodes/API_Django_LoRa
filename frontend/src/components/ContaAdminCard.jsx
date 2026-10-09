@@ -213,7 +213,7 @@ function ContaAdminCard({
               {conta.email || conta.username}
               <ChevronRight size={12} className={styles.subtextoSeparador} />
               <UserRound size={12} />
-              {conta.estacoes_vinculadas} de {limite ?? '∞'} estação(ões)
+              {conta.estacoes_vinculadas} de {conta.plano_max_estacoes ?? '∞'} estação(ões)
             </span>
           </div>
         </div>
