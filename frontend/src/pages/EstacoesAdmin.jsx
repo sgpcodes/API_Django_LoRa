@@ -5,6 +5,7 @@ import EstacaoAdminCard from '../components/EstacaoAdminCard'
 import NovaEstacaoForm from '../components/NovaEstacaoForm'
 import StatusMessage from '../components/StatusMessage'
 import { buscarLeituras, obterUltimaLeituraPorSensor, solicitarAnaliseRssi } from '../services/leiturasService'
+import { dataISODeslocada } from '../services/climaExternoService'
 import {
   apagarLeiturasOrfas,
   atribuirEstacao,
@@ -28,6 +29,16 @@ const POR_PAGINA = 9
 const INTERVALO_POLL_ANALISE_MS = 2_500
 const TIMEOUT_ANALISE_MS = 30_000
 const DURACAO_ERRO_MS = 3_000
+
+// `buscarLeituras()` sem filtro busca TODA leitura já registrada — ficou
+// pesado demais depois que as estações online passaram a gravar uma
+// leitura a cada 10 min (+ backfill de 30 dias na criação): a tabela só
+// cresce, e essa tela recarrega ela inteira a cada 60s (e a cada 2.5s
+// enquanto uma análise de RSSI está pendente). Essa página só precisa da
+// leitura mais recente por sensor (e, no pior caso, da última com RSSI/
+// config, que não costuma ficar mais de alguns dias sem acontecer) — 7
+// dias é uma folga confortável sem arrastar o histórico todo.
+const JANELA_LEITURAS_DIAS = 7
 
 const ABAS_PLANO = [
   { valor: 'todas', rotulo: 'Todas as estações', icone: LayoutGrid, cor: 'abaCorNeutra' },
@@ -122,7 +133,7 @@ function EstacoesAdmin() {
   async function carregar() {
     try {
       const [dadosLeituras, dadosEstacoes, dadosContas] = await Promise.all([
-        buscarLeituras(),
+        buscarLeituras({ desde: dataISODeslocada(JANELA_LEITURAS_DIAS) }),
         buscarEstacoes(),
         buscarContas(),
       ])
@@ -153,7 +164,7 @@ function EstacoesAdmin() {
 
     const poll = setInterval(async () => {
       try {
-        setLeituras(await buscarLeituras())
+        setLeituras(await buscarLeituras({ desde: dataISODeslocada(JANELA_LEITURAS_DIAS) }))
       } catch {
         // silencioso — o próximo poll tenta de novo.
       }

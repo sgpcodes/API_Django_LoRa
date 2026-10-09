@@ -16,6 +16,7 @@ from .views import (
     RecredenciarView,
     ReenviarConfirmacaoPublicoView,
     ReenviarConfirmacaoView,
+    ResumoDashboardAdminView,
     TokenObtainPairComRoleView,
     UsuarioViewSet,
 )
@@ -58,6 +59,9 @@ urlpatterns = [
     # GET -> tamanho do banco, contagem por tabela, atividade recente e
     # status das integrações externas. Gestor only.
     path('manutencao/info-sistema/', InfoSistemaView.as_view(), name='manutencao-info-sistema'),
+    # GET -> só atividade recente + leituras por mês — versão leve de
+    # cima, pro Dashboard administrativo (ver ResumoDashboardAdminView).
+    path('manutencao/resumo-dashboard/', ResumoDashboardAdminView.as_view(), name='manutencao-resumo-dashboard'),
     # GET ?dias= -> prévia de quantas leituras mais velhas que `dias` seriam
     # apagadas. POST {"dias":, "confirmar": true} -> apaga de verdade.
     path(

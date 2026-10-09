@@ -448,6 +448,27 @@ class InfoSistemaView(APIView):
         })
 
 
+class ResumoDashboardAdminView(APIView):
+    """GET /api/manutencao/resumo-dashboard/ — só os dois números do
+    InfoSistemaView que o Dashboard administrativo (tela de entrada do
+    Gestor) de fato usa: atividade recente e leituras por mês. Existe
+    separado de propósito — InfoSistemaView também faz 3 pings síncronos
+    em API externa (INMET/IBGE/Open-Meteo, até 4s cada) + contagem/
+    tamanho de banco, que deixavam a tela de entrada do Gestor lenta
+    (às vezes bem lenta, dependendo do cache por worker) só pra mostrar
+    um card de atividade recente."""
+
+    permission_classes = [IsAuthenticated, EhGestor]
+
+    def get(self, request):
+        return Response({
+            'leituras_por_mes': _leituras_por_mes(),
+            'atividade_recente': LogAuditoriaSerializer(
+                LogAuditoria.objects.select_related('ator')[:15], many=True,
+            ).data,
+        })
+
+
 class LimparLeiturasAntigasView(APIView):
     """Zona de risco (menor que a de LimparDadosOperacionaisView): apaga
     só leituras mais velhas que `dias` — não mexe em contas, estações,

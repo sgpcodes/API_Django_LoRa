@@ -18,7 +18,7 @@ import StatusMessage from '../components/StatusMessage'
 import DistribuicaoContasCard from '../components/DistribuicaoContasCard'
 import { buscarEstacoes, buscarSensoresOrfaos } from '../services/estacaoService'
 import { buscarContas } from '../services/contasAdminService'
-import { buscarInfoSistema } from '../services/manutencaoService'
+import { buscarResumoDashboard } from '../services/manutencaoService'
 import { calcularTendencia, calcularCrescimentoMensal } from '../services/estatisticasAdmin'
 import styles from './AdminDashboard.module.css'
 
@@ -92,7 +92,7 @@ function AdminDashboard() {
       .catch(() => setErro(t('adminDashboard.erroResumo')))
       .finally(() => setCarregando(false))
 
-    buscarInfoSistema()
+    buscarResumoDashboard()
       .then(setInfo)
       .catch(() => setErroInfo(t('adminDashboard.erroAtividade')))
   }, [])

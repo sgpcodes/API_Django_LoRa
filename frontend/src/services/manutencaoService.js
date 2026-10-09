@@ -25,6 +25,16 @@ export async function buscarInfoSistema(dias) {
   return resposta.data
 }
 
+// Versão leve do painel acima — só `atividade_recente` e
+// `leituras_por_mes`, sem os pings síncronos em API externa (INMET/
+// IBGE/Open-Meteo) nem o tamanho/contagem do banco. É o que o Dashboard
+// administrativo (tela de entrada do Gestor) realmente usa; chamar
+// buscarInfoSistema() ali deixava a entrada lenta à toa.
+export async function buscarResumoDashboard() {
+  const resposta = await api.get('/api/manutencao/resumo-dashboard/')
+  return resposta.data
+}
+
 // Zona de risco menor que "apagar tudo": só leituras mais velhas que
 // `dias` — não mexe em contas nem estações.
 export async function buscarResumoLimpezaLeiturasAntigas(dias) {
