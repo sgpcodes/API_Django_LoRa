@@ -370,12 +370,18 @@ class EstacaoViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def atualizar_dados_online(self, request, pk=None):
         """POST /api/estacoes/<id>/atualizar_dados_online/ — gatilho manual
-        pro Gestor usar quando precisa de dado AGORA (ex.: loop automático
-        de coleta ainda não rodou na instalação, ou o Gestor só quer
-        forçar uma atualização). Roda o backfill (idempotente — pula
-        data_hora já salvo) e, em seguida, uma coleta imediata (mesma
-        rotina do loop de fundo, ver management/commands/)."""
+        pro Gestor usar quando precisa de dado AGORA. Só roda o backfill
+        de 30 dias (pesado — 1 chamada grande à Open-Meteo) na PRIMEIRA
+        vez, quando a estação ainda não tem nenhuma Leitura; clicar de
+        novo depois só busca a leitura atual (1 chamada pequena), não o
+        histórico inteiro outra vez — repetir o backfill a cada clique
+        não trazia nada de novo (idempotente no banco) mas gastava cota
+        da Open-Meteo à toa, e foi exatamente isso que nos rendeu um 429
+        (Too Many Requests) num teste. Também busca só ESTA estação, não
+        `coletar_dados_online` (que varre todas as online de uma vez)."""
         from django.core.management import call_command
+
+        from .management.commands.coletar_dados_online import coletar_estacao
 
         estacao = self.get_object()
         if estacao.tipo != Estacao.Tipo.ONLINE:
@@ -385,8 +391,9 @@ class EstacaoViewSet(viewsets.ModelViewSet):
             )
 
         try:
-            call_command('backfill_historico_estacao', str(estacao.id))
-            call_command('coletar_dados_online')
+            if not estacao.leituras.exists():
+                call_command('backfill_historico_estacao', str(estacao.id))
+            coletar_estacao(estacao)
         except Exception as erro:
             return Response({'status': 'error', 'message': str(erro)}, status=status.HTTP_502_BAD_GATEWAY)
 
