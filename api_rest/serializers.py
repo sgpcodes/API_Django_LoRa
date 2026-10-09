@@ -99,6 +99,15 @@ class EstacaoSerializer(serializers.ModelSerializer):
             longitude = attrs.get('longitude', getattr(self.instance, 'longitude', None))
             if latitude is None or longitude is None:
                 raise serializers.ValidationError({'latitude': 'Estação online precisa de latitude e longitude.'})
+            # Padrão de 1h pra estação online (só na criação, e só quando
+            # o cliente não mandou um valor — o formulário de cadastro
+            # não tem campo pra isso hoje, então cai sempre aqui): o dado
+            # "atual" da Open-Meteo só muda de hora em hora por trás, os
+            # 10 min padrão de hardware LoRa só geram pedido repetido à
+            # toa pra uma estação online (foi um dos fatores do 429 Too
+            # Many Requests que já tivemos em produção).
+            if self.instance is None and 'intervalo_envio_minutos' not in self.initial_data:
+                attrs['intervalo_envio_minutos'] = Estacao.IntervaloEnvio.UMA_HORA
         else:
             # Física não usa coordenada — zera em vez de deixar lixo de uma
             # eventual troca de tipo (online -> física) pra trás.

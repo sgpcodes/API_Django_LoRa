@@ -252,26 +252,17 @@ class EstacaoViewSet(viewsets.ModelViewSet):
             return queryset
         return queryset.filter(usuarios=user)
 
-    def _estacao_online_precisa_atualizar(self, estacao):
-        if estacao.tipo != Estacao.Tipo.ONLINE or not estacao.ativa:
-            return False
-        if estacao.ultima_transmissao_em is None:
-            return True
-        limite = timezone.now() - timezone.timedelta(minutes=estacao.intervalo_envio_minutos)
-        return estacao.ultima_transmissao_em < limite
-
     def _atualizar_online_se_necessario(self, estacoes):
         """Busca uma leitura nova da Open-Meteo pra cada Estacao online
         cujo dado está mais velho que o próprio `intervalo_envio_minutos`
-        dela — direto na hora em que a lista/detalhe é consultado, em vez
-        de só confiar no loop de fundo do servidor (ver
-        coletar_dados_online.py e a dúvida real de produção: o loop pode
-        não estar rodando de verdade no Render, sem jeito de eu
-        confirmar isso remotamente). Com isso, abrir a tela de Estações,
-        o Dashboard do Usuário ou a tela de Contas sempre força o dado
-        mais novo possível pra estação online — exatamente o
-        comportamento pedido: "online quando tiver internet, com a
-        leitura mais recente, sem exceção".
+        dela (1h por padrão — ver EstacaoSerializer.validate; o mesmo
+        critério de "precisa atualizar" do loop de fundo, reaproveitado
+        daqui, ver coletar_dados_online.py) — direto na hora em que a
+        lista/detalhe é consultado, sem depender só do loop rodando a
+        tempo. Com isso, abrir a tela de Estações, o Dashboard do
+        Usuário ou a tela de Contas sempre força o dado mais novo
+        possível pra estação online, mesmo que o loop ainda não tenha
+        passado por ela.
 
         Silencioso de propósito (uma Open-Meteo fora do ar não pode
         quebrar a tela toda, igual o loop de fundo já faz) — pior caso,
@@ -279,10 +270,10 @@ class EstacaoViewSet(viewsets.ModelViewSet):
         from django.db import DatabaseError
         from requests import RequestException
 
-        from .management.commands.coletar_dados_online import coletar_estacao
+        from .management.commands.coletar_dados_online import coletar_estacao, precisa_atualizar
 
         for estacao in estacoes:
-            if not self._estacao_online_precisa_atualizar(estacao):
+            if not precisa_atualizar(estacao):
                 continue
             try:
                 coletar_estacao(estacao)

@@ -397,6 +397,7 @@ function EstacaoAdminCard({
                     <option value={5}>5 minutos</option>
                     <option value={10}>10 minutos</option>
                     <option value={15}>15 minutos</option>
+                    <option value={60}>1 hora</option>
                   </select>
                 </label>
                 <label className={adminStyles.campoEdicao}>

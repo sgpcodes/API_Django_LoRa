@@ -37,6 +37,13 @@ class Estacao(models.Model):
         CINCO_MIN = 5, '5 minutos'
         DEZ_MIN = 10, '10 minutos'
         QUINZE_MIN = 15, '15 minutos'
+        # Usado como padrão pra estações tipo=online (ver
+        # EstacaoSerializer.validate) — o dado "atual" da Open-Meteo só
+        # muda de hora em hora por trás, então pedir mais rápido que isso
+        # não traz nada mais fresco, só gasta cota da API à toa (foi
+        # isso, somado a testes repetidos, que gerou um 429 Too Many
+        # Requests em produção).
+        UMA_HORA = 60, '1 hora'
 
     class Tipo(models.TextChoices):
         FISICA = 'fisica', 'Física'

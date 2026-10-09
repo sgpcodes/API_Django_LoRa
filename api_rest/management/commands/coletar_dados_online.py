@@ -18,10 +18,28 @@ Uso:
 
 from django.core.management.base import BaseCommand
 from django.db import DatabaseError
+from django.utils import timezone
 from requests import RequestException
 
 from api_rest.models import Estacao, Leitura
 from api_rest.open_meteo import buscar_leitura_atual
+
+
+def precisa_atualizar(estacao):
+    """True se uma Estacao tipo=online está velha o bastante pra valer a
+    pena gastar 1 pedido na Open-Meteo — usa o `intervalo_envio_minutos`
+    da PRÓPRIA estação (1h por padrão pra online, ver
+    EstacaoSerializer.validate), não um número fixo pra todas. Função
+    solta de propósito: reaproveitada tanto aqui (loop de fundo) quanto
+    em EstacaoViewSet (atualização ao abrir a lista/detalhe) — sem isso
+    duplicado, o loop insistia em TODA estação a cada 10 min mesmo numa
+    configurada pra 1h, desperdiçando cota da Open-Meteo à toa."""
+    if estacao.tipo != Estacao.Tipo.ONLINE or not estacao.ativa:
+        return False
+    if estacao.ultima_transmissao_em is None:
+        return True
+    limite = timezone.now() - timezone.timedelta(minutes=estacao.intervalo_envio_minutos)
+    return estacao.ultima_transmissao_em < limite
 
 
 def coletar_estacao(estacao):
@@ -70,7 +88,11 @@ class Command(BaseCommand):
             return
 
         coletadas = 0
+        tentadas = 0
         for estacao in estacoes:
+            if not precisa_atualizar(estacao):
+                continue
+            tentadas += 1
             try:
                 if coletar_estacao(estacao):
                     coletadas += 1
@@ -79,4 +101,7 @@ class Command(BaseCommand):
                 # deve impedir as outras de serem coletadas neste ciclo.
                 self.stdout.write(self.style.WARNING(f'Falha ao coletar "{estacao.identificador}": {erro}'))
 
-        self.stdout.write(self.style.SUCCESS(f'{coletadas}/{estacoes.count()} estação(ões) online atualizada(s).'))
+        self.stdout.write(self.style.SUCCESS(
+            f'{coletadas}/{tentadas} estação(ões) online atualizada(s) '
+            f'({estacoes.count() - tentadas} já estavam frescas, puladas).',
+        ))
