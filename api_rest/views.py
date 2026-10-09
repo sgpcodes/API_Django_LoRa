@@ -257,7 +257,7 @@ class EstacaoViewSet(viewsets.ModelViewSet):
         # método é uma sobrescrita completa de get_permissions, então o
         # `permission_classes=[...]` passado pro @action abaixo (em
         # `orfas`) seria ignorado se não fosse checado explicitamente.
-        if self.action in ('create', 'destroy', 'orfas'):
+        if self.action in ('create', 'destroy', 'orfas', 'atualizar_dados_online'):
             return [IsAuthenticated(), EhGestor()]
         if self.action in ('retrieve', 'update', 'partial_update'):
             return [IsAuthenticated(), EhGestorOuDonoDaEstacao()]
@@ -321,6 +321,32 @@ class EstacaoViewSet(viewsets.ModelViewSet):
             detalhes={'identificador': instance.identificador, 'id': instance.id},
         )
         instance.delete()
+
+    @action(detail=True, methods=['post'])
+    def atualizar_dados_online(self, request, pk=None):
+        """POST /api/estacoes/<id>/atualizar_dados_online/ — gatilho manual
+        pro Gestor usar quando precisa de dado AGORA (ex.: loop automático
+        de coleta ainda não rodou na instalação, ou o Gestor só quer
+        forçar uma atualização). Roda o backfill (idempotente — pula
+        data_hora já salvo) e, em seguida, uma coleta imediata (mesma
+        rotina do loop de fundo, ver management/commands/)."""
+        from django.core.management import call_command
+
+        estacao = self.get_object()
+        if estacao.tipo != Estacao.Tipo.ONLINE:
+            return Response(
+                {'status': 'error', 'message': 'Só estações tipo=online têm dados pra atualizar desta forma.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            call_command('backfill_historico_estacao', str(estacao.id))
+            call_command('coletar_dados_online')
+        except Exception as erro:
+            return Response({'status': 'error', 'message': str(erro)}, status=status.HTTP_502_BAD_GATEWAY)
+
+        estacao.refresh_from_db()
+        return Response({'status': 'success', 'ultima_transmissao_em': estacao.ultima_transmissao_em})
 
     @action(detail=False, methods=['get'])
     def orfas(self, request):

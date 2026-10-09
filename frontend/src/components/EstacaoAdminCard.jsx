@@ -23,7 +23,6 @@ import {
   Wind,
   X,
 } from 'lucide-react'
-import { estaOnline } from '../services/leiturasService'
 import IndicadorTipoEstacao from './IndicadorTipoEstacao'
 import styles from './DispositivoLoraCard.module.css'
 import adminStyles from './EstacaoAdminCard.module.css'
@@ -73,6 +72,7 @@ function EstacaoAdminCard({
   onGerenciarUsuarios,
   onRemover,
   onSalvarEdicao,
+  onAtualizarDadosOnline,
   onAnalisar,
   onExcluirLeiturasOrfas,
 }) {
@@ -120,7 +120,14 @@ function EstacaoAdminCard({
     ultimaAnaliseRssi,
     ultimaConfiguracao,
   } = dispositivo
-  const online = Boolean(dataHora) && estaOnline(dataHora)
+  // Ao contrário de DispositivoLoraCard.jsx (hardware que reporta a cada
+  // 1-10 min, por isso usa um limiar fixo curto), aqui o intervalo real
+  // varia por estação — uma estação "online" (Open-Meteo) só tem dado
+  // novo por hora, então teria que usar o `limite_offline_minutos` da
+  // própria Estacao (o mesmo campo que o backend usa pra `esta_offline`),
+  // nunca um limiar fixo de poucos minutos.
+  const limiteOfflineMs = (limiteOfflineMinutos ?? 30) * 60 * 1000
+  const online = Boolean(dataHora) && Date.now() - new Date(dataHora).getTime() < limiteOfflineMs
   const uidRemoto = ultimaConfiguracao?.dados_adicionais?.uid_remoto
   // Estação online (ver Estacao.tipo em api_rest/models.py) grava vento
   // aninhado em dados_adicionais.vento (ver api_rest/open_meteo.py) — é a
@@ -240,6 +247,19 @@ function EstacaoAdminCard({
                     >
                       <UserRound size={14} /> Gerenciar usuários
                     </button>
+                    {tipo === 'online' && (
+                      <button
+                        type="button"
+                        className={adminStyles.menuItem}
+                        disabled={processando}
+                        onClick={() => {
+                          setMenuAberto(false)
+                          onAtualizarDadosOnline()
+                        }}
+                      >
+                        <RefreshCw size={14} /> Atualizar agora
+                      </button>
+                    )}
                     <button
                       type="button"
                       className={`${adminStyles.menuItem} ${adminStyles.menuItemPerigo}`}

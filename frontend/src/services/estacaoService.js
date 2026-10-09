@@ -46,11 +46,20 @@ export async function atribuirEstacao({ identificador, usuarioIds, nome, localiz
 }
 
 // Substitui a lista de contas vinculadas a uma estação já cadastrada —
-// admin só, em qualquer plano (RN15). O limite de estações do plano de
-// cada conta NOVA na lista é validado no backend do mesmo jeito que na
-// atribuição inicial (contas que já estavam vinculadas não são recontadas).
+// admin só, em qualquer plano (RN15). Sem limite de quantidade por plano
+// (desativado de propósito enquanto o sistema está em construção — ver
+// EstacaoSerializer.validate em api_rest/serializers.py).
 export async function atualizarUsuariosEstacao(estacaoId, usuarioIds) {
   const resposta = await api.patch(`/api/estacoes/${estacaoId}/`, { usuarios: usuarioIds })
+  return resposta.data
+}
+
+// Gatilho manual (botão "Atualizar agora" nos cards de estação online) —
+// roda o backfill de histórico + uma coleta imediata na hora, sem
+// esperar o loop de fundo (útil se a instalação ainda não tem esse loop
+// rodando, ou só pra forçar um dado novo na hora).
+export async function atualizarDadosOnline(estacaoId) {
+  const resposta = await api.post(`/api/estacoes/${estacaoId}/atualizar_dados_online/`)
   return resposta.data
 }
 

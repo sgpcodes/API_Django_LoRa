@@ -8,6 +8,7 @@ import { buscarLeituras, obterUltimaLeituraPorSensor, solicitarAnaliseRssi } fro
 import {
   apagarLeiturasOrfas,
   atribuirEstacao,
+  atualizarDadosOnline,
   atualizarEstacao,
   atualizarUsuariosEstacao,
   buscarEstacoes,
@@ -337,6 +338,7 @@ function EstacoesAdmin() {
     executarAcao(estacaoId, () => atualizarUsuariosEstacao(estacaoId, usuarioIds))
   const aoRemover = (estacaoId) => executarAcao(estacaoId, () => removerEstacao(estacaoId))
   const aoSalvarEdicao = (estacaoId, dados) => executarAcao(estacaoId, () => atualizarEstacao(estacaoId, dados))
+  const aoAtualizarDadosOnline = (estacaoId) => executarAcao(estacaoId, () => atualizarDadosOnline(estacaoId))
 
   // Chave prefixada (nunca colide com um estacaoId numérico) — sensores
   // órfãos não têm id de Estacao, só o sensor_id que veio da leitura.
@@ -482,6 +484,7 @@ function EstacoesAdmin() {
               onGerenciarUsuarios={(usuarioIds) => aoGerenciarUsuarios(dispositivo.estacaoId, usuarioIds)}
               onRemover={() => aoRemover(dispositivo.estacaoId)}
               onSalvarEdicao={(dados) => aoSalvarEdicao(dispositivo.estacaoId, dados)}
+              onAtualizarDadosOnline={() => aoAtualizarDadosOnline(dispositivo.estacaoId)}
               onAnalisar={() => aoClicarAnalisar(dispositivo.sensor_id)}
               onExcluirLeiturasOrfas={() => aoExcluirLeiturasOrfas(dispositivo.sensor_id)}
             />
