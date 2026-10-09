@@ -261,7 +261,11 @@
 
 .grideDados {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  /* auto-fit em vez de uma contagem fixa: agora são 7 variáveis (chuva
+     e radiação entraram depois das 5 originais), e auto-fit se adapta
+     sozinho à largura disponível sem deixar uma última linha com 2
+     tiles soltos numa grade de 5 colunas fixas. */
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
   gap: 0.5rem;
 }
 
@@ -310,6 +314,14 @@
 
 .iconePressao {
   color: #ec4899;
+}
+
+.iconeChuva {
+  color: #0284c7;
+}
+
+.iconeRadiacao {
+  color: #eab308;
 }
 
 .delta {
@@ -458,17 +470,7 @@
 }
 
 @media (max-width: 900px) {
-  .grideDados {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
   .linhaSecoes {
     grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 560px) {
-  .grideDados {
-    grid-template-columns: repeat(2, 1fr);
   }
 }

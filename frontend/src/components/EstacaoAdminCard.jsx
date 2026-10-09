@@ -5,6 +5,7 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
+  CloudRain,
   Compass,
   Cpu,
   Droplets,
@@ -17,6 +18,7 @@ import {
   RefreshCw,
   Search,
   SignalHigh,
+  Sun,
   Thermometer,
   Trash2,
   UserRound,
@@ -134,6 +136,8 @@ function EstacaoAdminCard({
   // única fonte real de vento hoje, por isso é esse o formato seguido.
   const velocidadeVento = dispositivo.dados_adicionais?.vento?.velocidade
   const direcaoVento = dispositivo.dados_adicionais?.vento?.direcao
+  const chuva = dispositivo.dados_adicionais?.chuva
+  const radiacao = dispositivo.dados_adicionais?.radiacao
 
   const dadosAdicionais = ultimaAnaliseRssi?.dados_adicionais
   const rssiIda = dadosAdicionais?.rssi_ida
@@ -342,6 +346,20 @@ function EstacaoAdminCard({
             </div>
             <span className={adminStyles.tileValor}>{pressao != null ? `${pressao} hPa` : '—'}</span>
             {seloDelta(deltaPressao, ' hPa')}
+          </div>
+          <div className={adminStyles.tile}>
+            <div className={adminStyles.tileCabecalho}>
+              <CloudRain size={14} className={adminStyles.iconeChuva} />
+              <span>Chuva</span>
+            </div>
+            <span className={adminStyles.tileValor}>{chuva != null ? `${chuva} mm` : '—'}</span>
+          </div>
+          <div className={adminStyles.tile}>
+            <div className={adminStyles.tileCabecalho}>
+              <Sun size={14} className={adminStyles.iconeRadiacao} />
+              <span>Radiação solar</span>
+            </div>
+            <span className={adminStyles.tileValor}>{radiacao != null ? `${radiacao} W/m²` : '—'}</span>
           </div>
         </div>
       </div>
