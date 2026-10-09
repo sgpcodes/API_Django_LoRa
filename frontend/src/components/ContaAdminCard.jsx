@@ -119,16 +119,15 @@ function ContaAdminCard({
   }, [])
 
   const nome = [conta.first_name, conta.last_name].filter(Boolean).join(' ') || conta.username
-  const limite = conta.plano_max_estacoes
-  const noLimite = limite != null && conta.estacoes_vinculadas >= limite
   const estacaoPrincipal = estacoesDaConta[0] ?? null
   const leituraPrincipal = estacaoPrincipal?.ultima_leitura ?? null
   // Vento não é um campo fixo da Leitura — só existe quando o firmware da
-  // estação manda (dentro de dados_adicionais, mesma convenção já usada
-  // pelo Dashboard em climaEstacaoService.js). Estações que não enviam
+  // estação manda, ou quando é uma estação online (ver
+  // api_rest/open_meteo.py) — aninhado em dados_adicionais.vento, mesma
+  // convenção já usada pelo Dashboard. Estações que não enviam
   // continuam mostrando "—", sem inventar valor.
-  const velocidadeVento = leituraPrincipal?.dados_adicionais?.velocidade_vento ?? null
-  const direcaoVentoGraus = leituraPrincipal?.dados_adicionais?.direcao_vento ?? null
+  const velocidadeVento = leituraPrincipal?.dados_adicionais?.vento?.velocidade ?? null
+  const direcaoVentoGraus = leituraPrincipal?.dados_adicionais?.vento?.direcao ?? null
 
   // Uma estação pode ter várias contas vinculadas (RN15), então o
   // seletor oferece tanto sensores órfãos (viram uma Estacao nova, já
@@ -559,7 +558,7 @@ function ContaAdminCard({
                         className={styles.seletor}
                         value={sensorEscolhido}
                         onChange={(evento) => setSensorEscolhido(evento.target.value)}
-                        disabled={noLimite || semOpcoes}
+                        disabled={semOpcoes}
                       >
                         <option value="">{semOpcoes ? 'Nenhuma estação disponível no momento' : 'Selecione um sensor...'}</option>
                         {sensoresOrfaos.length > 0 && (
@@ -582,12 +581,11 @@ function ContaAdminCard({
                         )}
                       </select>
                     </div>
-                    <button type="submit" className={styles.botaoAtribuir} disabled={!sensorEscolhido || processando || noLimite}>
+                    <button type="submit" className={styles.botaoAtribuir} disabled={!sensorEscolhido || processando}>
                       <Link2 size={14} />
                       {processando ? 'Atribuindo...' : 'Atribuir'}
                     </button>
                   </div>
-                  {noLimite && <p className={styles.aviso}>Limite de estações do plano atingido.</p>}
                   {erro && <p className={styles.aviso}>{erro}</p>}
                 </form>
               )}

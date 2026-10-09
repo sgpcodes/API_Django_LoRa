@@ -4,7 +4,13 @@ services:
     env: python
     plan: free
     buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate
-    startCommand: gunicorn api_root.wsgi --bind 0.0.0.0:$PORT
+    # O `(... &)` antes do gunicorn sobe em paralelo, em segundo plano, a
+    # coleta das estações tipo=online (Open-Meteo) a cada 10 min — mesmo
+    # papel do loop em docker/backend/entrypoint.sh, que só é usado na
+    # instalação local/Raspberry Pi (o Render não lê aquele arquivo, sobe
+    # direto por este startCommand). Sem estação online cadastrada, o
+    # comando só não faz nada a cada ciclo (barato).
+    startCommand: (while true; do python manage.py coletar_dados_online; sleep 600; done &) ; gunicorn api_root.wsgi --bind 0.0.0.0:$PORT
     envVars:
       - key: SECRET_KEY
         sync: false

@@ -112,25 +112,10 @@ class EstacaoSerializer(serializers.ModelSerializer):
         if self.instance is None and len(usuarios_novos) == 0:
             raise serializers.ValidationError({'usuarios': 'Selecione ao menos uma conta.'})
 
-        usuarios_atuais = set(self.instance.usuarios.all()) if self.instance is not None else set()
-        adicionados = [usuario for usuario in usuarios_novos if usuario not in usuarios_atuais]
-
-        if adicionados:
-            from contas.models import Assinatura
-
-            for usuario in adicionados:
-                assinatura = Assinatura.objects.filter(
-                    usuario=usuario, encerrada_em__isnull=True,
-                ).select_related('plano').first()
-
-                if assinatura is not None and assinatura.plano.max_estacoes is not None:
-                    estacoes_atuais = Estacao.objects.filter(usuarios=usuario)
-                    if self.instance is not None:
-                        estacoes_atuais = estacoes_atuais.exclude(pk=self.instance.pk)
-                    if estacoes_atuais.count() >= assinatura.plano.max_estacoes:
-                        raise serializers.ValidationError(
-                            {'usuarios': f'{usuario.username}: limite de {assinatura.plano.max_estacoes} '
-                                         f'estação(ões) do plano "{assinatura.plano.nome}" atingido.'}
-                        )
+        # RN10 (limite de estações por plano) desativado por pedido explícito
+        # do Gestor: por enquanto o sistema é "pré-moldado" de forma manual —
+        # o Gestor decide livremente quantas estações cada conta tem, sem
+        # bloqueio automático por plano. Essa regra de negócio volta quando
+        # o esquema de planos/assinatura for de fato implementado pra valer.
 
         return attrs

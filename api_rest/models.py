@@ -53,10 +53,11 @@ class Estacao(models.Model):
         help_text='Local em texto livre (ex.: "Área de Plantio - Talhão 2"), preenchido pelo Gestor — não vem do dispositivo.',
     )
     usuarios = models.ManyToManyField(
-        settings.AUTH_USER_MODEL, related_name='estacoes', blank=True,
+        settings.AUTH_USER_MODEL, related_name='estacoes', blank=True, through='AcessoEstacao',
         help_text='Contas com acesso a esta estação (RN15). Não existe "dono" único — o Gestor pode vincular '
                   'quantas contas quiser à mesma estação física; todas enxergam os mesmos dados, sem hierarquia '
-                  'entre elas. Só o Gestor administra o vínculo (adicionar/remover conta, editar, excluir).',
+                  'entre elas. Só o Gestor administra o vínculo (adicionar/remover conta, editar, excluir). '
+                  'Quais VARIÁVEIS cada uma vê fica no through model AcessoEstacao, não aqui.',
     )
     token_hash = models.CharField(
         max_length=128, blank=True,
@@ -125,6 +126,44 @@ class Estacao(models.Model):
 
     def __str__(self):
         return self.nome or self.identificador
+
+
+def todas_variaveis():
+    """Default do campo `variaveis_liberadas` abaixo — uma lista nova a
+    cada chamada (nunca compartilhada entre instâncias, cuidado clássico
+    de mutable default em Django/Python)."""
+    return list(AcessoEstacao.VARIAVEIS)
+
+
+class AcessoEstacao(models.Model):
+    """Through model de `Estacao.usuarios` — carrega, por vínculo
+    conta+estação, QUAIS variáveis aquela conta pode ver dessa estação
+    (RF-02 da especificação: não é mais "tudo ou nada" por estação, é por
+    variável também). O padrão (`variaveis_liberadas` com todas as 6) é
+    "sem restrição" — preserva o comportamento de antes desta mudança
+    pra todo vínculo já existente; o Gestor restringe manualmente depois,
+    por conta+estação, pela tela de gerenciar usuários (RF-03: o plano
+    contratado da conta sugere um padrão inicial, mas quem decide de
+    verdade é sempre esse registro aqui, não o plano)."""
+
+    VARIAVEIS = ['temperatura', 'umidade', 'pressao', 'vento', 'chuva', 'radiacao']
+
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    estacao = models.ForeignKey(Estacao, on_delete=models.CASCADE)
+    variaveis_liberadas = models.JSONField(
+        default=todas_variaveis,
+        help_text='Subconjunto de AcessoEstacao.VARIAVEIS que esta conta pode ver nesta estação.',
+    )
+
+    class Meta:
+        verbose_name = 'Acesso à estação'
+        verbose_name_plural = 'Acessos às estações'
+        constraints = [
+            models.UniqueConstraint(fields=['usuario', 'estacao'], name='acesso_unico_por_conta_estacao'),
+        ]
+
+    def __str__(self):
+        return f'{self.usuario} em {self.estacao} ({", ".join(self.variaveis_liberadas) or "nenhuma variável"})'
 
 
 class SolicitacaoRssi(models.Model):

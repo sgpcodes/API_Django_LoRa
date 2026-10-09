@@ -213,18 +213,20 @@ class EstacaoViewSetTests(APITestCase):
             resposta = self.client.get('/api/estacoes/')
             self.assertIn('COMPARTILHADA', [e['identificador'] for e in resposta.data])
 
-    def test_limite_de_estacoes_do_plano_e_respeitado(self):
-        """RN10: usuario1 está no plano Standard (max_estacoes=1 no
-        setUp) e já tem uma estação — uma segunda deve ser bloqueada,
-        mesmo sendo o Gestor quem está cadastrando."""
+    def test_limite_de_estacoes_do_plano_nao_e_mais_aplicado(self):
+        """RN10 foi desativada de propósito (pedido explícito do Gestor):
+        por enquanto o sistema é controlado manualmente, sem bloqueio
+        automático por plano — usuario1 está no Standard (max_estacoes=1
+        no setUp) e já tem uma estação, mas uma segunda deve ser permitida
+        mesmo assim."""
         plano = Plano.objects.create(nome='Standard-teste', dias_historico=30, max_estacoes=1)
         Assinatura.objects.create(usuario=self.usuario1, plano=plano)
         criar_estacao('JA_EXISTENTE', self.usuario1)
 
         self.client.force_authenticate(self.gestor)
         resposta = self.client.post('/api/estacoes/', {'identificador': 'SEGUNDA', 'usuarios': [self.usuario1.pk]})
-        self.assertEqual(resposta.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(Estacao.objects.filter(usuarios=self.usuario1).count(), 1)
+        self.assertEqual(resposta.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Estacao.objects.filter(usuarios=self.usuario1).count(), 2)
 
     def test_usuario_comum_ve_so_as_proprias_estacoes(self):
         criar_estacao('MINHA', self.usuario1)

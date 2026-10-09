@@ -1,6 +1,14 @@
 from django.contrib import admin
 
-from .models import Estacao, Leitura, SolicitacaoRssi
+from .models import AcessoEstacao, Estacao, Leitura, SolicitacaoRssi
+
+
+class AcessoEstacaoInline(admin.TabularInline):
+    # Substitui o antigo `filter_horizontal = ('usuarios',)` — não dá mais
+    # pra usar isso com M2M que tem through model (admin.E013). Aqui dá
+    # pra ver/editar direto quais variáveis cada conta vinculada enxerga.
+    model = AcessoEstacao
+    extra = 0
 
 
 @admin.register(Estacao)
@@ -8,7 +16,7 @@ class EstacaoAdmin(admin.ModelAdmin):
     list_display = ('identificador', 'nome', 'usuarios_display', 'esta_offline_display', 'ultima_transmissao_em', 'ativa')
     list_filter = ('ativa', 'intervalo_envio_minutos')
     search_fields = ('identificador', 'nome')
-    filter_horizontal = ('usuarios',)
+    inlines = [AcessoEstacaoInline]
     readonly_fields = ('ultima_transmissao_em', 'criado_em', 'token_hash')
     actions = ['gerar_novo_token']
 

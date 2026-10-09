@@ -219,6 +219,13 @@ class Funcionalidade(models.Model):
         return self.nome
 
 
+def _todas_variaveis_padrao():
+    # Mesma lista de api_rest.models.AcessoEstacao.VARIAVEIS — duplicada
+    # aqui (em vez de importada) pra não criar acoplamento entre os apps
+    # `contas` e `api_rest` só por causa de uma lista de strings.
+    return ['temperatura', 'umidade', 'pressao', 'vento', 'chuva', 'radiacao']
+
+
 class Plano(models.Model):
     """Nível de conta (Standard, Pro, Plus — RN21-RN23). Cada plano define
     limites (máx. de estações, dias de histórico) e quais Funcionalidades
@@ -251,6 +258,13 @@ class Plano(models.Model):
     )
     preco_mensal = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     ativo = models.BooleanField(default=True)
+    variaveis_padrao = models.JSONField(
+        default=_todas_variaveis_padrao,
+        help_text='Variáveis que uma conta deste plano enxerga por padrão em cada estação vinculada '
+                  '(temperatura/umidade/pressao/vento/chuva/radiacao) — sugestão inicial ao vincular '
+                  '(RF-03); o Gestor pode restringir manualmente por conta+estação depois '
+                  '(ver AcessoEstacao em api_rest/models.py), que é quem de fato vale.',
+    )
 
     class Meta:
         verbose_name = 'Plano'
