@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
-import { UFS } from '../services/ibgeService'
+import { UFS, buscarMunicipiosPorUf } from '../services/ibgeService'
 import { geocodificarCidade } from '../services/geocodingService'
 import styles from './NovaContaForm.module.css'
 
@@ -34,6 +34,31 @@ function NovaEstacaoForm({ contas, onCriar, onFechar }) {
   const [campos, setCampos] = useState(CAMPOS_INICIAIS)
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState(null)
+  const [municipios, setMunicipios] = useState([])
+
+  // Select de cidade, igual o Dashboard antigo tinha (ibgeService.js) —
+  // troca de UF busca a lista de municípios do IBGE pra esse estado, e
+  // cai no primeiro da lista se a cidade atual não existir mais nela
+  // (troca de estado, ou carga inicial).
+  useEffect(() => {
+    if (campos.tipo !== 'online') return
+    let cancelado = false
+    buscarMunicipiosPorUf(campos.uf)
+      .then((lista) => {
+        if (cancelado) return
+        setMunicipios(lista)
+        if (!lista.some((m) => m.nome === campos.cidade)) {
+          setCampos((c) => ({ ...c, cidade: lista[0]?.nome ?? '' }))
+        }
+      })
+      .catch(() => {
+        if (!cancelado) setMunicipios([])
+      })
+    return () => {
+      cancelado = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campos.uf, campos.tipo])
 
   async function aoEnviar(evento) {
     evento.preventDefault()
@@ -111,21 +136,28 @@ function NovaEstacaoForm({ contas, onCriar, onFechar }) {
         {campos.tipo === 'online' && (
           <>
             <label className={styles.campo}>
-              <span className={styles.rotulo}>Cidade</span>
-              <input
-                className={styles.input}
-                required
-                placeholder="Ex.: Niterói"
-                value={campos.cidade}
-                onChange={(e) => setCampos((c) => ({ ...c, cidade: e.target.value }))}
-              />
-            </label>
-            <label className={styles.campo}>
               <span className={styles.rotulo}>UF</span>
               <select className={styles.input} value={campos.uf} onChange={(e) => setCampos((c) => ({ ...c, uf: e.target.value }))}>
                 {UFS.map((sigla) => (
                   <option key={sigla} value={sigla}>
                     {sigla}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className={styles.campo}>
+              <span className={styles.rotulo}>Cidade</span>
+              <select
+                className={styles.input}
+                required
+                disabled={municipios.length === 0}
+                value={campos.cidade}
+                onChange={(e) => setCampos((c) => ({ ...c, cidade: e.target.value }))}
+              >
+                {municipios.length === 0 && <option value="">Carregando cidades...</option>}
+                {municipios.map((municipio) => (
+                  <option key={municipio.codigo} value={municipio.nome}>
+                    {municipio.nome}
                   </option>
                 ))}
               </select>
