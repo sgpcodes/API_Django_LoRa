@@ -24,6 +24,42 @@ from api_rest.models import Estacao, Leitura
 from api_rest.open_meteo import buscar_leitura_atual
 
 
+def coletar_estacao(estacao):
+    """Busca a leitura mais recente da Open-Meteo pra UMA Estacao
+    tipo=online e grava como Leitura, se for um dado novo. Função solta
+    (não método de Command) de propósito — reaproveitada por
+    EstacaoViewSet (api_rest/views.py) pra atualizar uma estação na hora
+    em que alguém abre a lista/detalhe dela, sem depender só do loop de
+    fundo rodando certinho no servidor (ver ONLINE_COLLECT_INTERVAL_SECONDS
+    em docker/backend/entrypoint.sh / render.yaml).
+
+    Levanta RequestException/DatabaseError pro chamador decidir o que
+    fazer com a falha (o comando de loop só avisa e segue pra próxima
+    estação; a view engole silenciosamente — uma Open-Meteo fora do ar
+    não pode derrubar a tela de Estações/Dashboard inteira).
+    """
+    ponto = buscar_leitura_atual(estacao.latitude, estacao.longitude)
+
+    # Open-Meteo não atualiza o dado "current" a cada poll nosso — sem
+    # essa checagem, rodar a cada 10 min quando o provedor só atualizou
+    # há 1h criaria Leitura duplicada pro mesmo data_hora.
+    if Leitura.objects.filter(estacao=estacao, data_hora=ponto['data_hora']).exists():
+        return False
+
+    Leitura.objects.create(
+        sensor_id=estacao.identificador,
+        estacao=estacao,
+        temperatura=ponto['temperatura'],
+        umidade=ponto['umidade'],
+        pressao=ponto['pressao'],
+        dados_adicionais=ponto['dados_adicionais'],
+        data_hora=ponto['data_hora'],
+    )
+    estacao.ultima_transmissao_em = ponto['data_hora']
+    estacao.save(update_fields=['ultima_transmissao_em'])
+    return True
+
+
 class Command(BaseCommand):
     help = 'Busca a leitura mais recente da Open-Meteo para cada Estacao tipo=online e grava como Leitura.'
 
@@ -36,27 +72,8 @@ class Command(BaseCommand):
         coletadas = 0
         for estacao in estacoes:
             try:
-                ponto = buscar_leitura_atual(estacao.latitude, estacao.longitude)
-
-                # Open-Meteo não atualiza o dado "current" a cada poll
-                # nosso — sem essa checagem, rodar a cada 10 min quando o
-                # provedor só atualizou há 1h criaria Leitura duplicada
-                # pro mesmo data_hora.
-                if Leitura.objects.filter(estacao=estacao, data_hora=ponto['data_hora']).exists():
-                    continue
-
-                Leitura.objects.create(
-                    sensor_id=estacao.identificador,
-                    estacao=estacao,
-                    temperatura=ponto['temperatura'],
-                    umidade=ponto['umidade'],
-                    pressao=ponto['pressao'],
-                    dados_adicionais=ponto['dados_adicionais'],
-                    data_hora=ponto['data_hora'],
-                )
-                estacao.ultima_transmissao_em = ponto['data_hora']
-                estacao.save(update_fields=['ultima_transmissao_em'])
-                coletadas += 1
+                if coletar_estacao(estacao):
+                    coletadas += 1
             except (RequestException, DatabaseError) as erro:
                 # Uma estação falhando (rede, Open-Meteo fora do ar) não
                 # deve impedir as outras de serem coletadas neste ciclo.
