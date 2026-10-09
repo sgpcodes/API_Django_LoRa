@@ -1,0 +1,77 @@
+.bloco {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--color-card-border);
+  background-color: var(--color-card-bg);
+}
+
+.cabecalhoBloco {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--color-accent);
+}
+
+.nomeEstacao {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.tabela thead th {
+  text-align: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  padding: 0.3rem 0.4rem;
+}
+
+.tabela tbody td {
+  padding: 0.4rem;
+  text-align: center;
+  border-top: 1px solid var(--color-card-border);
+}
+
+.colunaRotulo {
+  text-align: left !important;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--color-text);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.linhaAba td {
+  background-color: var(--color-pill-bg);
+}
+
+.caixa {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  border: 1.5px solid var(--color-card-border);
+  background-color: var(--color-card-bg);
+  color: #fff;
+  cursor: pointer;
+  padding: 0;
+}
+
+.caixaMarcada {
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
+}

@@ -241,13 +241,13 @@
 /* Linha de 5 painéis: status / estações / dados / ações rápidas / mais ações */
 .linhaPaineis {
   display: grid;
-  /* 4 "encaixes": Status+Estações empilhados na 1ª coluna (mais
-     estreita, os dois têm pouco conteúdo horizontal), Dados
-     transmitidos vira uma faixa larga e baixa (5 métricas numa linha
-     só, em vez de uma grade 2x3 alta e solta), Ações rápidas/Mais ações
-     dividem o resto — em vez de 5 colunas soltas do mesmo tamanho, sem
-     nenhuma se complementar visualmente com a vizinha. */
-  grid-template-columns: minmax(200px, 1fr) minmax(320px, 1.8fr) minmax(190px, 1fr) minmax(190px, 1fr);
+  /* 3 "encaixes": Status+Estações empilhados na 1ª coluna (mais
+     estreita, pouco conteúdo horizontal), Ações rápidas/Mais ações
+     dividem o resto. A antiga 2ª coluna ("Dados transmitidos pela
+     estação") virou a tabela de Permissões por estação, abaixo desta
+     grade — full-width, porque agora cobre TODAS as estações da conta,
+     não só uma. */
+  grid-template-columns: minmax(200px, 1fr) minmax(190px, 1fr) minmax(190px, 1fr);
   gap: 0.75rem;
   /* "start", não "stretch": cada painel deve ter a altura do próprio
      conteúdo (um com só um badge fica baixinho, "Mais ações" com 4
@@ -428,6 +428,19 @@
   font-size: 0.85rem;
   font-weight: 700;
   color: var(--color-text);
+}
+
+/* Uma tabela por estação vinculada — quebra linha quando não cabem
+   lado a lado (conta com várias estações), em vez de espremer todas na
+   largura do card. */
+.linhaTabelasPermissao {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.linhaTabelasPermissao > * {
+  flex: 1 1 320px;
 }
 
 .iconeTemperatura {

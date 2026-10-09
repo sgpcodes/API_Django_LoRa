@@ -5,11 +5,8 @@ import {
   ChevronDown,
   ChevronRight,
   ChevronUp,
-  Compass,
   CreditCard,
-  Droplets,
   Eye,
-  Gauge,
   Link2,
   Mail,
   MapPin,
@@ -22,15 +19,13 @@ import {
   Settings2,
   ShieldOff,
   ShieldCheck,
-  Thermometer,
   Trash2,
   UserPlus,
   UserRound,
-  Wind,
   X,
 } from 'lucide-react'
 import { solicitarAnaliseRssi } from '../services/leiturasService'
-import { direcaoTexto } from '../services/climaEstacaoService'
+import TabelaPermissoesEstacao from './TabelaPermissoesEstacao'
 import styles from './ContaAdminCard.module.css'
 
 // Paleta fixa pro avatar — a mesma conta sempre cai na mesma cor (baseado
@@ -120,14 +115,6 @@ function ContaAdminCard({
 
   const nome = [conta.first_name, conta.last_name].filter(Boolean).join(' ') || conta.username
   const estacaoPrincipal = estacoesDaConta[0] ?? null
-  const leituraPrincipal = estacaoPrincipal?.ultima_leitura ?? null
-  // Vento não é um campo fixo da Leitura — só existe quando o firmware da
-  // estação manda, ou quando é uma estação online (ver
-  // api_rest/open_meteo.py) — aninhado em dados_adicionais.vento, mesma
-  // convenção já usada pelo Dashboard. Estações que não enviam
-  // continuam mostrando "—", sem inventar valor.
-  const velocidadeVento = leituraPrincipal?.dados_adicionais?.vento?.velocidade ?? null
-  const direcaoVentoGraus = leituraPrincipal?.dados_adicionais?.vento?.direcao ?? null
 
   // Uma estação pode ter várias contas vinculadas (RN15), então o
   // seletor oferece tanto sensores órfãos (viram uma Estacao nova, já
@@ -449,41 +436,6 @@ function ContaAdminCard({
                   </div>
                 </div>
 
-                <div className={`${styles.painel} ${styles.painelDadosLargo}`}>
-                  <span className={styles.painelTitulo}>Dados transmitidos pela estação</span>
-                  <div className={styles.gradeDados}>
-                    <div className={styles.itemDado}>
-                      <Thermometer size={13} className={styles.iconeTemperatura} />
-                      <span className={styles.itemDadoRotulo}>Temperatura</span>
-                      <span className={styles.itemDadoValor}>{leituraPrincipal?.temperatura != null ? `${leituraPrincipal.temperatura} °C` : '—'}</span>
-                    </div>
-                    <div className={styles.itemDado}>
-                      <Droplets size={13} className={styles.iconeUmidade} />
-                      <span className={styles.itemDadoRotulo}>Umidade</span>
-                      <span className={styles.itemDadoValor}>{leituraPrincipal?.umidade != null ? `${leituraPrincipal.umidade}%` : '—'}</span>
-                    </div>
-                    <div className={styles.itemDado}>
-                      <Wind size={13} className={styles.iconeVento} />
-                      <span className={styles.itemDadoRotulo}>Vel. do vento</span>
-                      <span className={styles.itemDadoValor}>
-                        {velocidadeVento != null ? `${velocidadeVento} km/h` : '—'}
-                      </span>
-                    </div>
-                    <div className={styles.itemDado}>
-                      <Compass size={13} className={styles.iconeDirecao} />
-                      <span className={styles.itemDadoRotulo}>Direção do vento</span>
-                      <span className={styles.itemDadoValor}>
-                        {direcaoVentoGraus != null ? `${direcaoTexto(direcaoVentoGraus)} (${direcaoVentoGraus}°)` : '—'}
-                      </span>
-                    </div>
-                    <div className={styles.itemDado}>
-                      <Gauge size={13} className={styles.iconePressao} />
-                      <span className={styles.itemDadoRotulo}>Pressão atmosférica</span>
-                      <span className={styles.itemDadoValor}>{leituraPrincipal?.pressao != null ? `${leituraPrincipal.pressao} hPa` : '—'}</span>
-                    </div>
-                  </div>
-                </div>
-
                 <div className={styles.painel}>
                   <span className={styles.painelTitulo}>Ações rápidas</span>
                   <div className={styles.listaAcoes}>
@@ -544,6 +496,17 @@ function ContaAdminCard({
                   </div>
                 </div>
               </div>
+
+              {estacoesDaConta.length > 0 && (
+                <div className={styles.painel}>
+                  <span className={styles.painelTitulo}>Permissões por estação</span>
+                  <div className={styles.linhaTabelasPermissao}>
+                    {estacoesDaConta.map((estacao) => (
+                      <TabelaPermissoesEstacao key={estacao.id} estacao={estacao} />
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {mostrarAtribuir && (
                 <form className={styles.formAtribuir} onSubmit={aoAtribuirEstacao}>
