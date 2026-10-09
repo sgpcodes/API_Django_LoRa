@@ -365,6 +365,9 @@ function EstacoesAdmin() {
         usuarioIds: campos.usuarioIds,
         nome: campos.nome,
         localizacao: campos.localizacao,
+        tipo: campos.tipo,
+        latitude: campos.latitude,
+        longitude: campos.longitude,
       })
       await carregar()
       setMostrarNovaEstacao(false)
