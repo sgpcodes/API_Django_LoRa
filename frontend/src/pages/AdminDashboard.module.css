@@ -192,6 +192,66 @@
   background-color: var(--color-pill-bg);
 }
 
+.seletorPeriodoCrescimento {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.6rem;
+}
+
+.botaoPeriodoCrescimento {
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-card-border);
+  background-color: var(--color-input-bg);
+  color: var(--color-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-theme), border-color 0.15s ease;
+}
+
+.botaoPeriodoCrescimento:hover {
+  border-color: var(--color-accent);
+  color: var(--color-text);
+}
+
+.botaoPeriodoCrescimentoAtivo,
+.botaoPeriodoCrescimentoAtivo:hover {
+  background-color: var(--color-pill-ativo-bg);
+  border-color: var(--color-pill-ativo-bg);
+  color: var(--color-pill-ativo-texto);
+}
+
+.rangeCrescimento {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.6rem;
+}
+
+.campoDataCrescimento {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.campoDataCrescimento input {
+  padding: 0.25rem 0.45rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-card-border);
+  background-color: var(--color-input-bg);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 0.75rem;
+}
+
 .linkVerTodas {
   display: flex;
   align-items: center;

@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   ArrowRight,
   BarChart3,
+  Calendar,
   Clock,
   Radio,
   TrendingDown,
@@ -19,12 +20,28 @@ import DistribuicaoContasCard from '../components/DistribuicaoContasCard'
 import { buscarEstacoes, buscarSensoresOrfaos } from '../services/estacaoService'
 import { buscarContas } from '../services/contasAdminService'
 import { buscarResumoDashboard } from '../services/manutencaoService'
-import { calcularTendencia, calcularCrescimentoMensal } from '../services/estatisticasAdmin'
+import { calcularTendencia, calcularCrescimentoPeriodo } from '../services/estatisticasAdmin'
+import { dataISODeslocada } from '../services/climaExternoService'
 import styles from './AdminDashboard.module.css'
 
 // Período fixo pra calcular as tendências (RN — sem seletor na tela,
 // pra não duplicar o mesmo controle que já existe na Manutenção).
 const DIAS_TENDENCIA = 30
+
+// Opções do seletor de período do gráfico "Crescimento da plataforma" —
+// mesma ideia (e mesmos nomes) do seletor de período do Dashboard do
+// Usuário (Dashboard.jsx), só que com mais faixas longas (3 meses, 1
+// ano) porque aqui o interesse é tendência de cadastro, não clima do
+// dia. "30dias" é o padrão.
+const OPCOES_PERIODO_CRESCIMENTO = [
+  { valor: 'hoje', chave: 'adminDashboard.periodoHoje' },
+  { valor: 'ontem', chave: 'adminDashboard.periodoOntem' },
+  { valor: '7dias', chave: 'adminDashboard.periodo7dias' },
+  { valor: '30dias', chave: 'adminDashboard.periodo30dias' },
+  { valor: '3meses', chave: 'adminDashboard.periodo3meses' },
+  { valor: '1ano', chave: 'adminDashboard.periodo1ano' },
+  { valor: 'personalizado', chave: 'adminDashboard.periodoPersonalizado' },
+]
 
 // Rótulo amigável pra cada tipo real de evento do LogAuditoria (RN05) —
 // se um dia aparecer uma ação nova que ainda não está aqui, cai no
@@ -80,6 +97,8 @@ function AdminDashboard() {
   const [erroInfo, setErroInfo] = useState(null)
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState(null)
+  const [periodoCrescimento, setPeriodoCrescimento] = useState('30dias')
+  const [rangeCrescimento, setRangeCrescimento] = useState({ inicio: dataISODeslocada(30), fim: dataISODeslocada(0) })
 
   useEffect(() => {
     Promise.all([buscarEstacoes(), buscarSensoresOrfaos(), buscarContas()])
@@ -104,9 +123,9 @@ function AdminDashboard() {
 
   const tendenciaContas = useMemo(() => calcularTendencia(contas, 'date_joined', DIAS_TENDENCIA), [contas])
   const tendenciaEstacoes = useMemo(() => calcularTendencia(estacoes, 'criado_em', DIAS_TENDENCIA), [estacoes])
-  const crescimentoMensal = useMemo(
-    () => calcularCrescimentoMensal(contas, estacoes, info?.leituras_por_mes),
-    [contas, estacoes, info],
+  const crescimentoPeriodo = useMemo(
+    () => calcularCrescimentoPeriodo(contas, estacoes, periodoCrescimento, rangeCrescimento),
+    [contas, estacoes, periodoCrescimento, rangeCrescimento],
   )
 
   const banner = (
@@ -185,20 +204,67 @@ function AdminDashboard() {
         <div className={`${styles.cartaoBloco} ${styles.cartaoBlocoLargo}`}>
           <div className={styles.blocoCabecalho}>
             <h2 className={styles.blocoTitulo}><TrendingUp size={16} /> {t('adminDashboard.crescimentoTitulo')}</h2>
-            <span className={styles.blocoTag}>{t('adminDashboard.ultimos6Meses')}</span>
           </div>
           <p className={styles.blocoSubtitulo}>{t('adminDashboard.crescimentoSubtitulo')}</p>
+
+          <div className={styles.seletorPeriodoCrescimento}>
+            <Calendar size={13} />
+            {OPCOES_PERIODO_CRESCIMENTO.map((opcao) => (
+              <button
+                key={opcao.valor}
+                type="button"
+                className={`${styles.botaoPeriodoCrescimento} ${periodoCrescimento === opcao.valor ? styles.botaoPeriodoCrescimentoAtivo : ''}`}
+                onClick={() => setPeriodoCrescimento(opcao.valor)}
+              >
+                {t(opcao.chave)}
+              </button>
+            ))}
+          </div>
+          {periodoCrescimento === 'personalizado' && (
+            <div className={styles.rangeCrescimento}>
+              <label className={styles.campoDataCrescimento}>
+                {t('adminDashboard.personalizadoDe')}
+                <input
+                  type="date"
+                  value={rangeCrescimento.inicio}
+                  max={rangeCrescimento.fim}
+                  onChange={(evento) => setRangeCrescimento((atual) => ({ ...atual, inicio: evento.target.value }))}
+                />
+              </label>
+              <label className={styles.campoDataCrescimento}>
+                {t('adminDashboard.personalizadoAte')}
+                <input
+                  type="date"
+                  value={rangeCrescimento.fim}
+                  min={rangeCrescimento.inicio}
+                  max={dataISODeslocada(0)}
+                  onChange={(evento) => setRangeCrescimento((atual) => ({ ...atual, fim: evento.target.value }))}
+                />
+              </label>
+            </div>
+          )}
+
           <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={crescimentoMensal} margin={{ top: 10, right: 10, bottom: 0, left: -20 }}>
+            <LineChart data={crescimentoPeriodo} margin={{ top: 10, right: 10, bottom: 0, left: -20 }}>
               <CartesianGrid strokeDasharray="4 8" vertical={false} stroke="var(--color-grid)" />
               <XAxis dataKey="rotulo" tick={{ fontSize: 12, fill: 'var(--color-text-secondary)' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 12, fill: 'var(--color-text-secondary)' }} axisLine={false} tickLine={false} width={30} allowDecimals={false} />
+              <YAxis
+                tick={{ fontSize: 12, fill: 'var(--color-text-secondary)' }}
+                axisLine={false}
+                tickLine={false}
+                width={30}
+                allowDecimals={false}
+                domain={[0, 'auto']}
+              />
               <Tooltip contentStyle={{ borderRadius: 12, border: 'none', boxShadow: 'var(--shadow-card)' }} />
-              <Line type="monotone" dataKey="contas" name={t('adminDashboard.contasLinha')} stroke="#4a6fa5" strokeWidth={3} dot={{ r: 3 }} />
-              <Line type="monotone" dataKey="estacoes" name={t('adminDashboard.estacoesLinha')} stroke="#8b5cf6" strokeWidth={3} dot={{ r: 3 }} />
-              {info?.leituras_por_mes && (
-                <Line type="monotone" dataKey="leituras" name={t('adminDashboard.leiturasLinha')} stroke="#16a34a" strokeWidth={3} dot={{ r: 3 }} />
-              )}
+              {/* "linear", não "monotone": com muito bucket parado em 0 e
+                  um salto só no fim (o caso comum aqui — cadastro não é
+                  todo dia), a suavização do "monotone" desenha uma
+                  subida gradual ANTES do salto de verdade, sugerindo
+                  crescimento onde não teve nenhum. Linha reta é mais
+                  fiel ao dado discreto (contagem por bucket). */}
+              <Line type="linear" dataKey="contas" name={t('adminDashboard.contasLinha')} stroke="#4a6fa5" strokeWidth={3} dot={{ r: 3 }} />
+              <Line type="linear" dataKey="estacoes" name={t('adminDashboard.estacoesLinha')} stroke="#8b5cf6" strokeWidth={3} dot={{ r: 3 }} />
             </LineChart>
           </ResponsiveContainer>
         </div>
