@@ -63,6 +63,17 @@ export async function atualizarDadosOnline(estacaoId) {
   return resposta.data
 }
 
+// Quais variáveis (de AcessoEstacao.VARIAVEIS) uma conta específica pode
+// ver NESTA estação — admin only. Card da variável continua aparecendo
+// na tela de quem foi restringido, só o dado vem vazio (ver
+// aplicar_restricao_variaveis em api_rest/models.py).
+export async function atualizarVariaveisLiberadas(estacaoId, usuarioId, variaveisLiberadas) {
+  const resposta = await api.patch(`/api/estacoes/${estacaoId}/acesso/${usuarioId}/`, {
+    variaveis_liberadas: variaveisLiberadas,
+  })
+  return resposta.data
+}
+
 // Remove uma estação cadastrada inteira (todas as contas perdem o
 // vínculo de uma vez) — admin only. O histórico de leituras dela não é
 // apagado (fica com `estacao=null`), só o cadastro.

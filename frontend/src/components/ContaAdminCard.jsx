@@ -376,7 +376,7 @@ function ContaAdminCard({
                   <span className={styles.painelTitulo}>Permissões por estação</span>
                   <div className={styles.linhaTabelasPermissao}>
                     {estacoesDaConta.map((estacao) => (
-                      <TabelaPermissoesEstacao key={estacao.id} estacao={estacao} />
+                      <TabelaPermissoesEstacao key={estacao.id} estacao={estacao} usuarioId={conta.id} />
                     ))}
                   </div>
                 </div>

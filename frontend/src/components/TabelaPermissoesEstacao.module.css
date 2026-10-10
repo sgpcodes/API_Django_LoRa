@@ -75,3 +75,14 @@
   background-color: var(--color-accent);
   border-color: var(--color-accent);
 }
+
+.caixa:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.aviso {
+  margin: 0;
+  font-size: 0.72rem;
+  color: #dc2626;
+}

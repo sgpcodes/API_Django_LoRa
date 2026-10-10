@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.db import DatabaseError, connections
 from django.db.models import Prefetch
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from rest_framework import status, viewsets
@@ -9,7 +10,15 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Estacao, EstadoSincronizacao, Leitura, SolicitacaoRssi
+from .models import (
+    AcessoEstacao,
+    Estacao,
+    EstadoSincronizacao,
+    Leitura,
+    SolicitacaoRssi,
+    aplicar_restricao_variaveis,
+    mapa_variaveis_liberadas,
+)
 from .permissions import EhGestor, EhGestorOuDonoDaEstacao
 from .serializers import EstacaoSerializer, LeituraSerializer, _leitura_resumo
 from .validacao import detectar_inconsistencia
@@ -72,6 +81,18 @@ class LeituraListCreateView(APIView):
             leituras = leituras.filter(estacao__usuarios=request.user)
 
         dados = [_leitura_para_dict(leitura) for leitura in leituras]
+
+        # RF-02/RF-03: Gestor nunca é restrito (RN01, vê tudo); conta
+        # comum só vê a variável que o Gestor liberou pra ela NAQUELA
+        # estação (AcessoEstacao) — card continua aparecendo, só o dado
+        # vem zerado (ver aplicar_restricao_variaveis).
+        if not request.user.eh_gestor:
+            mapa = mapa_variaveis_liberadas(request.user)
+            for item in dados:
+                liberadas = mapa.get(item['estacao_id'])
+                if liberadas is not None:
+                    aplicar_restricao_variaveis(item, liberadas)
+
         return Response(dados)
 
     def post(self, request):
@@ -293,7 +314,7 @@ class EstacaoViewSet(viewsets.ModelViewSet):
         # método é uma sobrescrita completa de get_permissions, então o
         # `permission_classes=[...]` passado pro @action abaixo (em
         # `orfas`) seria ignorado se não fosse checado explicitamente.
-        if self.action in ('create', 'destroy', 'orfas', 'atualizar_dados_online'):
+        if self.action in ('create', 'destroy', 'orfas', 'atualizar_dados_online', 'variaveis_liberadas'):
             return [IsAuthenticated(), EhGestor()]
         if self.action in ('retrieve', 'update', 'partial_update'):
             return [IsAuthenticated(), EhGestorOuDonoDaEstacao()]
@@ -396,6 +417,33 @@ class EstacaoViewSet(viewsets.ModelViewSet):
 
         estacao.refresh_from_db()
         return Response({'status': 'success', 'ultima_transmissao_em': estacao.ultima_transmissao_em})
+
+    @action(detail=True, methods=['patch'], url_path='acesso/(?P<usuario_id>[^/.]+)')
+    def variaveis_liberadas(self, request, pk=None, usuario_id=None):
+        """PATCH /api/estacoes/<id>/acesso/<usuario_id>/ {"variaveis_liberadas": [...]}
+        — só o Gestor decide quais variáveis uma conta vê de uma estação
+        específica dela (RF-02/RF-03). Lista vazia é válida (RN: conta sem
+        nenhuma variável liberada daquela estação, não um erro) — só o que
+        não é um subconjunto de AcessoEstacao.VARIAVEIS é rejeitado."""
+        estacao = self.get_object()
+        usuario = get_object_or_404(Usuario, pk=usuario_id)
+        if not estacao.usuarios.filter(pk=usuario.pk).exists():
+            return Response(
+                {'status': 'error', 'message': 'Essa conta não está vinculada a esta estação.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        variaveis = request.data.get('variaveis_liberadas')
+        if not isinstance(variaveis, list) or not set(variaveis).issubset(AcessoEstacao.VARIAVEIS):
+            return Response(
+                {'status': 'error', 'message': f'variaveis_liberadas precisa ser uma lista dentro de {AcessoEstacao.VARIAVEIS}.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        acesso, _criado = AcessoEstacao.objects.update_or_create(
+            usuario=usuario, estacao=estacao, defaults={'variaveis_liberadas': variaveis},
+        )
+        return Response({'status': 'success', 'variaveis_liberadas': acesso.variaveis_liberadas})
 
     @action(detail=False, methods=['get'])
     def orfas(self, request):

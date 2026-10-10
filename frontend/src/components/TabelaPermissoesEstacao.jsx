@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { Calendar, Check, CloudRain, Compass, Droplet, Gauge, Sun, Thermometer, Wind } from 'lucide-react'
+import { atualizarVariaveisLiberadas } from '../services/estacaoService'
 import styles from './TabelaPermissoesEstacao.module.css'
 
-// Só visual por enquanto (pedido explícito do Gestor): nenhum checkbox
-// daqui chama a API ainda — é um mockup pra validar o formato antes de
-// decidir como vai funcionar de verdade (provavelmente em cima do
-// AcessoEstacao.variaveis_liberadas que já existe no backend, ver
-// api_rest/models.py). Tudo nasce marcado — representa o acesso de hoje,
-// sem restrição nenhuma.
+// As colunas "Card" e "Gráfico" controlam a MESMA permissão por trás
+// (AcessoEstacao.variaveis_liberadas não distingue os dois ainda) —
+// marcar/desmarcar qualquer uma das duas pra uma variável libera/tira
+// as duas juntas. "Previsão do tempo" e "Balanço hídrico" ainda são só
+// visuais (não fazem parte de AcessoEstacao.VARIAVEIS) — não persistem.
 const VARIAVEIS = [
   { chave: 'temperatura', rotulo: 'Temperatura', Icone: Thermometer },
   { chave: 'umidade', rotulo: 'Umidade', Icone: Droplet },
@@ -17,20 +17,13 @@ const VARIAVEIS = [
   { chave: 'radiacao', rotulo: 'Radiação', Icone: Sun },
 ]
 
-function todasMarcadas() {
-  const marcadas = {}
-  VARIAVEIS.forEach(({ chave }) => {
-    marcadas[chave] = true
-  })
-  return marcadas
-}
-
-function Caixa({ marcado, onClick, rotulo }) {
+function Caixa({ marcado, onClick, rotulo, desabilitado }) {
   return (
     <button
       type="button"
       className={`${styles.caixa} ${marcado ? styles.caixaMarcada : ''}`}
       onClick={onClick}
+      disabled={desabilitado}
       aria-pressed={marcado}
       aria-label={rotulo}
     >
@@ -40,18 +33,37 @@ function Caixa({ marcado, onClick, rotulo }) {
 }
 
 // Uma "tabelinha" de permissão por estação vinculada à conta: quais
-// variáveis aparecem como card-resumo, quais aparecem como gráfico, e se
-// as abas de Previsão do tempo / Balanço hídrico aparecem pra essa conta
-// nessa estação especificamente. Uma estação por bloco — uma conta com
-// várias estações vinculadas vê uma tabela pra cada uma.
-function TabelaPermissoesEstacao({ estacao }) {
-  const [cards, setCards] = useState(todasMarcadas)
-  const [graficos, setGraficos] = useState(todasMarcadas)
+// variáveis aquela conta pode ver NESTA estação (RF-02/RF-03) — card da
+// variável continua aparecendo pra ela mesmo desmarcada, só o dado some
+// (decisão explícita: não é a tela toda sumindo, ver
+// aplicar_restricao_variaveis em api_rest/models.py). Uma estação por
+// bloco — uma conta com várias estações vinculadas vê uma tabela pra
+// cada uma, cada uma com a permissão dela própria.
+function TabelaPermissoesEstacao({ estacao, usuarioId }) {
+  const infoDaConta = estacao.usuarios_info?.find((u) => u.id === usuarioId)
+  const [liberadas, setLiberadas] = useState(() => new Set(infoDaConta?.variaveis_liberadas ?? []))
+  const [salvando, setSalvando] = useState(null)
+  const [erro, setErro] = useState(null)
   const [previsao, setPrevisao] = useState(true)
   const [balancoHidrico, setBalancoHidrico] = useState(true)
 
-  function alternar(setEstado, chave) {
-    setEstado((atual) => ({ ...atual, [chave]: !atual[chave] }))
+  async function alternarVariavel(chave) {
+    const antes = new Set(liberadas)
+    const depois = new Set(liberadas)
+    if (depois.has(chave)) depois.delete(chave)
+    else depois.add(chave)
+
+    setLiberadas(depois)
+    setSalvando(chave)
+    setErro(null)
+    try {
+      await atualizarVariaveisLiberadas(estacao.id, usuarioId, Array.from(depois))
+    } catch {
+      setLiberadas(antes) // reverte — o Gestor vê a caixa voltar sozinha se não salvou de verdade
+      setErro('Não foi possível salvar. Tente de novo.')
+    } finally {
+      setSalvando(null)
+    }
   }
 
   return (
@@ -77,10 +89,20 @@ function TabelaPermissoesEstacao({ estacao }) {
                 {rotulo}
               </td>
               <td>
-                <Caixa marcado={cards[chave]} onClick={() => alternar(setCards, chave)} rotulo={`Card de ${rotulo}`} />
+                <Caixa
+                  marcado={liberadas.has(chave)}
+                  onClick={() => alternarVariavel(chave)}
+                  rotulo={`Card de ${rotulo}`}
+                  desabilitado={salvando === chave}
+                />
               </td>
               <td>
-                <Caixa marcado={graficos[chave]} onClick={() => alternar(setGraficos, chave)} rotulo={`Gráfico de ${rotulo}`} />
+                <Caixa
+                  marcado={liberadas.has(chave)}
+                  onClick={() => alternarVariavel(chave)}
+                  rotulo={`Gráfico de ${rotulo}`}
+                  desabilitado={salvando === chave}
+                />
               </td>
             </tr>
           ))}
@@ -108,6 +130,7 @@ function TabelaPermissoesEstacao({ estacao }) {
           </tr>
         </tbody>
       </table>
+      {erro && <p className={styles.aviso}>{erro}</p>}
     </div>
   )
 }

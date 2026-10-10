@@ -173,6 +173,49 @@ class AcessoEstacao(models.Model):
         return f'{self.usuario} em {self.estacao} ({", ".join(self.variaveis_liberadas) or "nenhuma variável"})'
 
 
+# Onde, dentro do dict de uma Leitura (ver _leitura_para_dict/_leitura_resumo
+# em views.py/serializers.py), cada variável de AcessoEstacao.VARIAVEIS mora
+# — as 3 primeiras são campo direto da Leitura, as 3 últimas vivem dentro de
+# `dados_adicionais` (ver api_rest/open_meteo.py pro formato de origem).
+_CAMPO_DA_VARIAVEL = {
+    'temperatura': ('temperatura', None),
+    'umidade': ('umidade', None),
+    'pressao': ('pressao', None),
+    'vento': ('dados_adicionais', 'vento'),
+    'chuva': ('dados_adicionais', 'chuva'),
+    'radiacao': ('dados_adicionais', 'radiacao'),
+}
+
+
+def mapa_variaveis_liberadas(usuario):
+    """{estacao_id: set(variaveis_liberadas)} pra TODAS as estações
+    vinculadas a `usuario` — uma query só (não por linha de Leitura),
+    pra filtrar uma lista inteira sem N+1. Gestor nunca é chamado aqui
+    de propósito (RN01: ele não tem restrição — ver aplicar_restricao_
+    variaveis, que já decide isso antes de precisar desse mapa)."""
+    return {
+        acesso.estacao_id: set(acesso.variaveis_liberadas)
+        for acesso in AcessoEstacao.objects.filter(usuario=usuario)
+    }
+
+
+def aplicar_restricao_variaveis(dados_leitura, liberadas):
+    """Zera (não remove a chave) os campos de variável que NÃO estão em
+    `liberadas` — o dict da leitura continua tendo o mesmo formato de
+    sempre, só sem valor nos campos restritos. É de propósito: o card
+    daquela variável continua aparecendo na tela (igual já acontece
+    quando ainda não tem leitura nenhuma), só o dado some — decisão
+    explícita do Gestor, não é a tela toda sumindo."""
+    for variavel, (campo, subcampo) in _CAMPO_DA_VARIAVEL.items():
+        if variavel in liberadas:
+            continue
+        if subcampo is None:
+            dados_leitura[campo] = None
+        elif dados_leitura.get(campo) is not None:
+            dados_leitura[campo][subcampo] = None
+    return dados_leitura
+
+
 class SolicitacaoRssi(models.Model):
     """
     Pedido de análise de RSSI/SNR pendente para um sensor específico — o

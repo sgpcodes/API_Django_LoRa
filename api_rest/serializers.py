@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 from django.utils import timezone
 
-from .models import Estacao, Leitura
+from .models import AcessoEstacao, Estacao, Leitura, aplicar_restricao_variaveis
 
 Usuario = get_user_model()
 
@@ -67,8 +67,22 @@ class EstacaoSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'ultima_transmissao_em', 'criado_em']
 
     def get_usuarios_info(self, obj):
+        # 1 query só pra todos os vínculos desta estação (não 1 por
+        # usuário) — `variaveis_liberadas` aqui é o que a tela de
+        # Permissões por estação usa pra abrir os checkboxes já no
+        # estado real salvo, em vez de sempre tudo marcado.
+        acessos = {
+            acesso['usuario_id']: acesso['variaveis_liberadas']
+            for acesso in AcessoEstacao.objects.filter(estacao=obj).values('usuario_id', 'variaveis_liberadas')
+        }
         return [
-            {'id': usuario.id, 'username': usuario.username, 'nome': usuario.first_name or usuario.username, 'plano': self._plano_de(usuario)}
+            {
+                'id': usuario.id,
+                'username': usuario.username,
+                'nome': usuario.first_name or usuario.username,
+                'plano': self._plano_de(usuario),
+                'variaveis_liberadas': acessos.get(usuario.id, AcessoEstacao.VARIAVEIS),
+            }
             for usuario in obj.usuarios.all()
         ]
 
@@ -85,7 +99,21 @@ class EstacaoSerializer(serializers.ModelSerializer):
 
     def get_ultima_leitura(self, obj):
         leitura = Leitura.objects.filter(estacao=obj).order_by('-data_hora').first()
-        return _leitura_resumo(leitura) if leitura else None
+        if leitura is None:
+            return None
+        resumo = _leitura_resumo(leitura)
+
+        # RF-02/RF-03: mesma restrição por variável de LeituraListCreateView
+        # (ver api_rest/views.py) — igual lá, card continua aparecendo, só
+        # o dado some. Gestor nunca é restrito; sem `request` no contexto
+        # (uso interno/teste sem view por trás), também não restringe.
+        request = self.context.get('request')
+        if request is not None and not request.user.eh_gestor:
+            acesso = AcessoEstacao.objects.filter(usuario=request.user, estacao=obj).first()
+            if acesso is not None:
+                aplicar_restricao_variaveis(resumo, set(acesso.variaveis_liberadas))
+
+        return resumo
 
     def validate(self, attrs):
         """RN10: limite máximo de estações por nível de conta — checado só
