@@ -32,14 +32,18 @@ const FRASE_CONFIRMACAO = 'APAGAR TUDO'
 const FRASE_CONFIRMACAO_ANTIGAS = 'APAGAR LEITURAS ANTIGAS'
 
 const ROTULOS_CATEGORIA_BANCO = {
-  dados_meteorologicos: 'Dados meteorológicos',
+  dados_estacoes_online: 'Dados — estações online',
+  dados_estacoes_fisicas: 'Dados — estações físicas',
+  leituras_sem_estacao: 'Leituras sem estação',
   contas_e_estacoes: 'Contas e estações',
   logs_e_auditoria: 'Logs e auditoria',
   outros: 'Outros',
 }
 
 const CORES_CATEGORIA_BANCO = {
-  dados_meteorologicos: '#4a6fa5',
+  dados_estacoes_online: '#0ea5e9',
+  dados_estacoes_fisicas: '#4a6fa5',
+  leituras_sem_estacao: '#64748b',
   contas_e_estacoes: '#8b5cf6',
   logs_e_auditoria: '#f59e0b',
   outros: '#94a3b8',

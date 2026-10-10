@@ -287,11 +287,38 @@ def _tamanho_tabela(model):
         return None
 
 
+def _tamanho_leituras_por_tipo_estacao(tamanho_tabela_leitura):
+    """Quebra o tamanho (físico, em bytes) da tabela Leitura inteira em
+    3 fatias — online / física / sem estação (órfã) — por PROPORÇÃO de
+    linhas de cada tipo. Postgres não guarda o tamanho de um subconjunto
+    de linhas (pg_total_relation_size é só por tabela inteira), então
+    isso é uma estimativa por contagem, não uma medida exata — linhas
+    têm tamanho parecido (mesmas colunas, só `dados_adicionais` varia
+    um pouco), suficiente pra um relatório de uso, não pra cobrança."""
+    total = Leitura.objects.count()
+    if total == 0:
+        return {'online': 0, 'fisica': 0, 'sem_estacao': 0}
+
+    online = Leitura.objects.filter(estacao__tipo=Estacao.Tipo.ONLINE).count()
+    fisica = Leitura.objects.filter(estacao__tipo=Estacao.Tipo.FISICA).count()
+    sem_estacao = total - online - fisica  # estacao=None (órfã, RN15)
+
+    tamanho_online = round(tamanho_tabela_leitura * online / total)
+    tamanho_fisica = round(tamanho_tabela_leitura * fisica / total)
+    # Resto pra "sem_estacao", não outra multiplicação — evita que os 3
+    # arredondamentos separados não batam com o total da tabela.
+    tamanho_sem_estacao = tamanho_tabela_leitura - tamanho_online - tamanho_fisica
+    return {'online': tamanho_online, 'fisica': tamanho_fisica, 'sem_estacao': tamanho_sem_estacao}
+
+
 def _tamanho_por_categoria(tamanho_total_bytes):
-    """Quebra o tamanho do banco em 4 categorias reais, consultando o
-    tamanho de cada tabela (Postgres). "Outros" é o resto (tabelas
-    internas do Django — sessão, admin, content types etc.) — não uma
-    estimativa, é tamanho_total menos o que já contamos nas outras 3.
+    """Quebra o tamanho do banco em categorias reais, consultando o
+    tamanho de cada tabela (Postgres). "Dados meteorológicos" vira 2
+    fatias (estações online vs físicas — RF pedido pelo Gestor pra saber
+    quanto cada fonte consome) + uma 3ª só se houver leitura órfã de
+    verdade. "Outros" é o resto (tabelas internas do Django — sessão,
+    admin, content types etc., NADA a ver com estação) — não uma
+    estimativa, é tamanho_total menos o que já contamos nas outras.
     Só Postgres: em dev (sqlite) devolve None, front mostra estado vazio
     em vez de inventar uma proporção."""
     if connection.vendor != 'postgresql' or tamanho_total_bytes is None:
@@ -307,13 +334,22 @@ def _tamanho_por_categoria(tamanho_total_bytes):
 
     conhecidos = tamanho_meteorologicos + tamanho_contas_estacoes + tamanho_logs
     tamanho_outros = max(tamanho_total_bytes - conhecidos, 0)
+    por_tipo = _tamanho_leituras_por_tipo_estacao(tamanho_meteorologicos)
 
     categorias = {
-        'dados_meteorologicos': tamanho_meteorologicos,
+        'dados_estacoes_online': por_tipo['online'],
+        'dados_estacoes_fisicas': por_tipo['fisica'],
         'contas_e_estacoes': tamanho_contas_estacoes,
         'logs_e_auditoria': tamanho_logs,
         'outros': tamanho_outros,
     }
+    # Leitura órfã (sem estacao) é rara (RN15: toda Estacao nasce com
+    # conta, mas a leitura em si pode chegar antes do cadastro) — só
+    # aparece como categoria própria quando existe de verdade, pra não
+    # poluir o gráfico com uma fatia de 0% sempre presente.
+    if por_tipo['sem_estacao'] > 0:
+        categorias['leituras_sem_estacao'] = por_tipo['sem_estacao']
+
     return {
         chave: {
             'tamanho_bytes': valor,
