@@ -199,6 +199,30 @@ function ContaAdminCard({
                   className={styles.menuItem}
                   onClick={() => {
                     setMenuAberto(false)
+                    setMostrarAtribuir((m) => !m)
+                  }}
+                >
+                  <UserPlus size={14} /> Atribuir estação
+                </button>
+                {estacoesDaConta.length === 1 && (
+                  <button
+                    type="button"
+                    className={styles.menuItem}
+                    onClick={() => {
+                      setMenuAberto(false)
+                      if (window.confirm(`Remover a estação "${estacaoPrincipal.nome || estacaoPrincipal.identificador}" desta conta?`)) {
+                        onRemoverEstacaoDaLista(estacaoPrincipal)
+                      }
+                    }}
+                  >
+                    <Radio size={14} /> Remover estação
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className={styles.menuItem}
+                  onClick={() => {
+                    setMenuAberto(false)
                     onSuspenderOuReativar()
                   }}
                 >
@@ -344,36 +368,6 @@ function ContaAdminCard({
                     <CreditCard size={12} /> Plano
                   </span>
                   <span className={styles.planoPill}>{conta.plano_atual ?? 'Sem plano'}</span>
-                </div>
-              </div>
-
-              <div className={styles.linhaPaineis}>
-                <div className={styles.painel}>
-                  <span className={styles.painelTitulo}>Mais ações</span>
-                  <div className={styles.listaAcoes}>
-                    <button type="button" className={styles.itemAcao} onClick={() => setMostrarAtribuir((m) => !m)}>
-                      <UserPlus size={13} /> Atribuir estação
-                    </button>
-                    <button type="button" className={styles.itemAcao} onClick={aoAbrirEdicao}>
-                      <Settings2 size={13} /> Configurações
-                    </button>
-                    {estacoesDaConta.length === 1 && (
-                      <button
-                        type="button"
-                        className={styles.itemAcao}
-                        onClick={() => {
-                          if (window.confirm(`Remover a estação "${estacaoPrincipal.nome || estacaoPrincipal.identificador}" desta conta?`)) {
-                            onRemoverEstacaoDaLista(estacaoPrincipal)
-                          }
-                        }}
-                      >
-                        <Radio size={13} /> Remover estação
-                      </button>
-                    )}
-                    <button type="button" className={`${styles.itemAcao} ${styles.itemAcaoPerigo}`} onClick={aoExcluir}>
-                      <Trash2 size={13} /> Excluir conta
-                    </button>
-                  </div>
                 </div>
               </div>
 
