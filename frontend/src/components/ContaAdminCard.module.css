@@ -243,9 +243,10 @@
   display: grid;
   /* Só "Mais ações" restou aqui (Status da conta já aparece no topo do
      card, Estações vinculadas e Ações rápidas viraram a tabela de
-     Permissões por estação, logo abaixo) — uma coluna só, estreita, pra
-     não esticar um painel pequeno pela largura toda do card. */
-  grid-template-columns: minmax(190px, 260px);
+     Permissões por estação, logo abaixo) — uma coluna só, larga o
+     bastante pra caber os 3 itens lado a lado numa linha (ver
+     .listaAcoes), sem esticar o painel pela largura toda do card. */
+  grid-template-columns: minmax(300px, max-content);
   gap: 0.75rem;
 }
 
@@ -451,8 +452,9 @@
 
 .listaAcoes {
   display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0.3rem;
 }
 
 .itemAcao {
