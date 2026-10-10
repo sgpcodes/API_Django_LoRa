@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import {
   AlertTriangle,
   Bell,
+  ChevronDown,
+  ChevronUp,
   Cpu,
   Database,
   Globe,
@@ -114,6 +116,7 @@ function ManutencaoAdmin() {
 
   const [info, setInfo] = useState(null)
   const [erroInfo, setErroInfo] = useState(null)
+  const [outrosAberto, setOutrosAberto] = useState(false)
 
   const [fraseDigitada, setFraseDigitada] = useState('')
   const [executando, setExecutando] = useState(false)
@@ -328,16 +331,37 @@ function ManutencaoAdmin() {
               </div>
             </div>
             <ul className={styles.legendaDonut}>
-              {dadosDonutBanco.map((fatia) => (
-                <li key={fatia.chave}>
-                  <span className={styles.pontoLegenda} style={{ backgroundColor: fatia.cor }} />
-                  <span className={styles.legendaNome}>{fatia.rotulo}</span>
-                  <span className={styles.legendaValores}>
-                    <span className={styles.legendaValor}>{fatia.tamanho_legivel}</span>
-                    <span className={styles.legendaPercentual}>{fatia.percentual}%</span>
-                  </span>
-                </li>
-              ))}
+              {dadosDonutBanco.map((fatia) => {
+                const temDetalhe = fatia.chave === 'outros' && fatia.detalhado?.length > 0
+                return (
+                  <li key={fatia.chave}>
+                    <button
+                      type="button"
+                      className={styles.linhaLegenda}
+                      onClick={() => temDetalhe && setOutrosAberto((a) => !a)}
+                      disabled={!temDetalhe}
+                    >
+                      <span className={styles.pontoLegenda} style={{ backgroundColor: fatia.cor }} />
+                      <span className={styles.legendaNome}>{fatia.rotulo}</span>
+                      <span className={styles.legendaValores}>
+                        <span className={styles.legendaValor}>{fatia.tamanho_legivel}</span>
+                        <span className={styles.legendaPercentual}>{fatia.percentual}%</span>
+                      </span>
+                      {temDetalhe && (outrosAberto ? <ChevronUp size={13} /> : <ChevronDown size={13} />)}
+                    </button>
+                    {temDetalhe && outrosAberto && (
+                      <ul className={styles.legendaDetalhe}>
+                        {fatia.detalhado.map((tabela) => (
+                          <li key={tabela.tabela}>
+                            <span className={styles.legendaDetalheNome}>{tabela.tabela}</span>
+                            <span className={styles.legendaDetalheValor}>{tabela.tamanho_legivel}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                )
+              })}
             </ul>
           </div>
         )}

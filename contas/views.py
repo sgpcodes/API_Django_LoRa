@@ -287,6 +287,63 @@ def _tamanho_tabela(model):
         return None
 
 
+def _todas_tabelas():
+    """Schema + nome + tamanho real (bytes) de TODA tabela do banco,
+    qualquer schema — usado só pra detalhar "Outros" (ver
+    _outros_detalhado), não pro resto do relatório. Postgres only."""
+    if connection.vendor != 'postgresql':
+        return []
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT n.nspname, c.relname, pg_total_relation_size(c.oid)
+                FROM pg_class c
+                JOIN pg_namespace n ON n.oid = c.relnamespace
+                WHERE c.relkind = 'r'
+                ORDER BY pg_total_relation_size(c.oid) DESC
+            """)
+            return cursor.fetchall()
+    except Exception:
+        logger.warning('Não foi possível listar as tabelas do banco.', exc_info=True)
+        return []
+
+
+def _outros_detalhado():
+    """Lista nomeada das tabelas que caem dentro de "Outros" — pra não
+    deixar essa categoria como caixa-preta (o Gestor perguntou "o que
+    são esses outros?" na tela de Manutenção).
+
+    Duas origens bem diferentes, separadas aqui: tabela de app nossa que
+    ainda não ganhou categoria própria no schema `public` (ex.:
+    SolicitacaoRssi, Plano, AcessoEstacao, mais as internas do próprio
+    Django/DRF — sessão, admin, content types, migrations) aparece
+    individualmente; e tudo que é schema de SISTEMA do Postgres
+    (`pg_catalog`, `information_schema` — metadados internos que
+    existem em QUALQUER banco Postgres, mesmo um vazio, nada a ver com
+    a nossa aplicação) vira uma única linha agregada, pra não poluir a
+    lista com 50+ tabelas que o Gestor não tem o que fazer com elas."""
+    conhecidas = {m._meta.db_table for m in [Leitura, Usuario, Estacao, Assinatura, LogAuditoria]}
+    linhas = []
+    tamanho_sistema = 0
+    for schema, nome, tamanho in _todas_tabelas():
+        if tamanho <= 0:
+            continue
+        if schema != 'public':
+            tamanho_sistema += tamanho
+            continue
+        if nome in conhecidas:
+            continue
+        linhas.append({'tabela': nome, 'tamanho_bytes': tamanho, 'tamanho_legivel': _tamanho_legivel(tamanho)})
+
+    if tamanho_sistema > 0:
+        linhas.append({
+            'tabela': 'postgres (tabelas de sistema)',
+            'tamanho_bytes': tamanho_sistema,
+            'tamanho_legivel': _tamanho_legivel(tamanho_sistema),
+        })
+    return sorted(linhas, key=lambda linha: linha['tamanho_bytes'], reverse=True)
+
+
 def _tamanho_leituras_por_tipo_estacao(tamanho_tabela_leitura):
     """Quebra o tamanho (físico, em bytes) da tabela Leitura inteira em
     3 fatias — online / física / sem estação (órfã) — por PROPORÇÃO de
@@ -350,7 +407,7 @@ def _tamanho_por_categoria(tamanho_total_bytes):
     if por_tipo['sem_estacao'] > 0:
         categorias['leituras_sem_estacao'] = por_tipo['sem_estacao']
 
-    return {
+    resultado = {
         chave: {
             'tamanho_bytes': valor,
             'tamanho_legivel': _tamanho_legivel(valor),
@@ -358,6 +415,8 @@ def _tamanho_por_categoria(tamanho_total_bytes):
         }
         for chave, valor in categorias.items()
     }
+    resultado['outros']['detalhado'] = _outros_detalhado()
+    return resultado
 
 
 def _leituras_por_mes(meses=6):
