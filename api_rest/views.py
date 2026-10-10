@@ -369,7 +369,13 @@ class EstacaoViewSet(viewsets.ModelViewSet):
         não trazia nada de novo (idempotente no banco) mas gastava cota
         da Open-Meteo à toa, e foi exatamente isso que nos rendeu um 429
         (Too Many Requests) num teste. Também busca só ESTA estação, não
-        `coletar_dados_online` (que varre todas as online de uma vez)."""
+        `coletar_dados_online` (que varre todas as online de uma vez).
+
+        POST {"forcar_backfill": true} refaz o backfill de 30 dias mesmo
+        já tendo Leitura — pro caso de uma estação ter nascido durante
+        um bloqueio da Open-Meteo (backfill falhou silenciosamente na
+        criação, mas a estação foi criada do mesmo jeito) e só ter
+        histórico curto, do período em que o loop normal já rodou."""
         from django.core.management import call_command
 
         from .management.commands.coletar_dados_online import coletar_estacao
@@ -382,7 +388,7 @@ class EstacaoViewSet(viewsets.ModelViewSet):
             )
 
         try:
-            if not estacao.leituras.exists():
+            if request.data.get('forcar_backfill') or not estacao.leituras.exists():
                 call_command('backfill_historico_estacao', str(estacao.id))
             coletar_estacao(estacao)
         except Exception as erro:
