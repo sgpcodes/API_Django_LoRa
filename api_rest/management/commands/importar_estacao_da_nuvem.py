@@ -22,8 +22,8 @@ from django.db.utils import OperationalError
 from api_rest.models import Estacao
 
 CAMPOS_ESTACAO = [
-    'nome', 'localizacao', 'token_hash', 'intervalo_envio_minutos',
-    'limite_offline_minutos', 'ultima_transmissao_em', 'ativa',
+    'nome', 'localizacao', 'token_hash', 'tipo', 'latitude', 'longitude',
+    'intervalo_envio_minutos', 'limite_offline_minutos', 'ultima_transmissao_em', 'ativa',
 ]
 
 CAMPOS_USUARIO = [

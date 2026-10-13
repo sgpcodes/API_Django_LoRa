@@ -76,15 +76,30 @@ guardadas no Postgres local até a conexão voltar.
 
 Isso só funciona se `CLOUD_DATABASE_URL` estiver preenchida em
 `.env.docker` (mesma connection string do Supabase usada no Render, em
-`DATABASE_URL`). Com isso configurado, o backend passa a:
+`DATABASE_URL`). Com isso configurado, o backend passa a rodar dois
+processos em segundo plano (ver `docker/backend/entrypoint.sh`):
 
-1. Tentar, a cada `SYNC_INTERVAL_SECONDS` (padrão 5 min), enviar pra
-   nuvem as leituras que só existem localmente.
-2. Apagar cada leitura do banco local só depois de confirmar que ela foi
-   salva com sucesso na nuvem — o banco local nunca vira uma cópia
-   permanente, é só um buffer enquanto durar a queda de conexão.
-3. Se a nuvem estiver inacessível, não faz nada (sem erro) e tenta de
+**`sincronizar_leituras`** (local -> nuvem), a cada `SYNC_INTERVAL_SECONDS`
+(padrão 5 min):
+
+1. Tenta enviar pra nuvem as leituras que ainda não foram confirmadas
+   (campo `sincronizada_em` vazio).
+2. Uma leitura só é marcada como sincronizada depois de confirmar que foi
+   salva com sucesso na nuvem — **nunca é apagada sem essa confirmação**,
+   não importa quanto tempo a internet fique fora.
+3. Leituras já sincronizadas continuam no banco local por
+   `RETENCAO_LOCAL_DIAS` dias (padrão 7, configurável em `.env.docker`) —
+   tempo suficiente pra continuar aparecendo nos gráficos locais mesmo
+   offline — e só então são apagadas.
+4. Se a nuvem estiver inacessível, não faz nada (sem erro) e tenta de
    novo no próximo ciclo — seguro deixar rodando o tempo todo.
+
+**`sincronizar_cadastros`** (nuvem -> local), no mesmo intervalo: traz
+TODOS os Usuarios e TODAS as Estacoes da nuvem pro banco local, pra
+qualquer conta (Gestor ou Usuário) conseguir logar e operar a Raspberry
+estando perto dela, mesmo sem internet — inclusive contas/estações
+criadas depois da Pi já estar em campo. Mão única (nuvem -> local, nunca
+apaga nem sobrescreve o que só existe localmente).
 
 **Antes de ligar a sincronização**, a Raspberry precisa conhecer
 localmente a Estação (e o Usuário vinculado a ela) que ela vai operar —

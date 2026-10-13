@@ -308,6 +308,14 @@ class Leitura(models.Model):
                   'excluída dos modelos preditivos.',
     )
     motivo_inconsistencia = models.CharField(max_length=200, blank=True)
+    sincronizada_em = models.DateTimeField(
+        null=True, blank=True,
+        help_text='Preenchido pelo comando sincronizar_leituras quando esta leitura é confirmada '
+                  'salva na nuvem. Só numa instalação local (Raspberry Pi) com CLOUD_DATABASE_URL '
+                  'configurada — a leitura só é apagada do banco local depois de sincronizada E com '
+                  'mais de RETENCAO_LOCAL_DIAS dias (padrão 7): nunca apaga sem confirmar sincronização, '
+                  'mesmo que a internet fique fora por mais tempo que isso.',
+    )
 
     class Meta:
         ordering = ['-data_hora']

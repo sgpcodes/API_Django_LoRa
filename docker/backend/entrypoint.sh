@@ -13,6 +13,17 @@ if [ -n "$CLOUD_DATABASE_URL" ]; then
             sleep "${SYNC_INTERVAL_SECONDS:-300}"
         done
     ) &
+
+    # Sincronização nuvem -> local de cadastros (Usuarios + Estacoes) em
+    # segundo plano — pra qualquer conta conseguir logar e operar a Pi
+    # estando perto dela, mesmo sem internet e mesmo pra cadastros feitos
+    # depois da Pi já estar em campo (ver sincronizar_cadastros.py).
+    (
+        while true; do
+            python manage.py sincronizar_cadastros
+            sleep "${SYNC_INTERVAL_SECONDS:-300}"
+        done
+    ) &
 fi
 
 # Coleta das estações tipo=online (Open-Meteo) em segundo plano — sempre

@@ -1,9 +1,12 @@
 """
 Empurra as Leituras acumuladas no banco local ('default') para o banco da
 nuvem ('nuvem', configurado via CLOUD_DATABASE_URL) e, só depois de
-confirmar que cada uma foi salva com sucesso do outro lado, apaga essa
-leitura do banco local — o local funciona como um buffer temporário
-enquanto a internet está fora, não como uma cópia permanente.
+confirmar que cada uma foi salva com sucesso do outro lado, marca
+`sincronizada_em` — a leitura continua no banco local até completar
+RETENCAO_LOCAL_DIAS (padrão 7) dias, pra continuar aparecendo nos
+gráficos locais mesmo já sincronizada, e só então é apagada. Uma leitura
+que ainda NÃO sincronizou nunca é apagada, não importa a idade — o local
+só funciona como cópia permanente até a nuvem confirmar.
 
 Se CLOUD_DATABASE_URL não estiver configurada, ou se a nuvem estiver
 inacessível agora, o comando simplesmente não faz nada (sem erro) — é
@@ -12,6 +15,9 @@ seguro chamar isso em loop (ver docker/backend/entrypoint.sh).
 Uso:
     python manage.py sincronizar_leituras
 """
+
+import os
+from datetime import timedelta
 
 from django.core.management.base import BaseCommand
 from django.db import connections
@@ -32,9 +38,11 @@ def nuvem_disponivel():
 
 
 class Command(BaseCommand):
-    help = 'Sincroniza leituras pendentes do banco local para a nuvem e apaga as já confirmadas.'
+    help = 'Sincroniza leituras pendentes do banco local para a nuvem e apaga as já confirmadas há tempo suficiente.'
 
     def handle(self, *args, **options):
+        self._apagar_antigas_ja_sincronizadas()
+
         if 'nuvem' not in connections.databases:
             self.stdout.write('CLOUD_DATABASE_URL não configurada — nada a sincronizar.')
             return
@@ -50,7 +58,12 @@ class Command(BaseCommand):
 
         estado.nuvem_alcancavel = True
 
-        pendentes = Leitura.objects.using('default').select_related('estacao').order_by('data_hora')
+        pendentes = (
+            Leitura.objects.using('default')
+            .filter(sincronizada_em__isnull=True)
+            .select_related('estacao')
+            .order_by('data_hora')
+        )
         total_pendentes = pendentes.count()
         if total_pendentes == 0:
             estado.ultima_sincronizacao_com_sucesso_em = timezone.now()
@@ -79,9 +92,11 @@ class Command(BaseCommand):
                     motivo_inconsistencia=leitura.motivo_inconsistencia,
                 )
 
-                # Só apaga localmente depois do create() acima ter ido bem
-                # — se a conexão cair no meio, essa linha nem chega aqui.
-                leitura.delete(using='default')
+                # Só marca como sincronizada depois do create() acima ter
+                # ido bem — se a conexão cair no meio, essa linha nem chega
+                # aqui, e a leitura continua pendente pro próximo ciclo.
+                leitura.sincronizada_em = timezone.now()
+                leitura.save(using='default', update_fields=['sincronizada_em'])
                 sincronizadas += 1
             except OperationalError:
                 # Conexão com a nuvem caiu no meio do lote — para por aqui;
@@ -104,9 +119,21 @@ class Command(BaseCommand):
             ])
 
         self.stdout.write(self.style.SUCCESS(
-            f'{sincronizadas}/{total_pendentes} leitura(s) sincronizada(s) e removida(s) do banco local.'
+            f'{sincronizadas}/{total_pendentes} leitura(s) sincronizada(s) com a nuvem.'
             + (f' {falhas} falharam e ficaram para a próxima tentativa.' if falhas else ''),
         ))
+
+    def _apagar_antigas_ja_sincronizadas(self):
+        """Limpeza do buffer local — roda sempre, mesmo sem internet agora
+        (só mexe em leituras que JÁ confirmaram sincronização antes, não
+        depende da nuvem estar acessível neste instante)."""
+        dias = int(os.environ.get('RETENCAO_LOCAL_DIAS', 7))
+        limite = timezone.now() - timedelta(days=dias)
+        apagadas, _ = Leitura.objects.using('default').filter(
+            sincronizada_em__isnull=False, data_hora__lt=limite,
+        ).delete()
+        if apagadas:
+            self.stdout.write(f'{apagadas} leitura(s) sincronizada(s) há mais de {dias} dia(s) removida(s) do banco local.')
 
     def _resolver_estacao_na_nuvem(self, estacao_local, cache):
         """Casa a Estacao local com a correspondente na nuvem pelo
