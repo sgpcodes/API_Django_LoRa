@@ -68,18 +68,28 @@ def buscar_leitura_atual(latitude, longitude):
 
 
 def buscar_historico(latitude, longitude, past_days=30):
-    """Uma leitura por hora dos últimos `past_days` dias — usado uma vez
-    só, no backfill de uma estação online recém-criada (ver
-    backfill_historico_estacao.py). forecast_days=0: aqui é só histórico,
-    não precisa do lado "previsão" que o Dashboard busca ao vivo."""
+    """Uma leitura por hora dos últimos `past_days` dias MAIS o que já
+    passou de hoje — usado uma vez só, no backfill de uma estação online
+    recém-criada (ver backfill_historico_estacao.py).
+
+    forecast_days=1 (não 0): past_days sozinho só cobre dias JÁ FECHADOS
+    (não inclui hoje, que a Open-Meteo só considera "fechado" à meia-
+    noite) — sem isso, uma estação recém-criada ficava com um buraco
+    enorme (da meia-noite de hoje até agora) até o coletar_dados_online
+    preencher aos poucos. Só que forecast_days=1 também traz as horas
+    FUTURAS de hoje (previsão, não medição real) — por isso filtra fora
+    qualquer ponto com `data_hora` depois de agora, pra nunca salvar uma
+    previsão como se fosse uma Leitura de verdade."""
     resposta = requests.get(BASE_URL, params={
         'latitude': latitude,
         'longitude': longitude,
         'hourly': ','.join(_CAMPOS_COMUNS),
         'past_days': str(past_days),
-        'forecast_days': '0',
+        'forecast_days': '1',
         'timezone': 'UTC',
     }, timeout=TIMEOUT)
     resposta.raise_for_status()
     hourly = resposta.json()['hourly']
-    return [_normalizar_ponto(hourly, indice=i) for i in range(len(hourly['time']))]
+    agora = datetime.now(dt_timezone.utc)
+    pontos = [_normalizar_ponto(hourly, indice=i) for i in range(len(hourly['time']))]
+    return [ponto for ponto in pontos if ponto['data_hora'] <= agora]
